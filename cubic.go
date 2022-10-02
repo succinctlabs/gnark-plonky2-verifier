@@ -41,16 +41,16 @@ func (circuit *Circuit) Define(api frontend.API) error {
 }
 
 func main() {
-    err := main_impl()
+    err := mainImpl()
     if err != nil {
         fmt.Println(err)
         os.Exit(1)
     }
 }
 
-func main_impl() error {
+func mainImpl() error {
     var myCircuit Circuit
-    r1cs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, &myCircuit)
+    r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &myCircuit)
     if err != nil {
         return err
     }
@@ -59,7 +59,7 @@ func main_impl() error {
         X: "2",
         Y: "15",
     }
-    witness, _ := frontend.NewWitness(assignment, ecc.BN254)
+    witness, _ := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
     publicWitness, _ := witness.Public()
     pk, vk, err := groth16.Setup(r1cs)
     proof, err := groth16.Prove(r1cs, pk, witness)
