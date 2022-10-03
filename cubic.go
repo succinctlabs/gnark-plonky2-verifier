@@ -21,6 +21,7 @@ import (
     "github.com/consensys/gnark-crypto/ecc"
     "github.com/consensys/gnark/frontend/cs/r1cs"
     "github.com/consensys/gnark/backend/groth16"
+    _ "gnark-ed25519/edwards_curve"
 )
 
 // Circuit defines a simple circuit
