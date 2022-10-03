@@ -1,6 +1,7 @@
 package edwards_curve
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -23,7 +24,7 @@ func (c *OnCurveTest[T, S]) Define(api frontend.API) error {
 	return nil
 }
 
-func TestGenerator(t *testing.T) {
+func TestGeneratorIsOnCurve(t *testing.T) {
 	assert := test.NewAssert(t)
 	circuit := OnCurveTest[Ed25519, Ed25519Scalars]{}
 	witness := OnCurveTest[Ed25519, Ed25519Scalars]{
@@ -34,6 +35,52 @@ func TestGenerator(t *testing.T) {
 	}
 	err := test.IsSolved(&circuit, &witness, testCurve.ScalarField())
 	assert.NoError(err)
+}
+
+// s1*x1 + s2*x2 = y
+type MulAddTest[T, S emulated.FieldParams] struct {
+	X1, X2 AffinePoint[T]
+	S1, S2 emulated.Element[S]
+	Y AffinePoint[T]
+}
+
+func (c *MulAddTest[T, S]) Define(api frontend.API) error {
+	cr, err := New[T, S](api)
+	if err != nil {
+		return err
+	}
+	X1S1 := cr.ScalarMul(c.X1, c.S1)
+	X2S2 := cr.ScalarMul(c.X2, c.S2)
+	sum := cr.Add(X1S1, X2S2)
+	cr.AssertIsEqual(sum, c.Y)
+	cr.scalarApi.AssertIsEqual(
+		cr.scalarApi.Add(c.S1, c.S2),
+		emulated.NewElement[S](big.NewInt(1)),
+	)
+	return nil
+}
+
+func TestGeneratorGeneratesCurveOfCorrectOrder(t *testing.T) {
+	assert := test.NewAssert(t)
+	Gx, Gy := Ed25519{}.Generator()
+	G := AffinePoint[Ed25519]{
+		X: emulated.NewElement[Ed25519](Gx),
+		Y: emulated.NewElement[Ed25519](Gy),
+	}
+	for i := 2; i <= 3; i++ {
+		S1 := new(big.Int).Sub(rEd25519, big.NewInt(int64(i - 1)))
+		S2 := big.NewInt(int64(i))
+		circuit := MulAddTest[Ed25519, Ed25519Scalars]{}
+		witness := MulAddTest[Ed25519, Ed25519Scalars]{
+			X1: G,
+			X2: G,
+			S1: emulated.NewElement[Ed25519Scalars](S1),
+			S2: emulated.NewElement[Ed25519Scalars](S2),
+			Y: G,
+		}
+		err := test.IsSolved(&circuit, &witness, testCurve.ScalarField())
+		assert.NoError(err)
+	}
 }
 
 var testCurve = ecc.BN254

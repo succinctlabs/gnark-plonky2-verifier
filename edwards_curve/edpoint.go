@@ -44,8 +44,8 @@ func newBigInt(s string) *big.Int {
 // equation and generator). But for now we don't do arbitrary curves.
 
 type Curve[T, S emulated.FieldParams] struct {
-	A emulated.Element[T]
-	D emulated.Element[T]
+	a emulated.Element[T]
+	d emulated.Element[T]
 
 	// api is the native api, we construct it ourselves to be sure
 	api frontend.API
@@ -61,7 +61,7 @@ func (c *Curve[T, S]) Generator() AffinePoint[T] {
 	return c.g
 }
 
-func newCurve[T, S emulated.FieldParams](api frontend.API, A, D, Gx, Gy emulated.Element[T]) (*Curve[T, S], error) {
+func newCurve[T, S emulated.FieldParams](api frontend.API, a, d, Gx, Gy emulated.Element[T]) (*Curve[T, S], error) {
 	ba, err := emulated.NewField[T](api)
 	if err != nil {
 		return nil, fmt.Errorf("new base api: %w", err)
@@ -71,8 +71,8 @@ func newCurve[T, S emulated.FieldParams](api frontend.API, A, D, Gx, Gy emulated
 		return nil, fmt.Errorf("new scalar api: %w", err)
 	}
 	return &Curve[T, S]{
-		A: A,
-		D: D,
+		a: a,
+		d: d,
 		api:       api,
 		baseApi:   ba,
 		scalarApi: sa,
@@ -102,50 +102,69 @@ func (c *Curve[T, S]) AssertIsEqual(p, q AffinePoint[T]) {
 func (c *Curve[T, S]) AssertIsOnCurve(p AffinePoint[T]) {
 	xx := c.baseApi.Mul(p.X, p.X)
 	yy := c.baseApi.Mul(p.Y, p.Y)
-	fmt.Println(xx)
-	fmt.Println(c.A)
-	axx := c.baseApi.Mul(xx, c.A)
+	axx := c.baseApi.Mul(xx, c.a)
 	lhs := c.baseApi.Add(axx, yy)
 
-	dxx := c.baseApi.Mul(xx, c.D)
+	dxx := c.baseApi.Mul(xx, c.d)
 	dxxyy := c.baseApi.Mul(dxx, yy)
 	rhs := c.baseApi.Add(dxxyy, 1)
 
 	c.baseApi.AssertIsEqual(lhs, rhs)
 }
 
-// func (c *Curve[T, S]) Add(q, r AffinePoint[T]) AffinePoint[T] {
-// 	// compute lambda = (p1.y-p.y)/(p1.x-p.x)
-// 	lambda := c.baseApi.DivUnchecked(c.baseApi.Sub(r.Y, q.Y), c.baseApi.Sub(r.X, q.X))
+func (c *Curve[T, S]) Add(q, r AffinePoint[T]) AffinePoint[T] {
+	// u = (x1 + y1) * (x2 + y2)
+	u1 := c.baseApi.Mul(q.X, c.a)
+	u1 = c.baseApi.Sub(q.Y, u1)
+	u2 := c.baseApi.Add(r.X, r.Y)
+	u := c.baseApi.Mul(u1, u2)
 
-// 	// xr = lambda**2-p.x-p1.x
-// 	xr := c.baseApi.Sub(c.baseApi.Mul(lambda, lambda), c.baseApi.Add(q.X, r.X))
+	// v0 = x1 * y2
+	v0 := c.baseApi.Mul(r.Y, q.X)
 
-// 	// p.y = lambda(p.x-xr) - p.y
-// 	py := c.baseApi.Sub(c.baseApi.Mul(lambda, c.baseApi.Sub(q.X, xr)), q.Y)
+	// v1 = x2 * y1
+	v1 := c.baseApi.Mul(r.X, q.Y)
 
-// 	return AffinePoint[T]{
-// 		X: xr.(emulated.Element[T]),
-// 		Y: py.(emulated.Element[T]),
-// 	}
-// }
+	// v2 = d * v0 * v1
+	v2 := c.baseApi.Mul(c.d, v0, v1)
 
-// func (c *Curve[T, S]) Double(p AffinePoint[T]) AffinePoint[T] {
+	var px, py frontend.Variable
 
-// 	// compute lambda = (3*p1.x**2+a)/2*p1.y, here we assume a=0 (j invariant 0 curve)
-// 	lambda := c.baseApi.DivUnchecked(c.baseApi.Mul(p.X, p.X, 3), c.baseApi.Mul(p.Y, 2))
+	// x = (v0 + v1) / (1 + v2)
+	px = c.baseApi.Add(v0, v1)
+	px = c.baseApi.DivUnchecked(px, c.baseApi.Add(1, v2))
 
-// 	// xr = lambda**2-p1.x-p1.x
-// 	xr := c.baseApi.Sub(c.baseApi.Mul(lambda, lambda), c.baseApi.Mul(p.X, 2))
+	// y = (u + a * v0 - v1) / (1 - v2)
+	py = c.baseApi.Mul(c.a, v0)
+	py = c.baseApi.Sub(py, v1)
+	py = c.baseApi.Add(py, u)
+	py = c.baseApi.DivUnchecked(py, c.baseApi.Sub(1, v2))
 
-// 	// p.y = lambda(p.x-xr) - p.y
-// 	py := c.baseApi.Sub(c.baseApi.Mul(lambda, c.baseApi.Sub(p.X, xr)), p.Y)
+	return AffinePoint[T]{
+		X: px.(emulated.Element[T]),
+		Y: py.(emulated.Element[T]),
+	}
+}
 
-// 	return AffinePoint[T]{
-// 		X: xr.(emulated.Element[T]),
-// 		Y: py.(emulated.Element[T]),
-// 	}
-// }
+func (c *Curve[T, S]) Double(p AffinePoint[T]) AffinePoint[T] {
+	u := c.baseApi.Mul(p.X, p.Y)
+	v := c.baseApi.Mul(p.X, p.X)
+	w := c.baseApi.Mul(p.Y, p.Y)
+
+	n1 := c.baseApi.Mul(2, u)
+	av := c.baseApi.Mul(v, c.a)
+	n2 := c.baseApi.Sub(w, av)
+	d1 := c.baseApi.Add(w, av)
+	d2 := c.baseApi.Sub(2, d1)
+
+	px := c.baseApi.DivUnchecked(n1, d1)
+	py := c.baseApi.DivUnchecked(n2, d2)
+
+	return AffinePoint[T]{
+		X: px.(emulated.Element[T]),
+		Y: py.(emulated.Element[T]),
+	}
+}
 
 func (c *Curve[T, S]) Select(b frontend.Variable, p, q AffinePoint[T]) AffinePoint[T] {
 	x := c.baseApi.Select(b, p.X, q.X)
@@ -156,18 +175,18 @@ func (c *Curve[T, S]) Select(b frontend.Variable, p, q AffinePoint[T]) AffinePoi
 	}
 }
 
-// func (c *Curve[T, S]) ScalarMul(p AffinePoint[T], s emulated.Element[S]) AffinePoint[T] {
-// 	res := p
-// 	acc := c.Double(p)
+func (c *Curve[T, S]) ScalarMul(p AffinePoint[T], s emulated.Element[S]) AffinePoint[T] {
+	res := p
+	acc := c.Double(p)
 
-// 	sBits := c.scalarApi.ToBinary(s)
-// 	for i := 1; i < len(sBits); i++ {
-// 		tmp := c.Add(res, acc)
-// 		res = c.Select(sBits[i], tmp, res)
-// 		acc = c.Double(acc)
-// 	}
+	sBits := c.scalarApi.ToBinary(s)
+	for i := 1; i < len(sBits); i++ {
+		tmp := c.Add(res, acc)
+		res = c.Select(sBits[i], tmp, res)
+		acc = c.Double(acc)
+	}
 
-// 	tmp := c.Add(res, c.Neg(p))
-// 	res = c.Select(sBits[0], res, tmp)
-// 	return res
-// }
+	tmp := c.Add(res, c.Neg(p))
+	res = c.Select(sBits[0], res, tmp)
+	return res
+}
