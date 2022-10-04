@@ -12,9 +12,9 @@ func Xor3_512(api frontend.API, a, b, c []frontend.Variable) ([]frontend.Variabl
 	out := make([]frontend.Variable, n)
 	for k := 0; k < n; k++ {
 		mid := api.Mul(b[k], c[k])
-		p := api.Add(1, api.Mul(-2, b[k]), api.Mul(-2, c[k]), api.Mul(4, mid[k]))
-		q := api.Mul(a[k], inner)
-		out[k] = api.Add(q, b[k], c[k], api.Mul(-2, mid[k]))
+		p := api.Add(1, api.Mul(-2, b[k]), api.Mul(-2, c[k]), api.Mul(4, mid))
+		q := api.Mul(a[k], p)
+		out[k] = api.Add(q, b[k], c[k], api.Mul(-2, mid))
 		// TODO: try doing this instead:
 		// out[k] = api.Xor(a[k], api.Xor(b[k], c[k]))
 	}

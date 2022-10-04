@@ -10,10 +10,10 @@ func T2_512(api frontend.API, a, b, c []frontend.Variable) ([]frontend.Variable)
 	if len(b) != 64 { panic("bad length") }
 	if len(c) != 64 { panic("bad length") }
 
-	bigsigma0 := BigSigma512(a, 28, 34, 39)
-	maj := Maj_t512(a, b, c)
+	bigsigma0 := BigSigma512(api, a, 28, 34, 39)
+	maj := Maj_t512(api, a, b, c)
 
-	return BinSum(maj, bigsigma0)
+	return BinSum(api, maj, bigsigma0)
 }
 
 // template T2_512() {

@@ -4,7 +4,7 @@ import (
 	"github.com/consensys/gnark/frontend"
 )
 
-func Sha512(api frontend.API, in [] frontend.Variable) ([] frontend.Variable) {
+func Sha512(api frontend.API, in [] frontend.Variable) ([512] frontend.Variable) {
 	nBits := len(in)
 
 	nBlocks := ((nBits + 128) / 1024) + 1
@@ -24,10 +24,10 @@ func Sha512(api frontend.API, in [] frontend.Variable) ([] frontend.Variable) {
 		paddedIn[nBlocks*1024 - k - 1] = (nBits >> k) & 1
 	}
 
-	var h512Components = [8][]frontend.Variable
+	var h512Components [8][64]frontend.Variable
 
 	for i := 0; i < 8; i++ {
-		h512Components[i] = H512(i)
+		h512Components[i] = H512(uint(i))
 	}
 
 	sha512compression := make([][] frontend.Variable, nBlocks)
@@ -51,10 +51,10 @@ func Sha512(api frontend.API, in [] frontend.Variable) ([] frontend.Variable) {
 		for k := 0; k < 1024; k++ {	
 			inp[k] = paddedIn[i*1024 + k]
 		}
-		sha512compression[i] = Sha512Compression(api, hin, inp)
+		sha512compression[i] = Sha512compression(api, hin, inp)
 	}
 
-	var out = [512]frontend.Variable
+	var out [512]frontend.Variable
 
 	for k := 0; k < 512; k++ {
 		out[k] = sha512compression[nBlocks-1][k]

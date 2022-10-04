@@ -11,7 +11,7 @@ func Sha512compression(api frontend.API, hin, inp []frontend.Variable) ([]fronte
 
 	var ct_k [80][]frontend.Variable
 	for i := 0; i < 80; i++ {
-		ct_k[i] = K512(i)
+		ct_k[i] = K512(uint(i))
 	}
 
 	var a [81][64]frontend.Variable
@@ -30,7 +30,7 @@ func Sha512compression(api frontend.API, hin, inp []frontend.Variable) ([]fronte
 				w[t][k] = inp[t*64+63-k]
 			}
 		} else {
-			w[t] = SigmaPlus512(w[t-2], w[t-7], w[t-15], w[t-16])
+			w[t] = SigmaPlus512(api, w[t-2][:], w[t-7][:], w[t-15][:], w[t-16][:])
 		}
 		// if (t<16) {
 		//     for (k=0; k<64; k++) {
@@ -73,8 +73,8 @@ func Sha512compression(api frontend.API, hin, inp []frontend.Variable) ([]fronte
 
 
 	for t := 0; t < 80; t++ {
-		t1 := T1_512(h[t], e[t], f[t], g[t], ct_k[t], w[t])
-		t2 := T2_512(a[t], b[t], c[t])
+		t1 := T1_512(api, h[t][:], e[t][:], f[t][:], g[t][:], ct_k[t][:], w[t][:])
+		t2 := T2_512(api, a[t][:], b[t][:], c[t][:])
 	//     for (k=0; k<64; k++) {
 	//         t1[t].h[k] <== h[t][k];
 	//         t1[t].e[k] <== e[t][k];
@@ -123,22 +123,22 @@ func Sha512compression(api frontend.API, hin, inp []frontend.Variable) ([]fronte
 	var fsum_in [8][2][64]frontend.Variable
 
 	for k := 0; k < 64; k++ {
-	    fsum[0][0][k] =  hin[64*0+k]
-	    fsum[0][1][k] =  a[80][k]
-	    fsum[1][0][k] =  hin[64*1+k]
-	    fsum[1][1][k] =  b[80][k]
-	    fsum[2][0][k] =  hin[64*2+k]
-	    fsum[2][1][k] =  c[80][k]
-	    fsum[3][0][k] =  hin[64*3+k]
-	    fsum[3][1][k] =  d[80][k]
-	    fsum[4][0][k] =  hin[64*4+k]
-	    fsum[4][1][k] =  e[80][k]
-	    fsum[5][0][k] =  hin[64*5+k]
-	    fsum[5][1][k] =  f[80][k]
-	    fsum[6][0][k] =  hin[64*6+k]
-	    fsum[6][1][k] =  g[80][k]
-	    fsum[7][0][k] =  hin[64*7+k]
-	    fsum[7][1][k] =  h[80][k]
+	    fsum_in[0][0][k] =  hin[64*0+k]
+	    fsum_in[0][1][k] =  a[80][k]
+	    fsum_in[1][0][k] =  hin[64*1+k]
+	    fsum_in[1][1][k] =  b[80][k]
+	    fsum_in[2][0][k] =  hin[64*2+k]
+	    fsum_in[2][1][k] =  c[80][k]
+	    fsum_in[3][0][k] =  hin[64*3+k]
+	    fsum_in[3][1][k] =  d[80][k]
+	    fsum_in[4][0][k] =  hin[64*4+k]
+	    fsum_in[4][1][k] =  e[80][k]
+	    fsum_in[5][0][k] =  hin[64*5+k]
+	    fsum_in[5][1][k] =  f[80][k]
+	    fsum_in[6][0][k] =  hin[64*6+k]
+	    fsum_in[6][1][k] =  g[80][k]
+	    fsum_in[7][0][k] =  hin[64*7+k]
+	    fsum_in[7][1][k] =  h[80][k]
 	}
 	// for (k=0; k<64; k++) {
 	//     fsum[0].in[0][k] <==  hin[64*0+k];
@@ -186,5 +186,5 @@ func Sha512compression(api frontend.API, hin, inp []frontend.Variable) ([]fronte
 	//     out[384+63-k] <== fsum[6].out[k];
 	//     out[448+63-k] <== fsum[7].out[k];
 	// }
-	return out
+	return out[:]
 }
