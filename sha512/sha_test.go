@@ -15,7 +15,7 @@ type Sha512Circuit struct {
 }
 
 func (circuit *Sha512Circuit) Define(api frontend.API) error {
-	res := PySha512(api, circuit.in)
+	res := Sha512(api, circuit.in)
 	if len(res) != 512 { panic("bad length") }
 	for i := 0; i < 512; i++ {
 		api.AssertIsEqual(res[i], circuit.out[i])

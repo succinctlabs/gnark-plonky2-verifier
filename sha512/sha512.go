@@ -15,7 +15,7 @@ func _right_rotate(n [64]frontend.Variable, bits int) [64]frontend.Variable {
 	return result
 }
 
-func PySha512(api frontend.API, in [] frontend.Variable) ([512] frontend.Variable) {
+func Sha512(api frontend.API, in [] frontend.Variable) ([512] frontend.Variable) {
 	_not := func(x [64]frontend.Variable) [64]frontend.Variable {
 		return not(api, x)
 	}
