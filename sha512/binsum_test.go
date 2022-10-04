@@ -2,7 +2,6 @@ package sha512
 
 import (
 	"testing"
-	"fmt"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
@@ -19,14 +18,11 @@ type BinsumTest struct {
 func (c *BinsumTest) Define(api frontend.API) error {
 	sum := BinSum(api, c.A, c.B)
 	for i := 0; i < len(sum) || i < len(c.C); i++ {
-		fmt.Println(i, c.C)
 		if i < len(sum) && i < len(c.C) {
-			api.Println(sum[i])
 			api.AssertIsEqual(sum[i], c.C[i])
 		} else if i < len(sum) {
 			api.AssertIsEqual(sum[i], 0)
 		} else {
-			fmt.Println(i, c.C[i])
 			api.AssertIsEqual(c.C[i], 0)
 		}
 	}

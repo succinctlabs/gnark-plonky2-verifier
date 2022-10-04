@@ -1,11 +1,16 @@
 package sha512
 
 import (
+	"fmt"
 	"github.com/consensys/gnark/frontend"
 )
 
 func Sha512(api frontend.API, in [] frontend.Variable) ([512] frontend.Variable) {
 	nBits := len(in)
+
+	for _, v := range in {
+		api.AssertIsBoolean(v)
+	}
 
 	nBlocks := ((nBits + 128) / 1024) + 1
 
@@ -23,6 +28,8 @@ func Sha512(api frontend.API, in [] frontend.Variable) ([512] frontend.Variable)
 	for k := 0; k < 128; k++ {
 		paddedIn[nBlocks*1024 - k - 1] = (nBits >> k) & 1
 	}
+
+	fmt.Println(paddedIn)
 
 	var h512Components [8][64]frontend.Variable
 
