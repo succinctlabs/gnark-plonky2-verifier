@@ -11,7 +11,12 @@ func SigmaPlus512(api frontend.API, in2, in7, in15, in16 []frontend.Variable) ([
     sigma1 := SmallSigma512(api, in2, 19, 61, 6)
     sigma0 := SmallSigma512(api, in15, 1, 8, 7)
 
-    return BinSum(api, sigma1, in7, sigma0, in16)
+    inter := BinSum(api, sigma1, in7, sigma0, in16)
+    var out [64]frontend.Variable
+    for k := 0; k < 64; k++ {
+        out[k] = inter[k]
+    }
+    return out
 }
 
 

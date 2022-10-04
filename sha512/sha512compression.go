@@ -88,8 +88,8 @@ func Sha512compression(api frontend.API, hin, inp []frontend.Variable) ([]fronte
 	//         t2[t].c[k] <== c[t][k];
 	//     }
 
-		sume := BinSum(d[t], t1)
-		suma := BinSum(t1, t2)
+		sume := BinSum(api, d[t][:], t1)
+		suma := BinSum(api, t1, t2)
 	//     for (k=0; k<64; k++) {
 	//         sume[t].in[0][k] <== d[t][k];
 	//         sume[t].in[1][k] <== t1[t].out[k];
@@ -161,7 +161,7 @@ func Sha512compression(api frontend.API, hin, inp []frontend.Variable) ([]fronte
 
 	var fsum [8][]frontend.Variable
 	for i := 0; i < 8; i++ {
-		fsum[i] = BinSum(fsum_in[i][0], fsum_in[i][1])
+		fsum[i] = BinSum(api, fsum_in[i][0][:], fsum_in[i][1][:])
 	}
 
 	var out [512]frontend.Variable
