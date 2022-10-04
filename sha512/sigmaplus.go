@@ -5,13 +5,13 @@ import (
 )
 
 
-func SigmaPlus512(api frontend.API, in2, in7, in15, in16 []frontend.Variable) ([]frontend.Variable) {
+func SigmaPlus512(api frontend.API, in2, in7, in15, in16 []frontend.Variable) ([64]frontend.Variable) {
     if len(in2) != 64 { panic("bad length") }
 
-    sigma1 := SmallSigma512(in2, 19, 61, 6)
-    sigma0 := SmallSigma512(in15, 1, 8, 7)
+    sigma1 := SmallSigma512(api, in2, 19, 61, 6)
+    sigma0 := SmallSigma512(api, in15, 1, 8, 7)
 
-    return BinSum(sigma1, in7, sigma0, in16)
+    return BinSum(api, sigma1, in7, sigma0, in16)
 }
 
 

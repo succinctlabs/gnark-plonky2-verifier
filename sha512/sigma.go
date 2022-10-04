@@ -8,11 +8,11 @@ import (
 func SmallSigma512(api frontend.API, in []frontend.Variable, ra, rb, rc int) ([]frontend.Variable) {
     if len(in) != 64 { panic("bad length") }
 
-    rota := RotR512(in, ra)
-    rotb := RotR512(in, rb)
-    shrc := ShR512(in, rc)
+    rota := RotR512(api, in, ra)
+    rotb := RotR512(api, in, rb)
+    shrc := ShR512(api, in, rc)
 
-    return Xor3_512(rota, rotb, shrc)
+    return Xor3_512(api, rota, rotb, shrc)
 }
 
 // template SmallSigma512(ra, rb, rc) {
@@ -45,11 +45,11 @@ func SmallSigma512(api frontend.API, in []frontend.Variable, ra, rb, rc int) ([]
 func BigSigma512(api frontend.API, in []frontend.Variable, ra, rb, rc int) ([]frontend.Variable) {
     if len(in) != 64 { panic("bad length") }
 
-    rota := RotR512(in, ra)
-    rotb := RotR512(in, rb)
-    rotc := RotR512(in, rc)
+    rota := RotR512(api, in, ra)
+    rotb := RotR512(api, in, rb)
+    rotc := RotR512(api, in, rc)
 
-    return Xor3_512(rota, rotb, rotc)
+    return Xor3_512(api, rota, rotb, rotc)
 }
 
 // template BigSigma512(ra, rb, rc) {
