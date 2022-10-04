@@ -22,6 +22,7 @@ import (
     "github.com/consensys/gnark/frontend/cs/r1cs"
     "github.com/consensys/gnark/backend/groth16"
     _ "gnark-ed25519/edwards_curve"
+    _ "gnark-ed25519/sha512"
 )
 
 // Circuit defines a simple circuit
