@@ -1,7 +1,6 @@
 package sha512
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/consensys/gnark/frontend"
@@ -23,15 +22,28 @@ func (circuit *Sha512Circuit) Define(api frontend.API) error {
 
 func TestSha512(t *testing.T) {
 	assert := test.NewAssert(t)
-	circuit := OnCurveTest[Ed25519, Ed25519Scalars]{}
-	witness := OnCurveTest[Ed25519, Ed25519Scalars]{
-		P: AffinePoint[Ed25519]{
-			X: emulated.NewElement[Ed25519](newBigInt("216936D3CD6E53FEC0A4E231FDD6DC5C692CC7609525A7B2C9562D608F25D51A")),
-			Y: emulated.NewElement[Ed25519](newBigInt("6666666666666666666666666666666666666666666666666666666666666658")),
-		},
+	in := toBytes("Succinct Labs")
+	out := toBytes("503ace098aa03f6feec1b5df0a38aee923f744a775508bc81f2b94ad139be297c2e8cd8c44af527b5d3f017a7fc929892c896604047e52e3f518924f52bff0dc")
+	circuit := Sha512Circuit {
+		in: toVariables(make([]byte, len(in))),
+		out: toVariables(make([]byte, len(out))),
+	}
+	witness := Sha512Circuit {
+		in: toVariables(in),
+		out: toVariables(out),
 	}
 	err := test.IsSolved(&circuit, &witness, testCurve.ScalarField())
 	assert.NoError(err)
 }
 
-var testCurve = ecc.BN254
+func toVariables(arr []byte) []frontend.Variable {
+	result := make([]frontend.Variable, len(arr))
+	for i, v := range arr {
+		result[i] = v
+	}
+	return result
+}
+
+func toBytes(s string) []byte {
+	return []byte(s)
+}

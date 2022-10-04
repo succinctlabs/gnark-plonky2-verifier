@@ -1,7 +1,6 @@
 package sha512
 
 import (
-	"fmt"
 	"math/big"
     "github.com/consensys/gnark/backend/hint"
     "github.com/consensys/gnark/frontend"
@@ -106,7 +105,6 @@ func BinSum(api frontend.API, args ...[]frontend.Variable) ([]frontend.Variable)
 			v.And(v, big.NewInt(1))
 			outputs[i] = v
 		}
-		fmt.Println(ops, n, nout, inputs, outputs)
 		return nil
 	}
 
