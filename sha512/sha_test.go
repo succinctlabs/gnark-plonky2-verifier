@@ -6,6 +6,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
+	"github.com/consensys/gnark-crypto/ecc"
 )
 
 type Sha512Circuit struct {
@@ -21,6 +22,8 @@ func (circuit *Sha512Circuit) Define(api frontend.API) error {
 	}
 	return nil
 }
+
+var testCurve = ecc.BN254
 
 func TestSha512(t *testing.T) {
 	assert := test.NewAssert(t)
