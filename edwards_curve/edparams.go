@@ -11,11 +11,7 @@ var (
 func init() {
 	// https://neuromancer.sk/std/other/Ed25519
 	qEd25519 = newBigInt("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed")
-	n := newBigInt("1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed")
-	// TODO: is this ok?
-	// h := big.NewInt(8)
-	// rEd25519 = new(big.Int).Mul(n, h)
-	rEd25519 = n
+	rEd25519 = newBigInt("1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed")
 }
 
 type Ed25519 struct{}
