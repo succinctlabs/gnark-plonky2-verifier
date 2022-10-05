@@ -56,16 +56,16 @@ func bits_to_scalar(c *EdCurve, s []frontend.Variable) EdCoordinate {
 // }
 
 func bits_to_element(c *EdCurve, input []frontend.Variable) EdPoint {
-	L := emulated.NewElement[Ed25519Scalars](rEd25519)
+	// L := emulated.NewElement[Ed25519Scalars](rEd25519)
 	unchecked_point := decodepoint(c, input)
 
-	// TODO: https://github.com/warner/python-pure25519 says this check is not necessary:
-	//
-	// > This library is conservative, and performs full subgroup-membership checks on decoded
-	// > points, which adds considerable overhead. The Curve25519/Ed25519 algorithms were
-	// > designed to not require these checks, so a careful application might be able to
-	// > improve on this slightly (Ed25519 verify down to 6.2ms, DH-finish to 3.2ms).
-	c.AssertIsZero(c.ScalarMul(unchecked_point, L))
+	// // TODO: https://github.com/warner/python-pure25519 says this check is not necessary:
+	// //
+	// // > This library is conservative, and performs full subgroup-membership checks on decoded
+	// // > points, which adds considerable overhead. The Curve25519/Ed25519 algorithms were
+	// // > designed to not require these checks, so a careful application might be able to
+	// // > improve on this slightly (Ed25519 verify down to 6.2ms, DH-finish to 3.2ms).
+	// c.AssertIsZero(c.ScalarMul(unchecked_point, L))
 
 	return unchecked_point
 }
