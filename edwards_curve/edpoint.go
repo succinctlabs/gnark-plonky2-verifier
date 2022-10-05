@@ -156,7 +156,7 @@ func (c *Curve[T, S]) Double(p AffinePoint[T]) AffinePoint[T] {
 	v := c.baseApi.Mul(p.X, p.X)
 	w := c.baseApi.Mul(p.Y, p.Y)
 
-	n1 := c.baseApi.Mul(2, u)
+	n1 := c.baseApi.Add(u, u)
 	av := c.baseApi.Mul(v, c.a)
 	n2 := c.baseApi.Sub(w, av)
 	d1 := c.baseApi.Add(w, av)
