@@ -185,16 +185,17 @@ func (c *Curve[T, S]) ScalarMul(p AffinePoint[T], s emulated.Element[S]) AffineP
 }
 
 func (c *Curve[T, S]) ScalarMulBinary(p AffinePoint[T], sBits []frontend.Variable) AffinePoint[T] {
-	res := p
-	acc := c.Double(p)
+	res := AffinePoint[T]{
+		X: emulated.NewElement[T](0),
+		Y: emulated.NewElement[T](1),
+	}
+	acc := p
 
-	for i := 1; i < len(sBits); i++ {
+	for i := 0; i < len(sBits); i++ {
 		tmp := c.Add(res, acc)
 		res = c.Select(sBits[i], tmp, res)
 		acc = c.Double(acc)
 	}
 
-	tmp := c.Add(res, c.Neg(p))
-	res = c.Select(sBits[0], res, tmp)
 	return res
 }

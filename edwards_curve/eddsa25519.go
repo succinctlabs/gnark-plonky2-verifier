@@ -4,6 +4,7 @@ package edwards_curve
 // This file is little-endian
 
 import (
+	"fmt"
 	"math/big"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
@@ -12,8 +13,11 @@ import (
 
 
 func H(api frontend.API, m []frontend.Variable) []frontend.Variable {
-	result := sha512.Sha512Bytes(api, m)
-	return result[:]
+	fmt.Println("sha input", m)
+	rawResult := sha512.Sha512(api, swapByteEndianness(m))
+	sResult := swapByteEndianness(rawResult[:])
+	fmt.Println("sha output", sResult)
+	return sResult
 }
 
 func pow2(n uint) *big.Int {
@@ -32,10 +36,10 @@ func bits_to_scalar(c *EdCurve, s []frontend.Variable) EdCoordinate {
 	elt := emulated.NewElement[Ed25519](0)
 	if len(elt.Limbs) != 4 { panic("bad length") }
 	i := 0
-	elt.Limbs[0] = c.api.FromBinary(s[i:i+64]); i += 64
-	elt.Limbs[1] = c.api.FromBinary(s[i:i+64]); i += 64
-	elt.Limbs[2] = c.api.FromBinary(s[i:i+64]); i += 64
-	elt.Limbs[3] = c.api.FromBinary(s[i:i+64]); i += 64
+	elt.Limbs[0] = c.api.FromBinary(s[i:i+64]...); i += 64
+	elt.Limbs[1] = c.api.FromBinary(s[i:i+64]...); i += 64
+	elt.Limbs[2] = c.api.FromBinary(s[i:i+64]...); i += 64
+	elt.Limbs[3] = c.api.FromBinary(s[i:i+64]...); i += 64
 	if i != len(s) { panic("bad length") }
 	return elt
 }
@@ -54,7 +58,15 @@ func bits_to_scalar(c *EdCurve, s []frontend.Variable) EdCoordinate {
 func bits_to_element(c *EdCurve, input []frontend.Variable) EdPoint {
 	L := emulated.NewElement[Ed25519Scalars](rEd25519)
 	unchecked_point := decodepoint(c, input)
+
+	// TODO: https://github.com/warner/python-pure25519 says this check is not necessary:
+	//
+	// > This library is conservative, and performs full subgroup-membership checks on decoded
+	// > points, which adds considerable overhead. The Curve25519/Ed25519 algorithms were
+	// > designed to not require these checks, so a careful application might be able to
+	// > improve on this slightly (Ed25519 verify down to 6.2ms, DH-finish to 3.2ms).
 	c.AssertIsZero(c.ScalarMul(unchecked_point, L))
+
 	return unchecked_point
 }
 
@@ -64,15 +76,29 @@ func bits_to_element(c *EdCurve, input []frontend.Variable) EdPoint {
 // 	return c.ScalarMul(c.g, a)
 // }
 
-func checkvalid(c *EdCurve, s, m, pk []frontend.Variable) {
+func CheckValid(c *EdCurve, s, m, pk []frontend.Variable) {
 	if len(s) != 512 { panic("bad signature length") }
 	if len(pk) != 256 { panic("bad public key length") }
+	if len(m) % 8 != 0 { panic("bad message length") }
 	R := bits_to_element(c, s[:256])
 	A := bits_to_element(c, pk)
 	h := H(c.api, concat(s[:256], pk, m))
+	fmt.Println("h", h)
+	fmt.Println("g", dbg(c.g.X), dbg(c.g.Y))
+	fmt.Println("s last half", s[256:])
 	v1 := c.ScalarMulBinary(c.g, s[256:])
+	fmt.Println("v1", dbg(v1.X), dbg(v1.Y))
 	v2 := c.Add(R, c.ScalarMulBinary(A, h))
+	fmt.Println("v2", dbg(v2.X), dbg(v2.Y))
 	c.AssertIsEqual(v1, v2)
+}
+
+func reverse[T interface{}](arr []T) []T {
+	result := make([]T, len(arr))
+	for i, v := range arr {
+		result[len(result)-i-1] = v
+	}
+	return result
 }
 
 func concat(args ...[]frontend.Variable) []frontend.Variable {
@@ -83,11 +109,11 @@ func concat(args ...[]frontend.Variable) []frontend.Variable {
 	return result
 }
 
-func decodepoint(c *EdCurve, input []frontend.Variable) EdPoint {
-	if len(input) != 256 { panic("bad length") }
+func decodepoint(c *EdCurve, unclamped []frontend.Variable) EdPoint {
+	if len(unclamped) != 256 { panic("bad length") }
 
-	s := make([]frontend.Variable, len(input))
-	copy(s, input)
+	s := make([]frontend.Variable, len(unclamped))
+	copy(s, unclamped)
 	s[255] = 0
 	y := bits_to_scalar(c, s)
 //     unclamped = int(binascii.hexlify(s[:32][::-1]), 16)
@@ -99,7 +125,7 @@ func decodepoint(c *EdCurve, input []frontend.Variable) EdPoint {
 
 	xbits := c.baseApi.ToBinary(x)
 	if len(xbits) != 256 { panic("bad length") }
-	mismatch := c.api.Xor(xbits[0], xbits[255])
+	mismatch := c.api.Xor(xbits[0], unclamped[255])
 	x = c.baseApi.Select(mismatch, c.baseApi.Neg(x), x).(EdCoordinate)
 //     if bool(x & 1) != bool(unclamped & (1<<255)): x = Q-x
 
@@ -113,6 +139,21 @@ func decodepoint(c *EdCurve, input []frontend.Variable) EdPoint {
 //     if not isoncurve(P): raise NotOnCurve("decoding point that is not on curve")
 
 	return P
+}
+
+func toValue(s EdCoordinate) *big.Int {
+	result := big.NewInt(0)
+	placeValue := big.NewInt(1)
+	for _, v := range s.Limbs {
+		q := new(big.Int).Mul(placeValue, v.(*big.Int))
+		result.Add(result, q)
+		placeValue.Lsh(placeValue, Ed25519{}.BitsPerLimb())
+	}
+	return result
+}
+
+func dbg(s EdCoordinate) string {
+	return toValue(s).Text(16)
 }
 
 func _const(x int64) EdCoordinate {
@@ -149,8 +190,8 @@ func xrecover(c *EdCurve, y EdCoordinate) EdCoordinate {
 	x = c.baseApi.Select(matches, x, c.baseApi.Mul(x, emulated.NewElement[Ed25519](I))).(EdCoordinate)
 	// if (x*x - xx) % Q != 0: x = (x*I) % Q
 
-	even := c.baseApi.ToBinary(x)[0]
-	x = c.baseApi.Select(even, x, c.baseApi.Neg(x)).(EdCoordinate)
+	odd := c.baseApi.ToBinary(x)[0]
+	x = c.baseApi.Select(odd, c.baseApi.Neg(x), x).(EdCoordinate)
 	// if x % 2 != 0: x = Q-x
 
 	return x
@@ -165,6 +206,17 @@ func pow(c *EdCurve, base EdCoordinate, exponent *big.Int) EdCoordinate {
 		}
 		mul = c.baseApi.Mul(mul, mul).(EdCoordinate)
 		exponent.Rsh(exponent, 1)
+	}
+	return result
+}
+
+func swapByteEndianness(in []frontend.Variable) []frontend.Variable {
+	if len(in) % 8 != 0 { panic("must be a multiple of 8 bits") }
+	result := make([]frontend.Variable, len(in))
+	for i := 0; i < len(in); i += 8 {
+		for j := 0; j < 8; j++ {
+			result[i+j] = in[i+7-j]
+		}
 	}
 	return result
 }
