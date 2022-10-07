@@ -4,7 +4,6 @@ package edwards_curve
 // This file is little-endian
 
 import (
-	"fmt"
 	"math/big"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
@@ -13,10 +12,8 @@ import (
 
 
 func H(api frontend.API, m []frontend.Variable) []frontend.Variable {
-	fmt.Println("sha input", m)
 	rawResult := sha512.Sha512(api, swapByteEndianness(m))
 	sResult := swapByteEndianness(rawResult[:])
-	fmt.Println("sha output", sResult)
 	return sResult
 }
 
@@ -36,10 +33,10 @@ func bits_to_scalar(c *EdCurve, s []frontend.Variable) EdCoordinate {
 	elt := emulated.NewElement[Ed25519](0)
 	if len(elt.Limbs) != 4 { panic("bad length") }
 	i := 0
-	elt.Limbs[0] = c.api.FromBinary(s[i:i+64]...); i += 64
-	elt.Limbs[1] = c.api.FromBinary(s[i:i+64]...); i += 64
-	elt.Limbs[2] = c.api.FromBinary(s[i:i+64]...); i += 64
-	elt.Limbs[3] = c.api.FromBinary(s[i:i+64]...); i += 64
+	for k := 0; k < 4; k++ {
+		elt.Limbs[k] = c.api.FromBinary(s[i:i+64]...)
+		i += 64
+	}
 	if i != len(s) { panic("bad length") }
 	return elt
 }
@@ -83,13 +80,8 @@ func CheckValid(c *EdCurve, s, m, pk []frontend.Variable) {
 	R := bits_to_element(c, s[:256])
 	A := bits_to_element(c, pk)
 	h := H(c.api, concat(s[:256], pk, m))
-	fmt.Println("h", h)
-	fmt.Println("g", dbg(c.g.X), dbg(c.g.Y))
-	fmt.Println("s last half", s[256:])
 	v1 := c.ScalarMulBinary(c.g, s[256:])
-	fmt.Println("v1", dbg(v1.X), dbg(v1.Y))
 	v2 := c.Add(R, c.ScalarMulBinary(A, h))
-	fmt.Println("v2", dbg(v2.X), dbg(v2.Y))
 	c.AssertIsEqual(v1, v2)
 }
 
@@ -150,10 +142,6 @@ func toValue(s EdCoordinate) *big.Int {
 		placeValue.Lsh(placeValue, Ed25519{}.BitsPerLimb())
 	}
 	return result
-}
-
-func dbg(s EdCoordinate) string {
-	return toValue(s).Text(16)
 }
 
 func _const(x int64) EdCoordinate {
