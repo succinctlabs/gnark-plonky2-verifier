@@ -112,6 +112,11 @@ func (c *Curve[T, S]) AssertIsOnCurve(p AffinePoint[T]) {
 	c.baseApi.AssertIsEqual(lhs, rhs)
 }
 
+func (c *Curve[T, S]) AssertIsZero(p AffinePoint[T]) {
+	c.baseApi.AssertIsEqual(p.X, 0)
+	c.baseApi.AssertIsEqual(p.Y, 1)
+}
+
 func (c *Curve[T, S]) Add(q, r AffinePoint[T]) AffinePoint[T] {
 	// u = (x1 + y1) * (x2 + y2)
 	u1 := c.baseApi.Mul(q.X, c.a)
@@ -151,7 +156,7 @@ func (c *Curve[T, S]) Double(p AffinePoint[T]) AffinePoint[T] {
 	v := c.baseApi.Mul(p.X, p.X)
 	w := c.baseApi.Mul(p.Y, p.Y)
 
-	n1 := c.baseApi.Mul(2, u)
+	n1 := c.baseApi.Add(u, u)
 	av := c.baseApi.Mul(v, c.a)
 	n2 := c.baseApi.Sub(w, av)
 	d1 := c.baseApi.Add(w, av)
@@ -176,17 +181,21 @@ func (c *Curve[T, S]) Select(b frontend.Variable, p, q AffinePoint[T]) AffinePoi
 }
 
 func (c *Curve[T, S]) ScalarMul(p AffinePoint[T], s emulated.Element[S]) AffinePoint[T] {
-	res := p
-	acc := c.Double(p)
+	return c.ScalarMulBinary(p, c.scalarApi.ToBinary(s))
+}
 
-	sBits := c.scalarApi.ToBinary(s)
-	for i := 1; i < len(sBits); i++ {
+func (c *Curve[T, S]) ScalarMulBinary(p AffinePoint[T], sBits []frontend.Variable) AffinePoint[T] {
+	res := AffinePoint[T]{
+		X: emulated.NewElement[T](0),
+		Y: emulated.NewElement[T](1),
+	}
+	acc := p
+
+	for i := 0; i < len(sBits); i++ {
 		tmp := c.Add(res, acc)
 		res = c.Select(sBits[i], tmp, res)
 		acc = c.Double(acc)
 	}
 
-	tmp := c.Add(res, c.Neg(p))
-	res = c.Select(sBits[0], res, tmp)
 	return res
 }
