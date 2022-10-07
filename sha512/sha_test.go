@@ -1,22 +1,24 @@
 package sha512
 
 import (
-	"testing"
 	"encoding/hex"
+	"testing"
 
+	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
-	"github.com/consensys/gnark-crypto/ecc"
 )
 
-type Sha512Circuit struct {
-	in []frontend.Variable `gnark:"in"`
+type TestSha512Circuit struct {
+	in  []frontend.Variable `gnark:"in"`
 	out []frontend.Variable `gnark:"out"`
 }
 
-func (circuit *Sha512Circuit) Define(api frontend.API) error {
+func (circuit *TestSha512Circuit) Define(api frontend.API) error {
 	res := Sha512(api, circuit.in)
-	if len(res) != 512 { panic("bad length") }
+	if len(res) != 512 {
+		panic("bad length")
+	}
 	for i := 0; i < 512; i++ {
 		api.AssertIsEqual(res[i], circuit.out[i])
 	}
@@ -25,20 +27,24 @@ func (circuit *Sha512Circuit) Define(api frontend.API) error {
 
 var testCurve = ecc.BN254
 
-func TestSha512(t *testing.T) {
+func TestSha512Witness(t *testing.T) {
 	assert := test.NewAssert(t)
 
 	testCase := func(in []byte, output string) {
 		out, err := hex.DecodeString(output)
-		if err != nil { panic(err) }
-		if len(out) != 512 / 8 { panic("bad output length") }
+		if err != nil {
+			panic(err)
+		}
+		if len(out) != 512/8 {
+			panic("bad output length")
+		}
 
-		circuit := Sha512Circuit {
-			in: toBits(in),
+		circuit := TestSha512Circuit{
+			in:  toBits(in),
 			out: toBits(out),
 		}
-		witness := Sha512Circuit {
-			in: toBits(in),
+		witness := TestSha512Circuit{
+			in:  toBits(in),
 			out: toBits(out),
 		}
 		err = test.IsSolved(&circuit, &witness, testCurve.ScalarField())
@@ -51,10 +57,10 @@ func TestSha512(t *testing.T) {
 }
 
 func toBits(arr []byte) []frontend.Variable {
-	result := make([]frontend.Variable, len(arr) * 8)
+	result := make([]frontend.Variable, len(arr)*8)
 	for i, v := range arr {
 		for j := 0; j < 8; j++ {
-			if (v & (1 << (7-j))) != 0 {
+			if (v & (1 << (7 - j))) != 0 {
 				result[i*8+j] = 1
 			} else {
 				result[i*8+j] = 0

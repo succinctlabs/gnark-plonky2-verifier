@@ -1,3 +1,4 @@
+
 # gnark-ed25519
 ed25519 implementation in Gnark
 
@@ -10,3 +11,5 @@ To build and run:
 ```
 go build gnark-ed25519 && ./gnark-ed25519
 ```
+
+if it panics on compilation.... make vriables capitalzie
