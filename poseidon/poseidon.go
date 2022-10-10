@@ -18,14 +18,14 @@ const SPONGE_WIDTH = 12
 const SPONGE_RATE = 8
 
 type PoseidonState = [WIDTH]GoldilocksElement
+type HashOutput = [4]GoldilocksElement
 type PoseidonChip struct {
 	api   frontend.API
 	field frontend.API
 }
 
-func Poseidon(api frontend.API, field frontend.API, input PoseidonState) PoseidonState {
-	chip := &PoseidonChip{api: api, field: field}
-	return chip.Poseidon(input)
+func NewPoseidonChip(api frontend.API, field frontend.API) *PoseidonChip {
+	return &PoseidonChip{api: api, field: field}
 }
 
 func (c *PoseidonChip) Poseidon(input PoseidonState) PoseidonState {
@@ -35,6 +35,37 @@ func (c *PoseidonChip) Poseidon(input PoseidonState) PoseidonState {
 	state = c.partialRounds(state, &roundCounter)
 	state = c.fullRounds(state, &roundCounter)
 	return state
+}
+
+func (c *PoseidonChip) HashNToMNoPad(input []GoldilocksElement, nbOutputs int) []GoldilocksElement {
+	var state PoseidonState
+
+	for i := 0; i < len(input); i += SPONGE_RATE {
+		for j := 0; j < SPONGE_RATE; j++ {
+			if i+j < len(input) {
+				state[j] = input[i+j]
+			}
+		}
+		state = c.Poseidon(state)
+	}
+
+	var outputs []GoldilocksElement
+
+	for {
+		for i := 0; i < SPONGE_RATE; i++ {
+			outputs = append(outputs, state[i])
+			if len(outputs) == nbOutputs {
+				return outputs
+			}
+		}
+		state = c.Poseidon(state)
+	}
+}
+
+func (c *PoseidonChip) HashNoPad(input []GoldilocksElement) HashOutput {
+	var hash [4]GoldilocksElement
+	copy(hash[:], c.HashNToMNoPad(input, 4))
+	return hash
 }
 
 func (c *PoseidonChip) fullRounds(state PoseidonState, roundCounter *int) PoseidonState {

@@ -2,17 +2,14 @@ package poseidon
 
 import (
 	. "gnark-ed25519/goldilocks"
-	"math/big"
+	"gnark-ed25519/utils"
 	"testing"
 
-	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/consensys/gnark/test"
 )
-
-var testCurve = ecc.BN254
 
 type TestPoseidonCircuit struct {
 	In  [12]frontend.Variable
@@ -28,7 +25,8 @@ func (circuit *TestPoseidonCircuit) Define(api frontend.API) error {
 		input[i] = goldilocksApi.FromBinary(api.ToBinary(circuit.In[i], 64)).(GoldilocksElement)
 	}
 
-	output := Poseidon(api, goldilocksApi, input)
+	chip := NewPoseidonChip(api, goldilocksApi)
+	output := chip.Poseidon(input)
 
 	// Check that output is correct
 	for i := 0; i < 12; i++ {
@@ -44,66 +42,39 @@ func (circuit *TestPoseidonCircuit) Define(api frontend.API) error {
 func TestPoseidonWitness(t *testing.T) {
 	assert := test.NewAssert(t)
 
-	testCase := func(inBigInt [12]big.Int, outBigInt [12]big.Int) {
-		var in [12]frontend.Variable
-		var out [12]frontend.Variable
-
-		for i := 0; i < 12; i++ {
-			in[i] = inBigInt[i]
-			out[i] = outBigInt[i]
-		}
-
+	testCase := func(in [12]frontend.Variable, out [12]frontend.Variable) {
 		circuit := TestPoseidonCircuit{In: in, Out: out}
 		witness := TestPoseidonCircuit{In: in, Out: out}
 		err := test.IsSolved(&circuit, &witness, testCurve.ScalarField())
 		assert.NoError(err)
 	}
 
-	inStr := [12]string{"0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"}
-	outStr := [12]string{
+	inStr := []string{"0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"}
+	outStr := []string{
 		"4330397376401421145", "14124799381142128323", "8742572140681234676",
 		"14345658006221440202", "15524073338516903644", "5091405722150716653",
 		"15002163819607624508", "2047012902665707362", "16106391063450633726",
 		"4680844749859802542", "15019775476387350140", "1698615465718385111",
 	}
-
-	var inBigInt [12]big.Int
-	var outBigInt [12]big.Int
-
-	for i := 0; i < 12; i++ {
-		inTmp := new(big.Int)
-		inTmp, _ = inTmp.SetString(inStr[i], 10)
-		inBigInt[i] = *inTmp
-
-		outTmp := new(big.Int)
-		outTmp, _ = outTmp.SetString(outStr[i], 10)
-		outBigInt[i] = *outTmp
-	}
-
-	testCase(inBigInt, outBigInt)
+	var in [12]frontend.Variable
+	var out [12]frontend.Variable
+	copy(in[:], utils.StrArrayToFrontendVariableArray(inStr))
+	copy(out[:], utils.StrArrayToFrontendVariableArray(outStr))
+	testCase(in, out)
 }
 
 func TestPoseidonProof(t *testing.T) {
-	inStr := [12]string{"0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"}
-	outStr := [12]string{
+	inStr := []string{"0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"}
+	outStr := []string{
 		"4330397376401421145", "14124799381142128323", "8742572140681234676",
 		"14345658006221440202", "15524073338516903644", "5091405722150716653",
 		"15002163819607624508", "2047012902665707362", "16106391063450633726",
 		"4680844749859802542", "15019775476387350140", "1698615465718385111",
 	}
-
 	var in [12]frontend.Variable
 	var out [12]frontend.Variable
-
-	for i := 0; i < 12; i++ {
-		inTmp := new(big.Int)
-		inTmp, _ = inTmp.SetString(inStr[i], 10)
-		in[i] = *inTmp
-
-		outTmp := new(big.Int)
-		outTmp, _ = outTmp.SetString(outStr[i], 10)
-		out[i] = *outTmp
-	}
+	copy(in[:], utils.StrArrayToFrontendVariableArray(inStr))
+	copy(out[:], utils.StrArrayToFrontendVariableArray(outStr))
 
 	circuit := TestPoseidonCircuit{In: in, Out: out}
 	assignment := TestPoseidonCircuit{In: in, Out: out}

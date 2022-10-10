@@ -1,79 +1,97 @@
 package plonky2_verifier
 
 import (
+	"fmt"
+	. "gnark-ed25519/goldilocks"
+	"gnark-ed25519/poseidon"
+	. "gnark-ed25519/poseidon"
+
 	"github.com/consensys/gnark/frontend"
 )
 
-type V = frontend.Variable
-
-type Challenger struct {
-	sponge_state: [SPONGE_WIDTH]V
-	input_buffer: []V
-	output_buffer: []V
+type ChallengerChip struct {
+	api          frontend.API
+	field        frontend.API
+	poseidonChip PoseidonChip
+	spongeState  [SPONGE_WIDTH]GoldilocksElement
+	inputBuffer  []GoldilocksElement
+	outputBuffer []GoldilocksElement
 }
 
-func NewChallenger() Challenger {
-	var sponge_state [SPONGE_WIDTH]V
-	for i := 0; i < SPONGE_WIDTH; i++ {
-		sponge_state[i] = 0
-	}
-	return Challenger {
-		sponge_state: sponge_state,
-		input_buffer: []V{},
-		output_buffer: []V{},
-	}
-}
-
-func (c *Challenger) observe_elements(elements []V) {
-	for _, element := range elements {
-		c.observe_element(element)
+func NewChallengerChip(api frontend.API, field frontend.API, poseidonChip PoseidonChip) *ChallengerChip {
+	var spongeState [SPONGE_WIDTH]GoldilocksElement
+	var inputBuffer []GoldilocksElement
+	var outputBuffer []GoldilocksElement
+	return &ChallengerChip{
+		api:          api,
+		field:        field,
+		poseidonChip: poseidonChip,
+		spongeState:  spongeState,
+		inputBuffer:  inputBuffer,
+		outputBuffer: outputBuffer,
 	}
 }
 
-func (c *Challenger) observe_hash(hash []V) {
-	c.observe_elements(hash)
-}
-
-func (c *Challenger) observe_element(element V) {
-	c.output_buffer = V[]{}
-	c.input_buffer = append(c.input_buffer, element)
-	if len(c.input_buffer) == SPONGE_RATE {
+func (c *ChallengerChip) ObserveElement(element GoldilocksElement) {
+	c.outputBuffer = clearBuffer(c.outputBuffer)
+	c.inputBuffer = append(c.inputBuffer, element)
+	if len(c.inputBuffer) == SPONGE_RATE {
 		c.duplexing()
 	}
 }
 
-func (c *Challenger) observe_cap(cap [][]V) {
-	for _, hash := range cap {
-		c.observe_hash(hash)
+func (c *ChallengerChip) ObserveElements(elements []GoldilocksElement) {
+	for i := 0; i < len(elements); i++ {
+		c.ObserveElement(elements[i])
 	}
 }
 
-func (c *Challenger) duplexing() {
-	if len(c.input_buffer) > SPONGE_RATE { panic("buffer too large") }
-
-	for i, input := range c.input_buffer {
-		c.sponge_state[i] = input
-	}
-	c.input_buffer = V[]{}
-
-	c.sponge_state = poseidon(c.sponge_state)
-
-	c.output_buffer = c.sponge_state[:SPONGE_RATE]
+func (c *ChallengerChip) ObserveHash(hash HashOutput) {
+	c.ObserveElements(hash[:])
 }
 
-func (c *Challenger) get_challenge() V {
-	if len(c.input_buffer) > 0 || len(c.output_buffer) == 0 {
+func (c *ChallengerChip) ObserveCap(cap []HashOutput) {
+	for i := 0; i < len(cap); i++ {
+		c.ObserveHash(cap[i])
+	}
+}
+
+func (c *ChallengerChip) GetChallenge() GoldilocksElement {
+	if len(c.inputBuffer) != 0 || len(c.outputBuffer) == 0 {
 		c.duplexing()
 	}
-	result := c.output_buffer[len(c.output_buffer) - 1]
-	c.output_buffer = c.output_buffer[:len(c.output_buffer) - 1]
-	return result
+
+	challenge := c.outputBuffer[len(c.outputBuffer)-1]
+	c.outputBuffer = c.outputBuffer[:len(c.outputBuffer)-1]
+
+	return challenge
 }
 
-func (c *Challenger) get_n_challenges(n int) []V {
-	result := make([]V, n)
+func (c *ChallengerChip) GetNChallenges(n int) []GoldilocksElement {
+	challenges := make([]GoldilocksElement, n)
 	for i := 0; i < n; i++ {
-		result[i] = c.get_challenge()
+		challenges[i] = c.GetChallenge()
 	}
-	return result
+	return challenges
+}
+
+func clearBuffer(buffer []GoldilocksElement) []GoldilocksElement {
+	return make([]GoldilocksElement, 0)
+}
+
+func (c *ChallengerChip) duplexing() {
+	if len(c.inputBuffer) > SPONGE_RATE {
+		fmt.Println(len(c.inputBuffer))
+		panic("something went wrong")
+	}
+	for i := 0; i < len(c.inputBuffer); i++ {
+		c.spongeState[i] = c.inputBuffer[i]
+	}
+	c.inputBuffer = clearBuffer(c.inputBuffer)
+	c.spongeState = c.poseidonChip.Poseidon(c.spongeState)
+	clearBuffer(c.outputBuffer)
+	for i := 0; i < poseidon.SPONGE_RATE; i++ {
+		c.outputBuffer = append(c.outputBuffer, c.spongeState[i])
+		// c.outputBuffer[i] = c.spongeState[i]
+	}
 }
