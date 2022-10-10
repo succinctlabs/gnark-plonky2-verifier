@@ -1,9 +1,13 @@
 package plonky2_verifier
 
 import (
+	"encoding/json"
+	"fmt"
 	. "gnark-ed25519/goldilocks"
 	. "gnark-ed25519/poseidon"
 	"gnark-ed25519/utils"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -70,6 +74,22 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	}
 
 	return nil
+}
+
+func TestDeserializationOfPlonky2Proof(t *testing.T) {
+	fibonacciProofPath := "./fibonacci_proof.json"
+	jsonFile, err := os.Open(fibonacciProofPath)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer jsonFile.Close()
+
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	var result Proof
+	json.Unmarshal(byteValue, &result)
+
+	fmt.Println(result.WiresCap)
 }
 
 func TestChallengerWitness(t *testing.T) {
