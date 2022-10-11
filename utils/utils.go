@@ -1,7 +1,7 @@
 package utils
 
 import (
-	. "gnark-ed25519/goldilocks"
+	. "gnark-ed25519/field"
 	"math/big"
 
 	"github.com/consensys/gnark/frontend"
@@ -26,8 +26,8 @@ func StrArrayToFrontendVariableArray(input []string) []frontend.Variable {
 	return output
 }
 
-func Uint64ArrayToGoldilocksElementArray(input []uint64) []GoldilocksElement {
-	var output []GoldilocksElement
+func Uint64ArrayToFArray(input []uint64) []F {
+	var output []F
 	for i := 0; i < len(input); i++ {
 		output = append(output, emulated.NewElement[emulated.Goldilocks](input[i]))
 	}

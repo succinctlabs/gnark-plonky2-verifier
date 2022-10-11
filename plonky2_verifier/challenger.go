@@ -2,9 +2,8 @@ package plonky2_verifier
 
 import (
 	"fmt"
-	. "gnark-ed25519/goldilocks"
+	. "gnark-ed25519/field"
 	"gnark-ed25519/poseidon"
-	. "gnark-ed25519/poseidon"
 
 	"github.com/consensys/gnark/frontend"
 )
@@ -12,16 +11,16 @@ import (
 type ChallengerChip struct {
 	api          frontend.API
 	field        frontend.API
-	poseidonChip PoseidonChip
-	spongeState  [SPONGE_WIDTH]GoldilocksElement
-	inputBuffer  []GoldilocksElement
-	outputBuffer []GoldilocksElement
+	poseidonChip poseidon.PoseidonChip
+	spongeState  [poseidon.SPONGE_WIDTH]F
+	inputBuffer  []F
+	outputBuffer []F
 }
 
-func NewChallengerChip(api frontend.API, field frontend.API, poseidonChip PoseidonChip) *ChallengerChip {
-	var spongeState [SPONGE_WIDTH]GoldilocksElement
-	var inputBuffer []GoldilocksElement
-	var outputBuffer []GoldilocksElement
+func NewChallengerChip(api frontend.API, field frontend.API, poseidonChip poseidon.PoseidonChip) *ChallengerChip {
+	var spongeState [poseidon.SPONGE_WIDTH]F
+	var inputBuffer []F
+	var outputBuffer []F
 	return &ChallengerChip{
 		api:          api,
 		field:        field,
@@ -32,31 +31,31 @@ func NewChallengerChip(api frontend.API, field frontend.API, poseidonChip Poseid
 	}
 }
 
-func (c *ChallengerChip) ObserveElement(element GoldilocksElement) {
+func (c *ChallengerChip) ObserveElement(element F) {
 	c.outputBuffer = clearBuffer(c.outputBuffer)
 	c.inputBuffer = append(c.inputBuffer, element)
-	if len(c.inputBuffer) == SPONGE_RATE {
+	if len(c.inputBuffer) == poseidon.SPONGE_RATE {
 		c.duplexing()
 	}
 }
 
-func (c *ChallengerChip) ObserveElements(elements []GoldilocksElement) {
+func (c *ChallengerChip) ObserveElements(elements []F) {
 	for i := 0; i < len(elements); i++ {
 		c.ObserveElement(elements[i])
 	}
 }
 
-func (c *ChallengerChip) ObserveHash(hash HashOutput) {
+func (c *ChallengerChip) ObserveHash(hash Hash) {
 	c.ObserveElements(hash[:])
 }
 
-func (c *ChallengerChip) ObserveCap(cap []HashOutput) {
+func (c *ChallengerChip) ObserveCap(cap []Hash) {
 	for i := 0; i < len(cap); i++ {
 		c.ObserveHash(cap[i])
 	}
 }
 
-func (c *ChallengerChip) GetChallenge() GoldilocksElement {
+func (c *ChallengerChip) GetChallenge() F {
 	if len(c.inputBuffer) != 0 || len(c.outputBuffer) == 0 {
 		c.duplexing()
 	}
@@ -67,20 +66,20 @@ func (c *ChallengerChip) GetChallenge() GoldilocksElement {
 	return challenge
 }
 
-func (c *ChallengerChip) GetNChallenges(n int) []GoldilocksElement {
-	challenges := make([]GoldilocksElement, n)
+func (c *ChallengerChip) GetNChallenges(n int) []F {
+	challenges := make([]F, n)
 	for i := 0; i < n; i++ {
 		challenges[i] = c.GetChallenge()
 	}
 	return challenges
 }
 
-func clearBuffer(buffer []GoldilocksElement) []GoldilocksElement {
-	return make([]GoldilocksElement, 0)
+func clearBuffer(buffer []F) []F {
+	return make([]F, 0)
 }
 
 func (c *ChallengerChip) duplexing() {
-	if len(c.inputBuffer) > SPONGE_RATE {
+	if len(c.inputBuffer) > poseidon.SPONGE_RATE {
 		fmt.Println(len(c.inputBuffer))
 		panic("something went wrong")
 	}

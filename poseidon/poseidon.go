@@ -1,12 +1,10 @@
 package poseidon
 
 import (
-	. "gnark-ed25519/goldilocks"
+	. "gnark-ed25519/field"
 
 	"github.com/consensys/gnark/frontend"
 )
-
-/* Note: This package assumes usage of the BN254 curve in various places. */
 
 const HALF_N_FULL_ROUNDS = 4
 const N_FULL_ROUNDS_TOTAL = 2 * HALF_N_FULL_ROUNDS
@@ -17,8 +15,7 @@ const WIDTH = 12
 const SPONGE_WIDTH = 12
 const SPONGE_RATE = 8
 
-type PoseidonState = [WIDTH]GoldilocksElement
-type HashOutput = [4]GoldilocksElement
+type PoseidonState = [WIDTH]F
 type PoseidonChip struct {
 	api   frontend.API
 	field frontend.API
@@ -37,7 +34,7 @@ func (c *PoseidonChip) Poseidon(input PoseidonState) PoseidonState {
 	return state
 }
 
-func (c *PoseidonChip) HashNToMNoPad(input []GoldilocksElement, nbOutputs int) []GoldilocksElement {
+func (c *PoseidonChip) HashNToMNoPad(input []F, nbOutputs int) []F {
 	var state PoseidonState
 
 	for i := 0; i < len(input); i += SPONGE_RATE {
@@ -49,7 +46,7 @@ func (c *PoseidonChip) HashNToMNoPad(input []GoldilocksElement, nbOutputs int) [
 		state = c.Poseidon(state)
 	}
 
-	var outputs []GoldilocksElement
+	var outputs []F
 
 	for {
 		for i := 0; i < SPONGE_RATE; i++ {
@@ -62,8 +59,8 @@ func (c *PoseidonChip) HashNToMNoPad(input []GoldilocksElement, nbOutputs int) [
 	}
 }
 
-func (c *PoseidonChip) HashNoPad(input []GoldilocksElement) HashOutput {
-	var hash [4]GoldilocksElement
+func (c *PoseidonChip) HashNoPad(input []F) Hash {
+	var hash Hash
 	copy(hash[:], c.HashNToMNoPad(input, 4))
 	return hash
 }
@@ -87,7 +84,7 @@ func (c *PoseidonChip) partialRounds(state PoseidonState, roundCounter *int) Pos
 
 	for i := 0; i < N_PARTIAL_ROUNDS; i++ {
 		state[0] = c.sBoxMonomial(state[0])
-		state[0] = c.field.Add(state[0], FAST_PARTIAL_ROUND_CONSTANTS[i]).(GoldilocksElement)
+		state[0] = c.field.Add(state[0], FAST_PARTIAL_ROUND_CONSTANTS[i]).(F)
 		state = c.mdsPartialLayerFast(state, i)
 	}
 
@@ -99,8 +96,8 @@ func (c *PoseidonChip) partialRounds(state PoseidonState, roundCounter *int) Pos
 func (c *PoseidonChip) constantLayer(state PoseidonState, roundCounter *int) PoseidonState {
 	for i := 0; i < 12; i++ {
 		if i < WIDTH {
-			roundConstant := NewGoldilocksElement(ALL_ROUND_CONSTANTS[i+WIDTH*(*roundCounter)])
-			state[i] = c.field.Add(state[i], roundConstant).(GoldilocksElement)
+			roundConstant := NewFieldElement(ALL_ROUND_CONSTANTS[i+WIDTH*(*roundCounter)])
+			state[i] = c.field.Add(state[i], roundConstant).(F)
 		}
 	}
 	return state
@@ -115,11 +112,11 @@ func (c *PoseidonChip) sBoxLayer(state PoseidonState) PoseidonState {
 	return state
 }
 
-func (c *PoseidonChip) sBoxMonomial(x GoldilocksElement) GoldilocksElement {
+func (c *PoseidonChip) sBoxMonomial(x F) F {
 	x2 := c.field.Mul(x, x)
 	x4 := c.field.Mul(x2, x2)
 	x3 := c.field.Mul(x2, x)
-	return c.field.Mul(x3, x4).(GoldilocksElement)
+	return c.field.Mul(x3, x4).(F)
 }
 
 func (c *PoseidonChip) mdsRowShf(r int, v [WIDTH]frontend.Variable) frontend.Variable {
@@ -139,7 +136,7 @@ func (c *PoseidonChip) mdsRowShf(r int, v [WIDTH]frontend.Variable) frontend.Var
 func (c *PoseidonChip) mdsLayer(state_ PoseidonState) PoseidonState {
 	var result PoseidonState
 	for i := 0; i < WIDTH; i++ {
-		result[i] = NewGoldilocksElement(0)
+		result[i] = NewFieldElement(0)
 	}
 
 	var state [WIDTH]frontend.Variable
@@ -151,7 +148,7 @@ func (c *PoseidonChip) mdsLayer(state_ PoseidonState) PoseidonState {
 		if r < WIDTH {
 			sum := c.mdsRowShf(r, state)
 			bits := c.api.ToBinary(sum)
-			result[r] = c.field.FromBinary(bits).(GoldilocksElement)
+			result[r] = c.field.FromBinary(bits).(F)
 		}
 	}
 
@@ -161,7 +158,7 @@ func (c *PoseidonChip) mdsLayer(state_ PoseidonState) PoseidonState {
 func (c *PoseidonChip) partialFirstConstantLayer(state PoseidonState) PoseidonState {
 	for i := 0; i < 12; i++ {
 		if i < WIDTH {
-			state[i] = c.field.Add(state[i], NewGoldilocksElement(FAST_PARTIAL_FIRST_ROUND_CONSTANT[i])).(GoldilocksElement)
+			state[i] = c.field.Add(state[i], NewFieldElement(FAST_PARTIAL_FIRST_ROUND_CONSTANT[i])).(F)
 		}
 	}
 	return state
@@ -170,7 +167,7 @@ func (c *PoseidonChip) partialFirstConstantLayer(state PoseidonState) PoseidonSt
 func (c *PoseidonChip) mdsPartialLayerInit(state PoseidonState) PoseidonState {
 	var result PoseidonState
 	for i := 0; i < 12; i++ {
-		result[i] = NewGoldilocksElement(0)
+		result[i] = NewFieldElement(0)
 	}
 
 	result[0] = state[0]
@@ -179,8 +176,8 @@ func (c *PoseidonChip) mdsPartialLayerInit(state PoseidonState) PoseidonState {
 		if r < WIDTH {
 			for d := 1; d < 12; d++ {
 				if d < WIDTH {
-					t := NewGoldilocksElement(FAST_PARTIAL_ROUND_INITIAL_MATRIX[r-1][d-1])
-					result[d] = c.field.Add(result[d], c.field.Mul(state[r], t)).(GoldilocksElement)
+					t := NewFieldElement(FAST_PARTIAL_ROUND_INITIAL_MATRIX[r-1][d-1])
+					result[d] = c.field.Add(result[d], c.field.Mul(state[r], t)).(F)
 				}
 			}
 		}
@@ -206,15 +203,15 @@ func (c *PoseidonChip) mdsPartialLayerFast(state PoseidonState, r int) PoseidonS
 
 	var result PoseidonState
 	for i := 0; i < WIDTH; i++ {
-		result[i] = NewGoldilocksElement(0)
+		result[i] = NewFieldElement(0)
 	}
 
-	result[0] = d.(GoldilocksElement)
+	result[0] = d.(F)
 
 	for i := 1; i < 12; i++ {
 		if i < WIDTH {
-			t := NewGoldilocksElement(FAST_PARTIAL_ROUND_VS[r][i-1])
-			result[i] = c.field.Add(state[i], c.field.Mul(state[0], t)).(GoldilocksElement)
+			t := NewFieldElement(FAST_PARTIAL_ROUND_VS[r][i-1])
+			result[i] = c.field.Add(state[i], c.field.Mul(state[0], t)).(F)
 		}
 	}
 
