@@ -1,8 +1,10 @@
 package plonky2_verifier
 
 import (
+	"fmt"
 	. "gnark-ed25519/field"
 	"gnark-ed25519/poseidon"
+	"gnark-ed25519/utils"
 
 	"github.com/consensys/gnark/frontend"
 )
@@ -17,12 +19,14 @@ func (c *VerifierChip) GetPublicInputsHash(publicInputs []F) Hash {
 	return c.poseidonChip.HashNoPad(publicInputs)
 }
 
-func (c *VerifierChip) GetChallenges(proofWithPis ProofWithPublicInputs, publicInputsHash Hash, commonData CommonCircuitData) ProofChallenges {
+func (c *VerifierChip) GetChallenges(proofWithPis ProofWithPublicInputs, publicInputsHash Hash, commonData CommonCircuitDataRaw) ProofChallenges {
 	config := commonData.Config
 	numChallenges := config.NumChallenges
 	challenger := NewChallengerChip(c.api, c.field, c.poseidonChip)
 
-	challenger.ObserveHash(commonData.CircuitDigest)
+	var circuitDigest Hash
+	copy(circuitDigest[:], utils.Uint64ArrayToFArray(commonData.CircuitDigest.Elements))
+	challenger.ObserveHash(circuitDigest)
 	challenger.ObserveHash(publicInputsHash)
 	challenger.ObserveCap(proofWithPis.Proof.WiresCap)
 	plonkBetas := challenger.GetNChallenges(numChallenges)
@@ -33,8 +37,6 @@ func (c *VerifierChip) GetChallenges(proofWithPis ProofWithPublicInputs, publicI
 
 	challenger.ObserveCap(proofWithPis.Proof.QuotientPolysCap)
 	plonkZeta := challenger.GetExtensionChallenge()
-
-	_, _, _, _ = plonkAlphas, plonkBetas, plonkGammas, plonkZeta
 
 	challenger.ObserveOpenings(proofWithPis.Proof.Openings.ToFriOpenings())
 
@@ -47,12 +49,14 @@ func (c *VerifierChip) GetChallenges(proofWithPis ProofWithPublicInputs, publicI
 			proofWithPis.Proof.OpeningProof.CommitPhaseMerkleCaps,
 			proofWithPis.Proof.OpeningProof.FinalPoly,
 			proofWithPis.Proof.OpeningProof.PowWitness,
-			commonData.DegreeBits, config.FriConfig,
+			commonData.DegreeBits,
+			config.FriConfig,
 		),
 	}
 }
 
-func (c *VerifierChip) Verify(proofWithPis ProofWithPublicInputs, verifierData VerifierOnlyCircuitData, commonData CommonCircuitData) {
+func (c *VerifierChip) Verify(proofWithPis ProofWithPublicInputs, verifierData VerifierOnlyCircuitData, commonData CommonCircuitDataRaw) {
 	publicInputsHash := c.GetPublicInputsHash(proofWithPis.PublicInputs)
-	_ = c.GetChallenges(proofWithPis, publicInputsHash, commonData)
+	proofChallenges := c.GetChallenges(proofWithPis, publicInputsHash, commonData)
+	fmt.Printf("%+v\n", proofChallenges)
 }
