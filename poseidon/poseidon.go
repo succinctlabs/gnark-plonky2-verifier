@@ -70,9 +70,6 @@ func (c *PoseidonChip) fullRounds(state PoseidonState, roundCounter *int) Poseid
 		state = c.constantLayer(state, roundCounter)
 		state = c.sBoxLayer(state)
 		state = c.mdsLayer(state)
-		if *roundCounter >= 26 && i == 3 {
-			break
-		}
 		*roundCounter += 1
 	}
 	return state
