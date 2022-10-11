@@ -8,53 +8,6 @@ import (
 	"os"
 )
 
-// type HashRaw = []uint64
-
-// type MerkleCapRaw struct {
-// 	Elements []HashRaw `json:"elements"`
-// }
-
-// type QuadraticExtensionRaw = [2]uint64
-
-// type OpeningSetRaw struct {
-// 	Constants       []QuadraticExtensionRaw `json:"constants"`
-// 	PlonkSigmas     []QuadraticExtensionRaw `json:"plonk_sigmas"`
-// 	Wires           []QuadraticExtensionRaw `json:"wires"`
-// 	PlonkZs         []QuadraticExtensionRaw `json:"plonk_zs"`
-// 	PlonkZsNext     []QuadraticExtensionRaw `json:"plonk_zs_next"`
-// 	PartialProducts []QuadraticExtensionRaw `json:"partial_products"`
-// 	QuotientPolys   []QuadraticExtensionRaw `json:"quotient_polys"`
-// }
-
-// type FriQueryRoundRaw struct {
-// 	InitialTreesProof struct {
-// 		EvalsProofs [][]interface{} `json:"evals_proofs"`
-// 	} `json:"initial_trees_proof"`
-// 	Steps []uint64 `json:"steps"`
-// }
-
-// type PolynomialCoeffsRaw struct {
-// 	Coeffs []uint64 `json:"coeffs"`
-// }
-
-// type FriProofRaw struct {
-// 	CommitPhaseMerkleCaps []MerkleCapRaw      `json:"commit_phase_merkle_caps"`
-// 	QueryRoundProofs      FriQueryRoundRaw    `json:"query_round_proofs"`
-// 	FinalPoly             PolynomialCoeffsRaw `json:"final_poly"`
-// 	PowWitness            uint64              `json:"pow_witness"`
-// }
-
-// type ProofWithPublicInputsRaw struct {
-// 	Proof struct {
-// 		WiresCap                  MerkleCapRaw  `json:"wires_cap"`
-// 		PlonkZsPartialProductsCap MerkleCapRaw  `json:"plonk_zs_partial_products_cap"`
-// 		QuotientPolysCap          MerkleCapRaw  `json:"quotient_polys_cap"`
-// 		Openings                  OpeningSetRaw `json:"openings"`
-// 		OpeningProof              FriProofRaw   `json:"opening_proof"`
-// 	} `json:"proof"`
-// 	PublicInputs []uint64 `json:"public_inputs"`
-// }
-
 type ProofWithPublicInputsRaw struct {
 	Proof struct {
 		WiresCap []struct {
@@ -107,7 +60,7 @@ type CommonCircuitDataRaw struct {
 			CapHeight         uint64 `json:"cap_height"`
 			ProofOfWorkBits   uint64 `json:"proof_of_work_bits"`
 			ReductionStrategy struct {
-				ConstantArityBits []uint64 `json:"ConstantArityBits"`
+				ConstantArityBits []int `json:"ConstantArityBits"`
 			} `json:"reduction_strategy"`
 			NumQueryRounds uint64 `json:"num_query_rounds"`
 		} `json:"fri_config"`
@@ -134,12 +87,12 @@ type CommonCircuitDataRaw struct {
 			End   uint64 `json:"end"`
 		} `json:"groups"`
 	} `json:"selectors_info"`
-	QuotientDegreeFactor uint64        `json:"quotient_degree_factor"`
-	NumGateConstraints   uint64        `json:"num_gate_constraints"`
-	NumConstants         uint64        `json:"num_constants"`
-	NumPublicInputs      uint64        `json:"num_public_inputs"`
-	KIs                  []interface{} `json:"k_is"`
-	NumPartialProducts   uint64        `json:"num_partial_products"`
+	QuotientDegreeFactor uint64   `json:"quotient_degree_factor"`
+	NumGateConstraints   uint64   `json:"num_gate_constraints"`
+	NumConstants         uint64   `json:"num_constants"`
+	NumPublicInputs      uint64   `json:"num_public_inputs"`
+	KIs                  []uint64 `json:"k_is"`
+	NumPartialProducts   uint64   `json:"num_partial_products"`
 	CircuitDigest        struct {
 		Elements []uint64 `json:"elements"`
 	} `json:"circuit_digest"`
@@ -238,4 +191,42 @@ func DeserializeProofWithPublicInputs(path string) ProofWithPublicInputs {
 	}(raw.Proof.OpeningProof))
 
 	return proofWithPis
+}
+
+func DeserializeCommonCircuitData(path string) CommonCircuitDataRaw {
+	jsonFile, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+
+	defer jsonFile.Close()
+	rawBytes, _ := ioutil.ReadAll(jsonFile)
+
+	var raw CommonCircuitDataRaw
+	err = json.Unmarshal(rawBytes, &raw)
+	if err != nil {
+		panic(err)
+	}
+
+	return raw
+}
+
+func DeserializeVerifierOnlyCircuitData(path string) VerifierOnlyCircuitData {
+	jsonFile, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+
+	defer jsonFile.Close()
+	rawBytes, _ := ioutil.ReadAll(jsonFile)
+
+	var raw VerifierOnlyCircuitDataRaw
+	err = json.Unmarshal(rawBytes, &raw)
+	if err != nil {
+		panic(err)
+	}
+
+	return VerifierOnlyCircuitData{
+		ConstantSigmasCap: DeserializeMerkleCap([]struct{ Elements []uint64 }(raw.ConstantsSigmasCap)),
+	}
 }
