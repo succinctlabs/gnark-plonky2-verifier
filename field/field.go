@@ -17,6 +17,10 @@ func NewFieldElement(x uint64) F {
 	return emulated.NewElement[EmulatedField](x)
 }
 
+func NewFieldElementFromString(x string) F {
+	return emulated.NewElement[EmulatedField](x)
+}
+
 func NewFieldAPI(api frontend.API) frontend.API {
 	field, err := emulated.NewField[EmulatedField](api)
 	if err != nil {

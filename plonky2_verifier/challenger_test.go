@@ -1,14 +1,10 @@
 package plonky2_verifier
 
 import (
-	"encoding/json"
-	"fmt"
 	"gnark-ed25519/field"
 	. "gnark-ed25519/field"
 	. "gnark-ed25519/poseidon"
 	"gnark-ed25519/utils"
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/consensys/gnark/frontend"
@@ -52,37 +48,33 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	plonkBetas := challengerChip.GetNChallenges(numChallenges)
 	plonkGammas := challengerChip.GetNChallenges(numChallenges)
 
-	expectedPlonkBetas := [2]frontend.Variable{
-		frontend.Variable("4678728155650926271"),
-		frontend.Variable("13611962404289024887"),
+	expectedPublicInputHash := [4]F{
+		NewFieldElementFromString("8416658900775745054"),
+		NewFieldElementFromString("12574228347150446423"),
+		NewFieldElementFromString("9629056739760131473"),
+		NewFieldElementFromString("3119289788404190010"),
 	}
+
+	for i := 0; i < 4; i++ {
+		field.AssertIsEqual(publicInputHash[i], expectedPublicInputHash[i])
+	}
+
+	expectedPlonkBetas := [2]F{
+		NewFieldElementFromString("4678728155650926271"),
+		NewFieldElementFromString("13611962404289024887"),
+	}
+
 	expectedPlonkGammas := [2]frontend.Variable{
-		frontend.Variable("13237663823305715949"),
-		frontend.Variable("15389314098328235145"),
+		NewFieldElementFromString("13237663823305715949"),
+		NewFieldElementFromString("15389314098328235145"),
 	}
 
 	for i := 0; i < 2; i++ {
-		field.AssertIsEqual(plonkBetas[i], field.FromBinary(api.ToBinary(expectedPlonkBetas[i])).(F))
-		field.AssertIsEqual(plonkGammas[i], field.FromBinary(api.ToBinary(expectedPlonkGammas[i])).(F))
+		field.AssertIsEqual(plonkBetas[i], expectedPlonkBetas[i])
+		field.AssertIsEqual(plonkGammas[i], expectedPlonkGammas[i])
 	}
 
 	return nil
-}
-
-func TestDeserializationOfPlonky2Proof(t *testing.T) {
-	fibonacciProofPath := "./fibonacci_proof.json"
-	jsonFile, err := os.Open(fibonacciProofPath)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer jsonFile.Close()
-
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-
-	var result Proof
-	json.Unmarshal(byteValue, &result)
-
-	fmt.Println(result.WiresCap)
 }
 
 func TestChallengerWitness(t *testing.T) {

@@ -42,7 +42,7 @@ type ProofWithPublicInputsRaw struct {
 			PowWitness uint64 `json:"pow_witness"`
 		} `json:"opening_proof"`
 	} `json:"proof"`
-	PublicInputs []interface{} `json:"public_inputs"`
+	PublicInputs []uint64 `json:"public_inputs"`
 }
 
 type CommonCircuitDataRaw struct {
@@ -189,6 +189,7 @@ func DeserializeProofWithPublicInputs(path string) ProofWithPublicInputs {
 		FinalPoly  struct{ Coeffs [][]uint64 }
 		PowWitness uint64
 	}(raw.Proof.OpeningProof))
+	proofWithPis.PublicInputs = utils.Uint64ArrayToFArray(raw.PublicInputs)
 
 	return proofWithPis
 }

@@ -26,6 +26,7 @@ func (c *VerifierChip) GetChallenges(proofWithPis ProofWithPublicInputs, publicI
 
 	var circuitDigest Hash
 	copy(circuitDigest[:], utils.Uint64ArrayToFArray(commonData.CircuitDigest.Elements))
+
 	challenger.ObserveHash(circuitDigest)
 	challenger.ObserveHash(publicInputsHash)
 	challenger.ObserveCap(proofWithPis.Proof.WiresCap)
