@@ -23,8 +23,8 @@ type TestChallengerCircuit struct {
 
 func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	field := field.NewFieldAPI(api)
-	poseidon := NewPoseidonChip(api, field)
-	challenger := NewChallengerChip(api, field, *poseidon)
+	poseidonChip := NewPoseidonChip(api, field)
+	challengerChip := NewChallengerChip(api, field, *poseidonChip)
 
 	var circuitDigest [4]F
 	for i := 0; i < len(circuitDigest); i++ {
@@ -43,14 +43,14 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 		}
 	}
 
-	publicInputHash := poseidon.HashNoPad(publicInputs[:])
-	challenger.ObserveHash(circuitDigest)
-	challenger.ObserveHash(publicInputHash)
-	challenger.ObserveCap(wiresCap[:])
+	publicInputHash := poseidonChip.HashNoPad(publicInputs[:])
+	challengerChip.ObserveHash(circuitDigest)
+	challengerChip.ObserveHash(publicInputHash)
+	challengerChip.ObserveCap(wiresCap[:])
 
 	nbChallenges := 2
-	plonkBetas := challenger.GetNChallenges(nbChallenges)
-	plonkGammas := challenger.GetNChallenges(nbChallenges)
+	plonkBetas := challengerChip.GetNChallenges(nbChallenges)
+	plonkGammas := challengerChip.GetNChallenges(nbChallenges)
 
 	expectedPlonkBetas := [2]frontend.Variable{
 		frontend.Variable("4678728155650926271"),

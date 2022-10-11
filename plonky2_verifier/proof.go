@@ -4,8 +4,6 @@ import (
 	. "gnark-ed25519/field"
 )
 
-type QuadraticExtension = [2]F
-
 type MerkleCap = []Hash
 
 type MerkleProof struct {
@@ -32,7 +30,7 @@ type FriQueryRound struct {
 }
 
 type PolynomialCoeffs struct {
-	Coeffs []F
+	Coeffs []QuadraticExtension
 }
 
 type FriProof struct {

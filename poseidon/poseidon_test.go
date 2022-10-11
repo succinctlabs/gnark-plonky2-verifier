@@ -25,8 +25,8 @@ func (circuit *TestPoseidonCircuit) Define(api frontend.API) error {
 		input[i] = goldilocksApi.FromBinary(api.ToBinary(circuit.In[i], 64)).(F)
 	}
 
-	chip := NewPoseidonChip(api, goldilocksApi)
-	output := chip.Poseidon(input)
+	poseidonChip := NewPoseidonChip(api, goldilocksApi)
+	output := poseidonChip.Poseidon(input)
 
 	for i := 0; i < 12; i++ {
 		goldilocksApi.AssertIsEqual(
