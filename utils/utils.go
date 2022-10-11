@@ -5,7 +5,6 @@ import (
 	"math/big"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/gnark/std/math/emulated"
 )
 
 func StrArrayToBigIntArray(input []string) []big.Int {
@@ -29,7 +28,7 @@ func StrArrayToFrontendVariableArray(input []string) []frontend.Variable {
 func Uint64ArrayToFArray(input []uint64) []F {
 	var output []F
 	for i := 0; i < len(input); i++ {
-		output = append(output, emulated.NewElement[emulated.Goldilocks](input[i]))
+		output = append(output, NewFieldElement(input[i]))
 	}
 	return output
 }

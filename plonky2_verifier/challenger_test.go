@@ -48,9 +48,9 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	challengerChip.ObserveHash(publicInputHash)
 	challengerChip.ObserveCap(wiresCap[:])
 
-	nbChallenges := 2
-	plonkBetas := challengerChip.GetNChallenges(nbChallenges)
-	plonkGammas := challengerChip.GetNChallenges(nbChallenges)
+	numChallenges := uint64(2)
+	plonkBetas := challengerChip.GetNChallenges(numChallenges)
+	plonkGammas := challengerChip.GetNChallenges(numChallenges)
 
 	expectedPlonkBetas := [2]frontend.Variable{
 		frontend.Variable("4678728155650926271"),

@@ -105,5 +105,19 @@ type CommonCircuitData struct {
 	KIs                  []F
 	NumPartialProducts   uint64
 	CircuitDigest        Hash
-	// TODO: add SelectorsInfo and Gates
+}
+
+type ProofChallenges struct {
+	PlonkBetas    []F
+	PlonkGammas   []F
+	PlonkAlphas   []F
+	PlonkZeta     QuadraticExtension
+	FriChallenges FriChallenges
+}
+
+type FriChallenges struct {
+	FriAlpha         QuadraticExtension
+	FriBetas         []QuadraticExtension
+	FriPowResponse   F
+	FriQueryIndicies []F
 }

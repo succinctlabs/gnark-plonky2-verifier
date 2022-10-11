@@ -55,6 +55,22 @@ func (c *ChallengerChip) ObserveCap(cap []Hash) {
 	}
 }
 
+func (c *ChallengerChip) ObserveExtensionElement(element QuadraticExtension) {
+	c.ObserveElements(element[:])
+}
+
+func (c *ChallengerChip) ObserveExtensionElements(elements []QuadraticExtension) {
+	for i := 0; i < len(elements); i++ {
+		c.ObserveExtensionElement(elements[i])
+	}
+}
+
+func (c *ChallengerChip) ObserveOpenings(openings FriOpenings) {
+	for i := 0; i < len(openings.Batches); i++ {
+		c.ObserveExtensionElements(openings.Batches[i].values)
+	}
+}
+
 func (c *ChallengerChip) GetChallenge() F {
 	if len(c.inputBuffer) != 0 || len(c.outputBuffer) == 0 {
 		c.duplexing()
@@ -66,12 +82,51 @@ func (c *ChallengerChip) GetChallenge() F {
 	return challenge
 }
 
-func (c *ChallengerChip) GetNChallenges(n int) []F {
+func (c *ChallengerChip) GetNChallenges(n uint64) []F {
 	challenges := make([]F, n)
-	for i := 0; i < n; i++ {
+	for i := uint64(0); i < n; i++ {
 		challenges[i] = c.GetChallenge()
 	}
 	return challenges
+}
+
+func (c *ChallengerChip) GetExtensionChallenge() QuadraticExtension {
+	values := c.GetNChallenges(2)
+	return QuadraticExtension{values[0], values[1]}
+}
+
+func (c *ChallengerChip) GetHash() Hash {
+	return [4]F{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
+}
+
+func (c *ChallengerChip) GetFriChallenges(commitPhaseMerkleCaps []MerkleCap, finalPoly PolynomialCoeffs, powWitness F, degreeBits uint64, config FriConfig) FriChallenges {
+	numFriQueries := config.NumQueryRounds
+	ldeSize := 1 << (degreeBits + config.RateBits)
+	friAlpha := c.GetExtensionChallenge()
+
+	var friBetas []QuadraticExtension
+	for i := 0; i < len(commitPhaseMerkleCaps); i++ {
+		c.ObserveCap(commitPhaseMerkleCaps[i])
+		friBetas = append(friBetas, c.GetExtensionChallenge())
+	}
+
+	c.ObserveExtensionElements(finalPoly.Coeffs)
+
+	hash := c.GetHash()
+	powInputs := append(hash[:], powWitness)
+
+	friPowResponse := c.poseidonChip.HashNoPad(powInputs)[0]
+	friQueryIndices := c.GetNChallenges(numFriQueries)
+
+	// need to modulo lde size on fri query indices
+	_ = ldeSize
+
+	return FriChallenges{
+		FriAlpha:         friAlpha,
+		FriBetas:         friBetas,
+		FriPowResponse:   friPowResponse,
+		FriQueryIndicies: friQueryIndices,
+	}
 }
 
 func clearBuffer(buffer []F) []F {
