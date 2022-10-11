@@ -1,17 +1,19 @@
 package plonky2_verifier
 
 import (
-	. "gnark-ed25519/goldilocks"
+	"encoding/json"
+	"fmt"
+	"gnark-ed25519/field"
+	. "gnark-ed25519/field"
 	. "gnark-ed25519/poseidon"
 	"gnark-ed25519/utils"
+	"io/ioutil"
+	"os"
 	"testing"
 
-	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
 )
-
-var testCurve = ecc.BN254
 
 type TestChallengerCircuit struct {
 	PublicInputs  [3]frontend.Variable
@@ -20,56 +22,67 @@ type TestChallengerCircuit struct {
 }
 
 func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
-	goldilocksApi := NewGoldilocksAPI(api)
-	poseidonChip := NewPoseidonChip(api, goldilocksApi)
-	challengerChip := NewChallengerChip(api, goldilocksApi, *poseidonChip)
+	field := field.NewFieldAPI(api)
+	poseidonChip := NewPoseidonChip(api, field)
+	challengerChip := NewChallengerChip(api, field, *poseidonChip)
 
-	var circuitDigestGoldilocks [4]GoldilocksElement
-	for i := 0; i < 4; i++ {
-		circuitDigestGoldilocks[i] = goldilocksApi.FromBinary(api.ToBinary(circuit.CircuitDigest[i], 64)).(GoldilocksElement)
+	var circuitDigest [4]F
+	for i := 0; i < len(circuitDigest); i++ {
+		circuitDigest[i] = field.FromBinary(api.ToBinary(circuit.CircuitDigest[i], 64)).(F)
 	}
 
-	var publicInputsGoldilocks [3]GoldilocksElement
-	for i := 0; i < 3; i++ {
-		publicInputsGoldilocks[i] = goldilocksApi.FromBinary(api.ToBinary(circuit.PublicInputs[i], 64)).(GoldilocksElement)
+	var publicInputs [3]F
+	for i := 0; i < len(publicInputs); i++ {
+		publicInputs[i] = field.FromBinary(api.ToBinary(circuit.PublicInputs[i], 64)).(F)
 	}
 
-	var wiresCapGoldilocks [16][4]GoldilocksElement
-	for i := 0; i < 16; i++ {
-		for j := 0; j < 4; j++ {
-			wiresCapGoldilocks[i][j] = goldilocksApi.FromBinary(api.ToBinary(circuit.WiresCap[i][j], 64)).(GoldilocksElement)
+	var wiresCap [16][4]F
+	for i := 0; i < len(wiresCap); i++ {
+		for j := 0; j < len(wiresCap[0]); j++ {
+			wiresCap[i][j] = field.FromBinary(api.ToBinary(circuit.WiresCap[i][j], 64)).(F)
 		}
 	}
 
-	publicInputHash := poseidonChip.HashNoPad(publicInputsGoldilocks[:])
-	challengerChip.ObserveHash(circuitDigestGoldilocks)
+	publicInputHash := poseidonChip.HashNoPad(publicInputs[:])
+	challengerChip.ObserveHash(circuitDigest)
 	challengerChip.ObserveHash(publicInputHash)
-	challengerChip.ObserveCap(wiresCapGoldilocks[:])
+	challengerChip.ObserveCap(wiresCap[:])
 
-	nbChallenges := 2
-	plonkBetas := challengerChip.GetNChallenges(nbChallenges)
-	plonkGammas := challengerChip.GetNChallenges(nbChallenges)
+	numChallenges := uint64(2)
+	plonkBetas := challengerChip.GetNChallenges(numChallenges)
+	plonkGammas := challengerChip.GetNChallenges(numChallenges)
 
-	var expectedPlonkBetas [2]frontend.Variable
-	expectedPlonkBetas[0] = frontend.Variable("4678728155650926271")
-	expectedPlonkBetas[1] = frontend.Variable("13611962404289024887")
-
-	var expectedPlonkGammas [2]frontend.Variable
-	expectedPlonkGammas[0] = frontend.Variable("13237663823305715949")
-	expectedPlonkGammas[1] = frontend.Variable("15389314098328235145")
+	expectedPlonkBetas := [2]frontend.Variable{
+		frontend.Variable("4678728155650926271"),
+		frontend.Variable("13611962404289024887"),
+	}
+	expectedPlonkGammas := [2]frontend.Variable{
+		frontend.Variable("13237663823305715949"),
+		frontend.Variable("15389314098328235145"),
+	}
 
 	for i := 0; i < 2; i++ {
-		goldilocksApi.AssertIsEqual(
-			plonkBetas[i],
-			goldilocksApi.FromBinary(api.ToBinary(expectedPlonkBetas[i])).(GoldilocksElement),
-		)
-		goldilocksApi.AssertIsEqual(
-			plonkGammas[i],
-			goldilocksApi.FromBinary(api.ToBinary(expectedPlonkGammas[i])).(GoldilocksElement),
-		)
+		field.AssertIsEqual(plonkBetas[i], field.FromBinary(api.ToBinary(expectedPlonkBetas[i])).(F))
+		field.AssertIsEqual(plonkGammas[i], field.FromBinary(api.ToBinary(expectedPlonkGammas[i])).(F))
 	}
 
 	return nil
+}
+
+func TestDeserializationOfPlonky2Proof(t *testing.T) {
+	fibonacciProofPath := "./fibonacci_proof.json"
+	jsonFile, err := os.Open(fibonacciProofPath)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer jsonFile.Close()
+
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	var result Proof
+	json.Unmarshal(byteValue, &result)
+
+	fmt.Println(result.WiresCap)
 }
 
 func TestChallengerWitness(t *testing.T) {
@@ -78,7 +91,7 @@ func TestChallengerWitness(t *testing.T) {
 	testCase := func(publicInputs [3]frontend.Variable, circuitDigest [4]frontend.Variable, wiresCap [16][4]frontend.Variable) {
 		circuit := TestChallengerCircuit{PublicInputs: publicInputs, CircuitDigest: circuitDigest, WiresCap: wiresCap}
 		witness := TestChallengerCircuit{PublicInputs: publicInputs, CircuitDigest: circuitDigest, WiresCap: wiresCap}
-		err := test.IsSolved(&circuit, &witness, testCurve.ScalarField())
+		err := test.IsSolved(&circuit, &witness, TEST_CURVE.ScalarField())
 		assert.NoError(err)
 	}
 

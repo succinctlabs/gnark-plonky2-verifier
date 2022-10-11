@@ -1,7 +1,8 @@
 package poseidon
 
 import (
-	. "gnark-ed25519/goldilocks"
+	"gnark-ed25519/field"
+	. "gnark-ed25519/field"
 	"gnark-ed25519/utils"
 	"testing"
 
@@ -17,22 +18,20 @@ type TestPoseidonCircuit struct {
 }
 
 func (circuit *TestPoseidonCircuit) Define(api frontend.API) error {
-	goldilocksApi := NewGoldilocksAPI(api)
+	goldilocksApi := field.NewFieldAPI(api)
 
-	// BN254 -> Binary(64) -> GoldilocksElement
 	var input PoseidonState
 	for i := 0; i < 12; i++ {
-		input[i] = goldilocksApi.FromBinary(api.ToBinary(circuit.In[i], 64)).(GoldilocksElement)
+		input[i] = goldilocksApi.FromBinary(api.ToBinary(circuit.In[i], 64)).(F)
 	}
 
-	chip := NewPoseidonChip(api, goldilocksApi)
-	output := chip.Poseidon(input)
+	poseidonChip := NewPoseidonChip(api, goldilocksApi)
+	output := poseidonChip.Poseidon(input)
 
-	// Check that output is correct
 	for i := 0; i < 12; i++ {
 		goldilocksApi.AssertIsEqual(
 			output[i],
-			goldilocksApi.FromBinary(api.ToBinary(circuit.Out[i])).(GoldilocksElement),
+			goldilocksApi.FromBinary(api.ToBinary(circuit.Out[i])).(F),
 		)
 	}
 
@@ -45,7 +44,7 @@ func TestPoseidonWitness(t *testing.T) {
 	testCase := func(in [12]frontend.Variable, out [12]frontend.Variable) {
 		circuit := TestPoseidonCircuit{In: in, Out: out}
 		witness := TestPoseidonCircuit{In: in, Out: out}
-		err := test.IsSolved(&circuit, &witness, testCurve.ScalarField())
+		err := test.IsSolved(&circuit, &witness, TEST_CURVE.ScalarField())
 		assert.NoError(err)
 	}
 
@@ -79,12 +78,12 @@ func TestPoseidonProof(t *testing.T) {
 	circuit := TestPoseidonCircuit{In: in, Out: out}
 	assignment := TestPoseidonCircuit{In: in, Out: out}
 
-	r1cs, err := frontend.Compile(testCurve.ScalarField(), r1cs.NewBuilder, &circuit)
+	r1cs, err := frontend.Compile(TEST_CURVE.ScalarField(), r1cs.NewBuilder, &circuit)
 	if err != nil {
 		panic(err)
 	}
 
-	witness, err := frontend.NewWitness(&assignment, testCurve.ScalarField())
+	witness, err := frontend.NewWitness(&assignment, TEST_CURVE.ScalarField())
 	if err != nil {
 		panic(err)
 	}
@@ -94,7 +93,7 @@ func TestPoseidonProof(t *testing.T) {
 		panic(err)
 	}
 
-	err = test.IsSolved(&circuit, &assignment, testCurve.ScalarField())
+	err = test.IsSolved(&circuit, &assignment, TEST_CURVE.ScalarField())
 	if err != nil {
 		panic(err)
 	}

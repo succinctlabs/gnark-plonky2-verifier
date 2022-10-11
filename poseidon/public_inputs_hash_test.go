@@ -1,7 +1,7 @@
 package poseidon
 
 import (
-	. "gnark-ed25519/goldilocks"
+	. "gnark-ed25519/field"
 	"gnark-ed25519/utils"
 	"testing"
 
@@ -18,22 +18,22 @@ type TestPublicInputsHashCircuit struct {
 }
 
 func (circuit *TestPublicInputsHashCircuit) Define(api frontend.API) error {
-	goldilocksApi := NewGoldilocksAPI(api)
+	field := NewFieldAPI(api)
 
-	// BN254 -> Binary(64) -> GoldilocksElement
-	var input [3]GoldilocksElement
+	// BN254 -> Binary(64) -> F
+	var input [3]F
 	for i := 0; i < 3; i++ {
-		input[i] = goldilocksApi.FromBinary(api.ToBinary(circuit.In[i], 64)).(GoldilocksElement)
+		input[i] = field.FromBinary(api.ToBinary(circuit.In[i], 64)).(F)
 	}
 
-	poseidonChip := &PoseidonChip{api: api, field: goldilocksApi}
+	poseidonChip := &PoseidonChip{api: api, field: field}
 	output := poseidonChip.HashNoPad(input[:])
 
 	// Check that output is correct
 	for i := 0; i < 4; i++ {
-		goldilocksApi.AssertIsEqual(
+		field.AssertIsEqual(
 			output[i],
-			goldilocksApi.FromBinary(api.ToBinary(circuit.Out[i])).(GoldilocksElement),
+			field.FromBinary(api.ToBinary(circuit.Out[i])).(F),
 		)
 	}
 
