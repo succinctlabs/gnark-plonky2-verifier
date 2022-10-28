@@ -40,23 +40,26 @@ func (p *PlonkChip) evalL0(x QuadraticExtension, xPowN QuadraticExtension) Quadr
 	)
 }
 
-func (p *PlonkChip) checkPartialProductsCircuit(
+func (p *PlonkChip) checkPartialProducts(
 	numerators []QuadraticExtension,
 	denominators []QuadraticExtension,
 	challengeNum uint64) []QuadraticExtension {
 
-	productAccs := make([]QuadraticExtension, p.commonData.NumPartialProducts+2)
+	numPartProds := p.commonData.NumPartialProducts
+	quotDegreeFactor := p.commonData.QuotientDegreeFactor
+
+	productAccs := make([]QuadraticExtension, numPartProds+2)
 	productAccs = append(productAccs, p.openings.PlonkZs[challengeNum])
-	productAccs = append(productAccs, p.openings.PartialProducts[challengeNum*p.commonData.NumPartialProducts:(challengeNum+1)*p.commonData.NumPartialProducts]...)
+	productAccs = append(productAccs, p.openings.PartialProducts[challengeNum*numPartProds:(challengeNum+1)*numPartProds]...)
 	productAccs = append(productAccs, p.openings.PlonkZsNext[challengeNum])
 
-	partialProductChecks := make([]QuadraticExtension, p)
+	partialProductChecks := make([]QuadraticExtension, numPartProds)
 
-	for i := uint64(0); i < numPartialProducts; i += 1 {
-		ppStartIdx := i * p.commonData.QuotientDegreeFactor
+	for i := uint64(0); i < numPartProds; i += 1 {
+		ppStartIdx := i * quotDegreeFactor
 		numeProduct := numerators[ppStartIdx]
 		denoProduct := denominators[ppStartIdx]
-		for j := uint64(1); j < p.commonData.QuotientDegreeFactor; j++ {
+		for j := uint64(1); j < quotDegreeFactor; j++ {
 			numeProduct = p.qe.MulExtension(numeProduct, numerators[ppStartIdx+j])
 			denoProduct = p.qe.MulExtension(denoProduct, denominators[ppStartIdx+j])
 		}
@@ -87,6 +90,7 @@ func (p *PlonkChip) evalVanishingPoly() []QuadraticExtension {
 	l_0_zeta := p.evalL0(p.proofChallenges.PlonkZeta, zeta_pow_n)
 
 	vanishing_z1_terms := make([]QuadraticExtension, p.commonData.Config.NumChallenges)
+	vanishing_partial_products_terms := make([]QuadraticExtension, p.commonData.Config.NumChallenges*p.commonData.NumPartialProducts)
 	numerator_values := make([]QuadraticExtension, p.commonData.Config.NumChallenges*p.commonData.Config.NumRoutedWires)
 	denominator_values := make([]QuadraticExtension, p.commonData.Config.NumChallenges*p.commonData.Config.NumRoutedWires)
 	for i := uint64(0); i < p.commonData.Config.NumChallenges; i++ {
@@ -120,17 +124,16 @@ func (p *PlonkChip) evalVanishingPoly() []QuadraticExtension {
 			numerator_values = append(numerator_values, numerator)
 			denominator_values = append(denominator_values, denominator)
 		}
+
+		vanishing_partial_products_terms = append(
+			vanishing_partial_products_terms,
+			p.checkPartialProducts(numerator_values, denominator_values, i)...,
+		)
 	}
 
+	return vanishing_partial_products_terms
 }
 
 func (p *PlonkChip) Verify() {
-	zeta_pow_deg := p.expPowerOf2Extension(p.proofChallenges.PlonkZeta)
-	p.evalVanishingPoly(p.proofChallenges.PlonkZeta, zeta_pow_deg)
-
-	vanishingZTerms := make(F, commonData.Config.NumChallenges)
-
-	for i := 0; i < int(commonData.Config.NumChallenges); i++ {
-
-	}
+	p.evalVanishingPoly()
 }
