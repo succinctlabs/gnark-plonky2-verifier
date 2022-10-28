@@ -104,10 +104,13 @@ func (p *PlonkChip) evalVanishingPoly() []QuadraticExtension {
 		for j := uint64(0); j < p.commonData.Config.NumRoutedWires; j++ {
 			// The numerator is `beta * s_id + wire_value + gamma`, and the denominator is
 			// `beta * s_sigma + wire_value + gamma`.
-			wire_value_plus_gamma := p.qe.AddExtension(p.openings.Wires[j], p.proofChallenges.FriChallenges.FriBetas[i])
+			wire_value_plus_gamma := p.qe.AddExtension(
+				p.openings.Wires[j],
+				p.qe.FieldToQE(p.proofChallenges.PlonkGammas[i]),
+			)
 			numerator := p.qe.AddExtension(
 				p.qe.MulExtension(
-					p.proofChallenges.FriChallenges.FriBetas[i],
+					p.qe.FieldToQE(p.proofChallenges.PlonkBetas[i]),
 					s_ids[j],
 				),
 				wire_value_plus_gamma,
@@ -115,7 +118,7 @@ func (p *PlonkChip) evalVanishingPoly() []QuadraticExtension {
 
 			denominator := p.qe.AddExtension(
 				p.qe.MulExtension(
-					p.proofChallenges.FriChallenges.FriBetas[i],
+					p.qe.FieldToQE(p.proofChallenges.PlonkBetas[i]),
 					p.openings.PlonkSigmas[j],
 				),
 				wire_value_plus_gamma,

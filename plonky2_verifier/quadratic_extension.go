@@ -78,3 +78,7 @@ func (c *QuadraticExtensionAPI) InverseExtension(a QuadraticExtension) Quadratic
 func (c *QuadraticExtensionAPI) ScalarMulExtension(a QuadraticExtension, scalar F) QuadraticExtension {
 	return QuadraticExtension{c.field.Mul(a[0], scalar).(F), c.field.Mul(a[1], scalar).(F)}
 }
+
+func (c *QuadraticExtensionAPI) FieldToQE(a F) QuadraticExtension {
+	return QuadraticExtension{a, c.ZERO_F}
+}
