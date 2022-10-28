@@ -99,15 +99,7 @@ func (c *ChallengerChip) GetHash() Hash {
 	return [4]F{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
 }
 
-func (c *ChallengerChip) GetFriChallenges(commitPhaseMerkleCaps []MerkleCap, finalPoly PolynomialCoeffs, powWitness F, degreeBits uint64, config struct {
-	RateBits          uint64 "json:\"rate_bits\""
-	CapHeight         uint64 "json:\"cap_height\""
-	ProofOfWorkBits   uint64 "json:\"proof_of_work_bits\""
-	ReductionStrategy struct {
-		ConstantArityBits []int "json:\"ConstantArityBits\""
-	} "json:\"reduction_strategy\""
-	NumQueryRounds uint64 "json:\"num_query_rounds\""
-}) FriChallenges {
+func (c *ChallengerChip) GetFriChallenges(commitPhaseMerkleCaps []MerkleCap, finalPoly PolynomialCoeffs, powWitness F, degreeBits uint64, config FriConfig) FriChallenges {
 	numFriQueries := config.NumQueryRounds
 	friAlpha := c.GetExtensionChallenge()
 

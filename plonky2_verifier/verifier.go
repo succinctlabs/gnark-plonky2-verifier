@@ -4,7 +4,6 @@ import (
 	"fmt"
 	. "gnark-ed25519/field"
 	"gnark-ed25519/poseidon"
-	"gnark-ed25519/utils"
 
 	"github.com/consensys/gnark/frontend"
 )
@@ -19,13 +18,12 @@ func (c *VerifierChip) GetPublicInputsHash(publicInputs []F) Hash {
 	return c.poseidonChip.HashNoPad(publicInputs)
 }
 
-func (c *VerifierChip) GetChallenges(proofWithPis ProofWithPublicInputs, publicInputsHash Hash, commonData CommonCircuitDataRaw) ProofChallenges {
+func (c *VerifierChip) GetChallenges(proofWithPis ProofWithPublicInputs, publicInputsHash Hash, commonData CommonCircuitData) ProofChallenges {
 	config := commonData.Config
 	numChallenges := config.NumChallenges
 	challenger := NewChallengerChip(c.api, c.field, c.poseidonChip)
 
-	var circuitDigest Hash
-	copy(circuitDigest[:], utils.Uint64ArrayToFArray(commonData.CircuitDigest.Elements))
+	var circuitDigest = commonData.CircuitDigest
 
 	challenger.ObserveHash(circuitDigest)
 	challenger.ObserveHash(publicInputsHash)
@@ -56,7 +54,7 @@ func (c *VerifierChip) GetChallenges(proofWithPis ProofWithPublicInputs, publicI
 	}
 }
 
-func (c *VerifierChip) Verify(proofWithPis ProofWithPublicInputs, verifierData VerifierOnlyCircuitData, commonData CommonCircuitDataRaw) {
+func (c *VerifierChip) Verify(proofWithPis ProofWithPublicInputs, verifierData VerifierOnlyCircuitData, commonData CommonCircuitData) {
 	publicInputsHash := c.GetPublicInputsHash(proofWithPis.PublicInputs)
 	proofChallenges := c.GetChallenges(proofWithPis, publicInputsHash, commonData)
 	fmt.Printf("%+v\n", proofChallenges)

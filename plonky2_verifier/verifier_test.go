@@ -11,7 +11,7 @@ import (
 
 type TestVerifierCircuit struct{}
 
-func (c *VerifierChip) GetChallengesSanityCheck(proofWithPis ProofWithPublicInputs, verifierData VerifierOnlyCircuitData, commonData CommonCircuitDataRaw) {
+func (c *VerifierChip) GetChallengesSanityCheck(proofWithPis ProofWithPublicInputs, verifierData VerifierOnlyCircuitData, commonData CommonCircuitData) {
 	publicInputsHash := c.GetPublicInputsHash(proofWithPis.PublicInputs)
 	proofChallenges := c.GetChallenges(proofWithPis, publicInputsHash, commonData)
 

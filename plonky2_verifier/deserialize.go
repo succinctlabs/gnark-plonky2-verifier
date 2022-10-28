@@ -194,7 +194,7 @@ func DeserializeProofWithPublicInputs(path string) ProofWithPublicInputs {
 	return proofWithPis
 }
 
-func DeserializeCommonCircuitData(path string) CommonCircuitDataRaw {
+func DeserializeCommonCircuitData(path string) CommonCircuitData {
 	jsonFile, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -209,7 +209,36 @@ func DeserializeCommonCircuitData(path string) CommonCircuitDataRaw {
 		panic(err)
 	}
 
-	return raw
+	var commonCircuitData CommonCircuitData
+	commonCircuitData.Config.NumWires = raw.Config.NumWires
+	commonCircuitData.Config.NumRoutedWires = raw.Config.NumRoutedWires
+	commonCircuitData.Config.NumConstants = raw.Config.NumConstants
+	commonCircuitData.Config.UseBaseArithmeticGate = raw.Config.UseBaseArithmeticGate
+	commonCircuitData.Config.SecurityBits = raw.Config.SecurityBits
+	commonCircuitData.Config.NumChallenges = raw.Config.NumChallenges
+	commonCircuitData.Config.ZeroKnowledge = raw.Config.ZeroKnowledge
+	commonCircuitData.Config.MaxQuotientDegreeFactor = raw.Config.MaxQuotientDegreeFactor
+
+	commonCircuitData.Config.FriConfig.RateBits = raw.Config.FriConfig.RateBits
+	commonCircuitData.Config.FriConfig.CapHeight = raw.Config.FriConfig.CapHeight
+	commonCircuitData.Config.FriConfig.ProofOfWorkBits = raw.Config.FriConfig.ProofOfWorkBits
+	commonCircuitData.Config.FriConfig.NumQueryRounds = raw.Config.FriConfig.NumQueryRounds
+
+	commonCircuitData.FriParams.Config.CapHeight = raw.FriParams.Config.CapHeight
+	commonCircuitData.FriParams.Config.CapHeight = raw.FriParams.Config.CapHeight
+	commonCircuitData.FriParams.Config.ProofOfWorkBits = raw.FriParams.Config.ProofOfWorkBits
+	commonCircuitData.FriParams.Config.NumQueryRounds = raw.FriParams.Config.NumQueryRounds
+
+	commonCircuitData.DegreeBits = raw.DegreeBits
+	commonCircuitData.QuotientDegreeFactor = raw.QuotientDegreeFactor
+	commonCircuitData.NumGateConstraints = raw.NumGateConstraints
+	commonCircuitData.NumConstants = raw.NumConstants
+	commonCircuitData.NumPublicInputs = raw.NumPublicInputs
+	commonCircuitData.KIs = utils.Uint64ArrayToFArray(raw.KIs)
+	commonCircuitData.NumPartialProducts = raw.NumPartialProducts
+	copy(commonCircuitData.CircuitDigest[:], utils.Uint64ArrayToFArray(raw.CircuitDigest.Elements))
+
+	return commonCircuitData
 }
 
 func DeserializeVerifierOnlyCircuitData(path string) VerifierOnlyCircuitData {
