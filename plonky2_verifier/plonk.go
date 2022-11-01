@@ -2,18 +2,32 @@ package plonky2_verifier
 
 import (
 	. "gnark-ed25519/field"
-
-	"github.com/consensys/gnark/frontend"
 )
 
 type PlonkChip struct {
-	api   frontend.API
-	field frontend.API
-	qe    *QuadraticExtensionAPI
+	qe *QuadraticExtensionAPI
 
 	commonData      CommonCircuitData
 	proofChallenges ProofChallenges
 	openings        OpeningSet
+
+	DEGREE        F
+	DEGREE_BITS_F F
+	DEGREE_QE     QuadraticExtension
+}
+
+func NewPlonkChip(qe *QuadraticExtensionAPI, commonData CommonCircuitData) *PlonkChip {
+	// TODO:  Should degreeBits be verified that it fits within the field and that degree is within uint64?
+
+	return &PlonkChip{
+		qe: qe,
+
+		commonData: commonData,
+
+		DEGREE:        NewFieldElement(1 << commonData.DegreeBits),
+		DEGREE_BITS_F: NewFieldElement(commonData.DegreeBits),
+		DEGREE_QE:     QuadraticExtension{NewFieldElement(1 << commonData.DegreeBits), NewFieldElement(0)},
+	}
 }
 
 func (p *PlonkChip) expPowerOf2Extension(x QuadraticExtension) QuadraticExtension {
@@ -31,8 +45,8 @@ func (p *PlonkChip) evalL0(x QuadraticExtension, xPowN QuadraticExtension) Quadr
 		p.qe.ONE,
 	)
 	denominator := p.qe.SubExtension(
-		p.qe.ScalarMulExtension(x, p.qe.DEGREE_BITS_F),
-		p.qe.DEGREE_BITS_QE,
+		p.qe.ScalarMulExtension(x, p.DEGREE),
+		p.DEGREE_QE,
 	)
 	return p.qe.DivExtension(
 		evalZeroPoly,
@@ -55,7 +69,7 @@ func (p *PlonkChip) checkPartialProducts(
 
 	partialProductChecks := make([]QuadraticExtension, 0, numPartProds)
 
-	for i := uint64(0); i < numPartProds; i += 1 {
+	for i := uint64(0); i <= numPartProds; i += 1 {
 		ppStartIdx := i * quotDegreeFactor
 		numeProduct := numerators[ppStartIdx]
 		denoProduct := denominators[ppStartIdx]
@@ -92,10 +106,9 @@ func (p *PlonkChip) evalVanishingPoly() []QuadraticExtension {
 	vanishingPartialProductsTerms := make([]QuadraticExtension, 0, p.commonData.Config.NumChallenges*p.commonData.NumPartialProducts)
 	for i := uint64(0); i < p.commonData.Config.NumChallenges; i++ {
 		// L_0(zeta) (Z(zeta) - 1) = 0
-		z1_term := p.qe.SubExtension(
-			p.qe.MulExtension(l0Zeta, p.openings.PlonkZs[i]),
+		z1_term := p.qe.MulExtension(
 			l0Zeta,
-		)
+			p.qe.SubExtension(p.openings.PlonkZs[i], p.qe.ONE))
 		vanishingZ1Terms = append(vanishingZ1Terms, z1_term)
 
 		numeratorValues := make([]QuadraticExtension, 0, p.commonData.Config.NumRoutedWires)
@@ -135,9 +148,16 @@ func (p *PlonkChip) evalVanishingPoly() []QuadraticExtension {
 		)
 	}
 
-	return vanishingPartialProductsTerms
+	return append(vanishingZ1Terms, vanishingPartialProductsTerms...)
 }
 
 func (p *PlonkChip) Verify() {
 	p.evalVanishingPoly()
+
+	/*
+		vanishingPolys := p.evalVanishingPoly()
+
+		for _, vp := range vanishingPolys {
+			//fmt.Println(vp)
+	}*/
 }

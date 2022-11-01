@@ -1,6 +1,7 @@
 package plonky2_verifier
 
 import (
+	"fmt"
 	. "gnark-ed25519/field"
 
 	"github.com/consensys/gnark/frontend"
@@ -9,28 +10,24 @@ import (
 type QuadraticExtensionAPI struct {
 	field frontend.API
 
-	W             F
-	DTH_ROOT      F
-	ZERO_F        F
-	DEGREE_BITS_F F
+	W        F
+	DTH_ROOT F
+	ZERO_F   F
 
-	ONE            QuadraticExtension
-	DEGREE_BITS_QE QuadraticExtension
+	ONE QuadraticExtension
 }
 
 func NewQuadraticExtensionAPI(field frontend.API, degreeBits uint64) *QuadraticExtensionAPI {
-	// TODO:  Should degreeBits be verified that it fits within the field?
+	// TODO:  Should degreeBits be verified that it fits within the field and that degree is within uint64?
 
 	return &QuadraticExtensionAPI{
 		field: field,
 
-		W:             NewFieldElement(7),
-		DTH_ROOT:      NewFieldElement(18446744069414584320),
-		ZERO_F:        NewFieldElement(0),
-		DEGREE_BITS_F: NewFieldElement(degreeBits),
+		W:        NewFieldElement(7),
+		DTH_ROOT: NewFieldElement(18446744069414584320),
+		ZERO_F:   NewFieldElement(0),
 
-		ONE:            QuadraticExtension{NewFieldElement(1), NewFieldElement(0)},
-		DEGREE_BITS_QE: QuadraticExtension{NewFieldElement(degreeBits), NewFieldElement(0)},
+		ONE: QuadraticExtension{NewFieldElement(1), NewFieldElement(0)},
 	}
 }
 
@@ -81,4 +78,12 @@ func (c *QuadraticExtensionAPI) ScalarMulExtension(a QuadraticExtension, scalar 
 
 func (c *QuadraticExtensionAPI) FieldToQE(a F) QuadraticExtension {
 	return QuadraticExtension{a, c.ZERO_F}
+}
+
+func (c *QuadraticExtensionAPI) Println(a QuadraticExtension) {
+	fmt.Print("Degree 0 coefficient")
+	c.field.Println(a[0])
+
+	fmt.Print("Degree 1 coefficient")
+	c.field.Println(a[1])
 }
