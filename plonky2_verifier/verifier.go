@@ -55,6 +55,8 @@ func (c *VerifierChip) GetChallenges(proofWithPis ProofWithPublicInputs, publicI
 }
 
 func (c *VerifierChip) Verify(proofWithPis ProofWithPublicInputs, verifierData VerifierOnlyCircuitData, commonData CommonCircuitData) {
+	// TODO: Verify shape of the proof?
+
 	publicInputsHash := c.GetPublicInputsHash(proofWithPis.PublicInputs)
 	proofChallenges := c.GetChallenges(proofWithPis, publicInputsHash, commonData)
 	fmt.Printf("%+v\n", proofChallenges)

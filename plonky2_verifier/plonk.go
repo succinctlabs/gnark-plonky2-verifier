@@ -2,10 +2,13 @@ package plonky2_verifier
 
 import (
 	. "gnark-ed25519/field"
+
+	"github.com/consensys/gnark/frontend"
 )
 
 type PlonkChip struct {
-	qe *QuadraticExtensionAPI
+	api frontend.API
+	qe  *QuadraticExtensionAPI
 
 	commonData      CommonCircuitData
 	proofChallenges ProofChallenges
@@ -16,11 +19,12 @@ type PlonkChip struct {
 	DEGREE_QE     QuadraticExtension
 }
 
-func NewPlonkChip(qe *QuadraticExtensionAPI, commonData CommonCircuitData) *PlonkChip {
+func NewPlonkChip(api frontend.API, qe *QuadraticExtensionAPI, commonData CommonCircuitData) *PlonkChip {
 	// TODO:  Should degreeBits be verified that it fits within the field and that degree is within uint64?
 
 	return &PlonkChip{
-		qe: qe,
+		api: api,
+		qe:  qe,
 
 		commonData: commonData,
 
@@ -88,16 +92,13 @@ func (p *PlonkChip) checkPartialProducts(
 	return partialProductChecks
 }
 
-func (p *PlonkChip) evalVanishingPoly() []QuadraticExtension {
+func (p *PlonkChip) evalVanishingPoly(zetaPowN QuadraticExtension) []QuadraticExtension {
 	// Calculate the k[i] * x
 	sIDs := make([]QuadraticExtension, p.commonData.Config.NumRoutedWires)
 
 	for i := uint64(0); i < p.commonData.Config.NumRoutedWires; i++ {
 		sIDs[i] = p.qe.ScalarMulExtension(p.proofChallenges.PlonkZeta, p.commonData.KIs[i])
 	}
-
-	// Calculate zeta^n
-	zetaPowN := p.expPowerOf2Extension(p.proofChallenges.PlonkZeta)
 
 	// Calculate L_0(zeta)
 	l0Zeta := p.evalL0(p.proofChallenges.PlonkZeta, zetaPowN)
@@ -179,33 +180,46 @@ func (p *PlonkChip) evalVanishingPoly() []QuadraticExtension {
 	return reducedValues
 }
 
-func (p *PlonkChip) Verify() {
-	vanishingPolysZeta := p.evalVanishingPoly()
+func (p *PlonkChip) reduceWithPowers(terms []QuadraticExtension, scalar QuadraticExtension) QuadraticExtension {
+	sum := p.qe.ZERO_QE
 
-	for _, vp := range vanishingPolysZeta {
-		p.qe.Println(vp)
+	for i := len(terms) - 1; i >= 0; i-- {
+		sum = p.qe.AddExtension(
+			p.qe.MulExtension(
+				sum,
+				scalar,
+			),
+			terms[i],
+		)
 	}
 
-	/*
-			let alphas = &alphas.iter().map(|&a| a.into()).collect::<Vec<_>>();
-		    plonk_common::reduce_with_powers_multi(&vanishing_terms, alphas)
+	return sum
+}
 
-		    // Check each polynomial identity, of the form `vanishing(x) = Z_H(x) quotient(x)`, at zeta.
-		    let quotient_polys_zeta = &proof.openings.quotient_polys;
-		    let zeta_pow_deg = challenges
-		        .plonk_zeta
-		        .exp_power_of_2(common_data.degree_bits());
-		    let z_h_zeta = zeta_pow_deg - F::Extension::ONE;
-		    // `quotient_polys_zeta` holds `num_challenges * quotient_degree_factor` evaluations.
-		    // Each chunk of `quotient_degree_factor` holds the evaluations of `t_0(zeta),...,t_{quotient_degree_factor-1}(zeta)`
-		    // where the "real" quotient polynomial is `t(X) = t_0(X) + t_1(X)*X^n + t_2(X)*X^{2n} + ...`.
-		    // So to reconstruct `t(zeta)` we can compute `reduce_with_powers(chunk, zeta^n)` for each
-		    // `quotient_degree_factor`-sized chunk of the original evaluations.
-		    for (i, chunk) in quotient_polys_zeta
-		        .chunks(common_data.quotient_degree_factor)
-		        .enumerate()
-		    {
-		        ensure!(vanishing_polys_zeta[i] == z_h_zeta * reduce_with_powers(chunk, zeta_pow_deg));
-		    }
-	*/
+func (p *PlonkChip) Verify() {
+	// Calculate zeta^n
+	zetaPowN := p.expPowerOf2Extension(p.proofChallenges.PlonkZeta)
+
+	vanishingPolysZeta := p.evalVanishingPoly(zetaPowN)
+
+	// Calculate Z(H)
+	zHZeta := p.qe.SubExtension(zetaPowN, p.qe.ONE)
+
+	// `quotient_polys_zeta` holds `num_challenges * quotient_degree_factor` evaluations.
+	// Each chunk of `quotient_degree_factor` holds the evaluations of `t_0(zeta),...,t_{quotient_degree_factor-1}(zeta)`
+	// where the "real" quotient polynomial is `t(X) = t_0(X) + t_1(X)*X^n + t_2(X)*X^{2n} + ...`.
+	// So to reconstruct `t(zeta)` we can compute `reduce_with_powers(chunk, zeta^n)` for each
+	// `quotient_degree_factor`-sized chunk of the original evaluations.
+	for i := 0; i < len(p.openings.QuotientPolys); i += int(p.commonData.QuotientDegreeFactor) {
+		prod := p.qe.MulExtension(
+			zHZeta,
+			p.reduceWithPowers(
+				p.openings.QuotientPolys[i:i+int(p.commonData.QuotientDegreeFactor)],
+				zetaPowN,
+			),
+		)
+
+		// TODO: Uncomment this after adding in the custom gates evaluations
+		//p.api.AssertIsEqual(vanishingPolysZeta[i], prod)
+	}
 }
