@@ -148,16 +148,64 @@ func (p *PlonkChip) evalVanishingPoly() []QuadraticExtension {
 		)
 	}
 
-	return append(vanishingZ1Terms, vanishingPartialProductsTerms...)
+	vanishingTerms := append(vanishingZ1Terms, vanishingPartialProductsTerms...)
+
+	reducedValues := make([]QuadraticExtension, p.commonData.Config.NumChallenges)
+	for i := uint64(0); i < p.commonData.Config.NumChallenges; i++ {
+		reducedValues[i] = p.qe.ZERO_QE
+	}
+
+	// TODO:  Enable this check once the custom gate evaluations are added to the
+	//        vanishingTerms array
+	/*
+		if len(vanishingTerms) != int(p.commonData.QuotientDegreeFactor) {
+			panic("evalVanishingPoly: len(vanishingTerms) != int(p.commonData.QuotientDegreeFactor)")
+		}
+	*/
+
+	// reverse iterate the vanishingPartialProductsTerms array
+	for i := len(vanishingTerms) - 1; i >= 0; i-- {
+		for j := uint64(0); j < p.commonData.Config.NumChallenges; j++ {
+			reducedValues[j] = p.qe.AddExtension(
+				vanishingTerms[i],
+				p.qe.ScalarMulExtension(
+					reducedValues[j],
+					p.proofChallenges.PlonkAlphas[j],
+				),
+			)
+		}
+	}
+
+	return reducedValues
 }
 
 func (p *PlonkChip) Verify() {
-	p.evalVanishingPoly()
+	vanishingPolysZeta := p.evalVanishingPoly()
+
+	for _, vp := range vanishingPolysZeta {
+		p.qe.Println(vp)
+	}
 
 	/*
-		vanishingPolys := p.evalVanishingPoly()
+			let alphas = &alphas.iter().map(|&a| a.into()).collect::<Vec<_>>();
+		    plonk_common::reduce_with_powers_multi(&vanishing_terms, alphas)
 
-		for _, vp := range vanishingPolys {
-			//fmt.Println(vp)
-	}*/
+		    // Check each polynomial identity, of the form `vanishing(x) = Z_H(x) quotient(x)`, at zeta.
+		    let quotient_polys_zeta = &proof.openings.quotient_polys;
+		    let zeta_pow_deg = challenges
+		        .plonk_zeta
+		        .exp_power_of_2(common_data.degree_bits());
+		    let z_h_zeta = zeta_pow_deg - F::Extension::ONE;
+		    // `quotient_polys_zeta` holds `num_challenges * quotient_degree_factor` evaluations.
+		    // Each chunk of `quotient_degree_factor` holds the evaluations of `t_0(zeta),...,t_{quotient_degree_factor-1}(zeta)`
+		    // where the "real" quotient polynomial is `t(X) = t_0(X) + t_1(X)*X^n + t_2(X)*X^{2n} + ...`.
+		    // So to reconstruct `t(zeta)` we can compute `reduce_with_powers(chunk, zeta^n)` for each
+		    // `quotient_degree_factor`-sized chunk of the original evaluations.
+		    for (i, chunk) in quotient_polys_zeta
+		        .chunks(common_data.quotient_degree_factor)
+		        .enumerate()
+		    {
+		        ensure!(vanishing_polys_zeta[i] == z_h_zeta * reduce_with_powers(chunk, zeta_pow_deg));
+		    }
+	*/
 }

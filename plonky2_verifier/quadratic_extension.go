@@ -14,7 +14,8 @@ type QuadraticExtensionAPI struct {
 	DTH_ROOT F
 	ZERO_F   F
 
-	ONE QuadraticExtension
+	ONE     QuadraticExtension
+	ZERO_QE QuadraticExtension
 }
 
 func NewQuadraticExtensionAPI(field frontend.API, degreeBits uint64) *QuadraticExtensionAPI {
@@ -27,7 +28,8 @@ func NewQuadraticExtensionAPI(field frontend.API, degreeBits uint64) *QuadraticE
 		DTH_ROOT: NewFieldElement(18446744069414584320),
 		ZERO_F:   NewFieldElement(0),
 
-		ONE: QuadraticExtension{NewFieldElement(1), NewFieldElement(0)},
+		ONE:     QuadraticExtension{NewFieldElement(1), NewFieldElement(0)},
+		ZERO_QE: QuadraticExtension{NewFieldElement(0), NewFieldElement(0)},
 	}
 }
 
