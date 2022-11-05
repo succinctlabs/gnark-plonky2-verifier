@@ -180,22 +180,6 @@ func (p *PlonkChip) evalVanishingPoly(zetaPowN QuadraticExtension) []QuadraticEx
 	return reducedValues
 }
 
-func (p *PlonkChip) reduceWithPowers(terms []QuadraticExtension, scalar QuadraticExtension) QuadraticExtension {
-	sum := p.qe.ZERO_QE
-
-	for i := len(terms) - 1; i >= 0; i-- {
-		sum = p.qe.AddExtension(
-			p.qe.MulExtension(
-				sum,
-				scalar,
-			),
-			terms[i],
-		)
-	}
-
-	return sum
-}
-
 func (p *PlonkChip) Verify() {
 	// Calculate zeta^n
 	zetaPowN := p.expPowerOf2Extension(p.proofChallenges.PlonkZeta)
@@ -213,7 +197,8 @@ func (p *PlonkChip) Verify() {
 	for i := 0; i < len(p.openings.QuotientPolys); i += int(p.commonData.QuotientDegreeFactor) {
 		prod := p.qe.MulExtension(
 			zHZeta,
-			p.reduceWithPowers(
+			reduceWithPowers(
+				p.qe,
 				p.openings.QuotientPolys[i:i+int(p.commonData.QuotientDegreeFactor)],
 				zetaPowN,
 			),

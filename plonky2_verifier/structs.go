@@ -35,7 +35,7 @@ type PolynomialCoeffs struct {
 
 type FriProof struct {
 	CommitPhaseMerkleCaps []MerkleCap
-	QueryRoundProofs      FriQueryRound
+	QueryRoundProofs      []FriQueryRound
 	FinalPoly             PolynomialCoeffs
 	PowWitness            F
 }
