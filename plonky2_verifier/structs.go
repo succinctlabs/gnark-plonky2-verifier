@@ -75,6 +75,10 @@ type FriConfig struct {
 	// TODO: add FriReductionStrategy
 }
 
+func (fc *FriConfig) rate() float64 {
+	return 1.0 / float64((uint64(1) << fc.RateBits))
+}
+
 type FriParams struct {
 	Config             FriConfig
 	Hiding             bool

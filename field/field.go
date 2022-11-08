@@ -1,6 +1,8 @@
 package field
 
 import (
+	"math/big"
+
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
@@ -27,4 +29,10 @@ func NewFieldAPI(api frontend.API) frontend.API {
 		panic(err)
 	}
 	return field
+}
+
+var r EmulatedField
+
+func EmulatedFieldModulus() *big.Int {
+	return r.Modulus()
 }

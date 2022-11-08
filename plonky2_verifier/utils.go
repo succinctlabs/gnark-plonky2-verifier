@@ -1,7 +1,9 @@
 package plonky2_verifier
 
 import (
+	"fmt"
 	. "gnark-ed25519/field"
+	"math/bits"
 )
 
 func reduceWithPowers(qe *QuadraticExtensionAPI, terms []QuadraticExtension, scalar QuadraticExtension) QuadraticExtension {
@@ -18,4 +20,13 @@ func reduceWithPowers(qe *QuadraticExtensionAPI, terms []QuadraticExtension, sca
 	}
 
 	return sum
+}
+
+// Computes `log_2(n)`, panicking if `n` is not a power of two.
+func log2Strict(n uint) int {
+	res := bits.TrailingZeros(n)
+	if n>>res != 1 {
+		panic(fmt.Sprintf("Not a power of two: %d", n))
+	}
+	return res
 }

@@ -1,9 +1,9 @@
 package plonky2_verifier
 
 import (
-	"fmt"
 	"gnark-ed25519/field"
 	. "gnark-ed25519/field"
+	"gnark-ed25519/poseidon"
 	"math"
 
 	"github.com/consensys/gnark/frontend"
@@ -34,16 +34,19 @@ type FriChip struct {
 	field frontend.API
 	qe    *QuadraticExtensionAPI
 
+	poseidonChip *poseidon.PoseidonChip
+
 	friParams               *FriParams
 	verifierOnlyCircuitData *VerifierOnlyCircuitData
 }
 
-func NewFriChip(api frontend.API, field frontend.API, qe *QuadraticExtensionAPI, friParams *FriParams) *FriChip {
+func NewFriChip(api frontend.API, field frontend.API, qe *QuadraticExtensionAPI, poseidonChip *poseidon.PoseidonChip, friParams *FriParams) *FriChip {
 	return &FriChip{
-		api:       api,
-		field:     field,
-		qe:        qe,
-		friParams: friParams,
+		api:          api,
+		field:        field,
+		qe:           qe,
+		poseidonChip: poseidonChip,
+		friParams:    friParams,
 	}
 }
 
@@ -52,9 +55,6 @@ func (f *FriChip) assertLeadingZeros(powWitness F, friConfig FriConfig) {
 	// Note that this is assuming that the Goldilocks field is being used.  Specfically that the
 	// field is 64 bits long
 	maxPowWitness := uint64(math.Pow(2, float64(64-friConfig.ProofOfWorkBits))) - 1
-	f.field.Println(powWitness)
-	fmt.Println(maxPowWitness)
-	fmt.Println(friConfig.ProofOfWorkBits)
 	f.field.AssertIsLessOrEqual(powWitness, field.NewFieldElement(maxPowWitness))
 }
 
@@ -70,10 +70,63 @@ func (f *FriChip) fromOpeningsAndAlpha(openings *FriOpenings, alpha QuadraticExt
 	return reducedOpenings
 }
 
-func (f *FriChip) verifyMerkleProofToCap(leafData []F, leafIndex F, merkleCap MerkleCap, proof *MerkleProof) {
+func (f *FriChip) hashOrNoop(data []F) Hash {
+	var elements Hash
+	if len(data) <= 4 {
+		// Pad the data to have a size of 4
+		for i, inputElement := range data {
+			elements[i] = inputElement
+		}
+		for i := len(data); i < 4; i++ {
+			elements[i] = f.qe.ZERO_F
+		}
+
+		return elements
+	} else {
+		hashOutput := f.poseidonChip.HashNToMNoPad(data, 4)
+
+		if len(hashOutput) != len(elements) {
+			panic("The length of hashOutput and elements is different")
+		}
+
+		for i, hashField := range hashOutput {
+			elements[i] = hashField
+		}
+
+		return elements
+	}
 }
 
-func (f *FriChip) verifyInitialProof(xIndex F, proof *FriInitialTreeProof, initialMerkleCaps []MerkleCap) {
+func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits []frontend.Variable, capIndex F, merkleCap MerkleCap, proof *MerkleProof) {
+	currentDigest := f.hashOrNoop(leafData)
+
+	if len(leafIndexBits) != len(proof.Siblings) {
+		panic("len(leafIndexBits) != len(proof.Siblings)")
+	}
+
+	fourZeros := [4]F{f.qe.ZERO_F, f.qe.ZERO_F, f.qe.ZERO_F, f.qe.ZERO_F}
+	for i, bit := range leafIndexBits {
+		sibling := proof.Siblings[i]
+
+		var leftSiblingState poseidon.PoseidonState
+		copy(leftSiblingState[0:4], sibling[0:4])
+		copy(leftSiblingState[4:8], currentDigest[0:4])
+		copy(leftSiblingState[8:12], fourZeros[0:4])
+		leftHash := f.poseidonChip.Poseidon(leftSiblingState)
+		leftHashCompress := leftHash[0:4]
+
+		var rightSiblingState poseidon.PoseidonState
+		copy(rightSiblingState[0:4], currentDigest[0:4])
+		copy(rightSiblingState[4:8], sibling[0:4])
+		copy(rightSiblingState[8:12], fourZeros[0:4])
+		rightHash := f.poseidonChip.Poseidon(rightSiblingState)
+		rightHashCompress := rightHash[0:4]
+
+		currentDigest = f.api.Select(bit, leftHashCompress, rightHashCompress).(Hash)
+	}
+}
+
+func (f *FriChip) verifyInitialProof(xIndexBits []frontend.Variable, proof *FriInitialTreeProof, initialMerkleCaps []MerkleCap, capIndex F) {
 	if len(proof.EvalsProofs) != len(initialMerkleCaps) {
 		panic("length of eval proofs in fri proof should equal length of initial merkle caps")
 	}
@@ -82,7 +135,28 @@ func (f *FriChip) verifyInitialProof(xIndex F, proof *FriInitialTreeProof, initi
 		evals := proof.EvalsProofs[i].Elements
 		merkleProof := proof.EvalsProofs[i].MerkleProof
 		cap := initialMerkleCaps[i]
-		f.verifyMerkleProofToCap(evals, xIndex, cap, &merkleProof)
+		f.verifyMerkleProofToCapWithCapIndex(evals, xIndexBits, capIndex, cap, &merkleProof)
+	}
+}
+
+// / We decompose FRI query indices into bits without verifying that the decomposition given by
+// / the prover is the canonical one. In particular, if `x_index < 2^field_bits - p`, then the
+// / prover could supply the binary encoding of either `x_index` or `x_index + p`, since they are
+// / congruent mod `p`. However, this only occurs with probability
+// /     p_ambiguous = (2^field_bits - p) / p
+// / which is small for the field that we use in practice.
+// /
+// / In particular, the soundness error of one FRI query is roughly the codeword rate, which
+// / is much larger than this ambiguous-element probability given any reasonable parameters.
+// / Thus ambiguous elements contribute a negligible amount to soundness error.
+// /
+// / Here we compare the probabilities as a sanity check, to verify the claim above.
+func (f *FriChip) assertNoncanonicalIndicesOK() {
+	numAmbiguousElems := uint64(math.MaxUint64) - EmulatedFieldModulus().Uint64() + 1
+	queryError := f.friParams.Config.rate()
+	pAmbiguous := float64(numAmbiguousElems) / float64(EmulatedFieldModulus().Uint64())
+	if pAmbiguous < queryError*1e-5 {
+		panic("A non-negligible portion of field elements are in the range that permits non-canonical encodings. Need to do more analysis or enforce canonical encodings.")
 	}
 }
 
@@ -95,11 +169,17 @@ func (f *FriChip) verifyQueryRound(
 	n uint64,
 	roundProof *FriQueryRound,
 ) {
-	f.verifyInitialProof(xIndex, &roundProof.InitialTreesProof, initialMerkleCaps)
+	nLog := log2Strict(uint(n))
+
+	f.assertNoncanonicalIndicesOK()
+	xIndexBits := f.qe.field.ToBinary(xIndex, nLog)
+	capIndex := f.qe.field.FromBinary(xIndexBits[len(xIndexBits)-int(f.friParams.Config.CapHeight):]...).(F)
+
+	f.verifyInitialProof(xIndexBits, &roundProof.InitialTreesProof, initialMerkleCaps, capIndex)
 }
 
 func (f *FriChip) VerifyFriProof(
-	openings *FriOpenings,
+	openings FriOpenings,
 	friChallenges *FriChallenges,
 	initialMerkleCaps []MerkleCap,
 	friProof *FriProof,
@@ -116,9 +196,9 @@ func (f *FriChip) VerifyFriProof(
 	); */
 
 	// Check POW
-	f.assertLeadingZeros(friProof.PowWitness, f.friParams.Config)
+	f.assertLeadingZeros(friChallenges.FriPowResponse, f.friParams.Config)
 
-	precomputedReducedEvals := f.fromOpeningsAndAlpha(openings, friChallenges.FriAlpha)
+	precomputedReducedEvals := f.fromOpeningsAndAlpha(&openings, friChallenges.FriAlpha)
 
 	// Size of the LDE domain.
 	n := uint64(math.Pow(2, float64(f.friParams.DegreeBits+f.friParams.Config.RateBits)))
