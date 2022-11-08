@@ -32,7 +32,7 @@ type ProofWithPublicInputsRaw struct {
 			CommitPhaseMerkleCaps []interface{} `json:"commit_phase_merkle_caps"`
 			QueryRoundProofs      []struct {
 				InitialTreesProof struct {
-					EvalsProofs [][]interface{} `json:"evals_proofs"`
+					EvalsProofs []EvalProofRaw `json:"evals_proofs"`
 				} `json:"initial_trees_proof"`
 				Steps []interface{} `json:"steps"`
 			} `json:"query_round_proofs"`
@@ -43,6 +43,38 @@ type ProofWithPublicInputsRaw struct {
 		} `json:"opening_proof"`
 	} `json:"proof"`
 	PublicInputs []uint64 `json:"public_inputs"`
+}
+
+type EvalProofRaw struct {
+	leafElements []uint64
+	merkleProof  MerkleProofRaw
+}
+
+func (e *EvalProofRaw) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &[]interface{}{&e.leafElements, &e.merkleProof})
+}
+
+type MerkleProofRaw struct {
+	hash [][]uint64
+}
+
+func (m *MerkleProofRaw) UnmarshalJSON(data []byte) error {
+	var siblingDict map[string]interface{}
+	if err := json.Unmarshal(data, &siblingDict); err != nil {
+		panic(err)
+	}
+
+	siblings := siblingDict["siblings"].([]interface{})
+	m.hash = make([][]uint64, len(siblings))
+	for siblingIdx, sibling := range siblings {
+		siblingHash := sibling.(map[string]interface{})["elements"].([]interface{})
+		m.hash[siblingIdx] = make([]uint64, 4)
+		for siblingElementIdx, siblingElement := range siblingHash {
+			m.hash[siblingIdx][siblingElementIdx] = uint64(siblingElement.(float64))
+		}
+	}
+
+	return nil
 }
 
 type CommonCircuitDataRaw struct {
@@ -113,6 +145,17 @@ func DeserializeMerkleCap(merkleCapRaw []struct{ Elements []uint64 }) MerkleCap 
 	return merkleCap
 }
 
+func DeserializeMerkleProof(merkleProofRaw struct{ Siblings []interface{} }) MerkleProof {
+	n := len(merkleProofRaw.Siblings)
+	var mp MerkleProof
+	mp.Siblings = make([]Hash, n)
+	for i := 0; i < n; i++ {
+		element := merkleProofRaw.Siblings[i].(struct{ Elements []uint64 })
+		copy(mp.Siblings[i][:], utils.Uint64ArrayToFArray(element.Elements))
+	}
+	return mp
+}
+
 func DeserializeOpeningSet(openingSetRaw struct {
 	Constants       [][]uint64
 	PlonkSigmas     [][]uint64
@@ -137,7 +180,7 @@ func DeserializeFriProof(openingProofRaw struct {
 	CommitPhaseMerkleCaps []interface{}
 	QueryRoundProofs      []struct {
 		InitialTreesProof struct {
-			EvalsProofs [][]interface{}
+			EvalsProofs []EvalProofRaw
 		}
 		Steps []interface{}
 	}
@@ -149,6 +192,19 @@ func DeserializeFriProof(openingProofRaw struct {
 	var openingProof FriProof
 	openingProof.PowWitness = NewFieldElement(openingProofRaw.PowWitness)
 	openingProof.FinalPoly.Coeffs = utils.Uint64ArrayToQuadraticExtensionArray(openingProofRaw.FinalPoly.Coeffs)
+
+	numQueryRoundProofs := len(openingProofRaw.QueryRoundProofs)
+	openingProof.QueryRoundProofs = make([]FriQueryRound, numQueryRoundProofs)
+
+	for i := 0; i < numQueryRoundProofs; i++ {
+		numEvalProofs := len(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs)
+		openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs = make([]EvalProof, numEvalProofs)
+		for j := 0; j < numEvalProofs; j++ {
+			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].Elements = utils.Uint64ArrayToFArray(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].leafElements)
+			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Siblings = utils.Uint64ArrayToHashArray(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].merkleProof.hash)
+		}
+	}
+
 	return openingProof
 }
 
@@ -183,8 +239,10 @@ func DeserializeProofWithPublicInputs(path string) ProofWithPublicInputs {
 	proofWithPis.Proof.OpeningProof = DeserializeFriProof(struct {
 		CommitPhaseMerkleCaps []interface{}
 		QueryRoundProofs      []struct {
-			InitialTreesProof struct{ EvalsProofs [][]interface{} }
-			Steps             []interface{}
+			InitialTreesProof struct {
+				EvalsProofs []EvalProofRaw
+			}
+			Steps []interface{}
 		}
 		FinalPoly  struct{ Coeffs [][]uint64 }
 		PowWitness uint64
@@ -224,7 +282,8 @@ func DeserializeCommonCircuitData(path string) CommonCircuitData {
 	commonCircuitData.Config.FriConfig.ProofOfWorkBits = raw.Config.FriConfig.ProofOfWorkBits
 	commonCircuitData.Config.FriConfig.NumQueryRounds = raw.Config.FriConfig.NumQueryRounds
 
-	commonCircuitData.FriParams.Config.CapHeight = raw.FriParams.Config.CapHeight
+	commonCircuitData.FriParams.DegreeBits = raw.FriParams.DegreeBits
+	commonCircuitData.FriParams.Config.RateBits = raw.FriParams.Config.RateBits
 	commonCircuitData.FriParams.Config.CapHeight = raw.FriParams.Config.CapHeight
 	commonCircuitData.FriParams.Config.ProofOfWorkBits = raw.FriParams.Config.ProofOfWorkBits
 	commonCircuitData.FriParams.Config.NumQueryRounds = raw.FriParams.Config.NumQueryRounds

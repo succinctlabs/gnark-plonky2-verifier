@@ -1,6 +1,7 @@
 package plonky2_verifier
 
 import (
+	"fmt"
 	"gnark-ed25519/field"
 	. "gnark-ed25519/field"
 	"gnark-ed25519/poseidon"
@@ -155,7 +156,9 @@ func (f *FriChip) assertNoncanonicalIndicesOK() {
 	numAmbiguousElems := uint64(math.MaxUint64) - EmulatedFieldModulus().Uint64() + 1
 	queryError := f.friParams.Config.rate()
 	pAmbiguous := float64(numAmbiguousElems) / float64(EmulatedFieldModulus().Uint64())
-	if pAmbiguous < queryError*1e-5 {
+
+	// TODO:  Check that pAmbiguous value is the same as the one in plonky2 verifier
+	if pAmbiguous >= queryError*1e-5 {
 		panic("A non-negligible portion of field elements are in the range that permits non-canonical encodings. Need to do more analysis or enforce canonical encodings.")
 	}
 }
@@ -167,12 +170,11 @@ func (f *FriChip) verifyQueryRound(
 	proof *FriProof,
 	xIndex F,
 	n uint64,
+	nLog uint64,
 	roundProof *FriQueryRound,
 ) {
-	nLog := log2Strict(uint(n))
-
 	f.assertNoncanonicalIndicesOK()
-	xIndexBits := f.qe.field.ToBinary(xIndex, nLog)
+	xIndexBits := f.qe.field.ToBinary(xIndex, int(nLog))
 	capIndex := f.qe.field.FromBinary(xIndexBits[len(xIndexBits)-int(f.friParams.Config.CapHeight):]...).(F)
 
 	f.verifyInitialProof(xIndexBits, &roundProof.InitialTreesProof, initialMerkleCaps, capIndex)
@@ -201,10 +203,15 @@ func (f *FriChip) VerifyFriProof(
 	precomputedReducedEvals := f.fromOpeningsAndAlpha(&openings, friChallenges.FriAlpha)
 
 	// Size of the LDE domain.
-	n := uint64(math.Pow(2, float64(f.friParams.DegreeBits+f.friParams.Config.RateBits)))
+	nLog := f.friParams.DegreeBits + f.friParams.Config.RateBits
+	n := uint64(math.Pow(2, float64(nLog)))
 
-	if len(friChallenges.FriQueryIndicies) != len(precomputedReducedEvals) {
-		panic("Number of queryRoundProofs should equal number of precomputedReducedEvals")
+	if len(friChallenges.FriQueryIndicies) != len(friProof.QueryRoundProofs) {
+		panic(fmt.Sprintf(
+			"Number of query indices (%d) should equal number of query round proofs (%d)",
+			len(friChallenges.FriQueryIndicies),
+			len(friProof.QueryRoundProofs),
+		))
 	}
 
 	for idx, xIndex := range friChallenges.FriQueryIndicies {
@@ -217,6 +224,7 @@ func (f *FriChip) VerifyFriProof(
 			friProof,
 			xIndex,
 			n,
+			nLog,
 			&roundProof,
 		)
 	}
