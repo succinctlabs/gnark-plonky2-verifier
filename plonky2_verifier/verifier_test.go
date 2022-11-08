@@ -71,9 +71,52 @@ func (c *VerifierChip) GetChallengesSanityCheck(proofWithPis ProofWithPublicInpu
 		c.field.AssertIsEqual(proofChallenges.FriChallenges.FriAlpha[i], expectedFriAlpha[i])
 	}
 
+	if len(proofChallenges.FriChallenges.FriBetas) != 0 {
+		panic("There should be no fri betas")
+	}
+
 	// This test is commented out because pow_witness is randomized between runs of the prover.
 	// expectedPowResponse := NewFieldElementFromString("92909863298412")
 	// c.field.AssertIsEqual(proofChallenges.FriChallenges.FriPowResponse, expectedPowResponse)
+
+	expectedFriQueryIndices := [...]F{
+		NewFieldElement(6790812084677375942),
+		NewFieldElement(12394212020331474798),
+		NewFieldElement(16457600747000998582),
+		NewFieldElement(1543271328932331916),
+		NewFieldElement(12115726870906958644),
+		NewFieldElement(6775897107605342797),
+		NewFieldElement(15989401564746021030),
+		NewFieldElement(10691676456016926845),
+		NewFieldElement(1632499470630032007),
+		NewFieldElement(1317292355445098328),
+		NewFieldElement(18391440812534384252),
+		NewFieldElement(17321705613231354333),
+		NewFieldElement(6176487551308859603),
+		NewFieldElement(7119835651572002873),
+		NewFieldElement(3903019169623116693),
+		NewFieldElement(4886491111111487546),
+		NewFieldElement(4087641893164620518),
+		NewFieldElement(13801643080324181364),
+		NewFieldElement(16993775312274189321),
+		NewFieldElement(9268202926222765679),
+		NewFieldElement(10683001302406181735),
+		NewFieldElement(13359465725531647963),
+		NewFieldElement(4523327590105620849),
+		NewFieldElement(4883588003760409588),
+		NewFieldElement(187699146998097671),
+		NewFieldElement(14489263557623716717),
+		NewFieldElement(11748359318238148146),
+		NewFieldElement(13636347200053048758),
+	}
+
+	if len(expectedFriQueryIndices) != len(proofChallenges.FriChallenges.FriQueryIndicies) {
+		panic("len(expectedFriQueryIndices) != len(proofChallenges.FriChallenges.FriQueryIndicies)")
+	}
+
+	for i := 0; i < len(expectedFriQueryIndices); i++ {
+		c.field.AssertIsEqual(expectedFriQueryIndices[i], proofChallenges.FriChallenges.FriQueryIndicies[i])
+	}
 }
 
 func (circuit *TestVerifierCircuit) Define(api frontend.API) error {
