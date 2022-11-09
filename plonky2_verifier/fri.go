@@ -98,10 +98,9 @@ func (f *FriChip) hashOrNoop(data []F) Hash {
 	}
 }
 
-func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits []frontend.Variable, capIndex F, merkleCap MerkleCap, proof *MerkleProof) {
+func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits []frontend.Variable, capIndexBits []frontend.Variable, merkleCap MerkleCap, proof *MerkleProof) {
 	currentDigest := f.hashOrNoop(leafData)
 	fourZeros := [4]F{f.qe.ZERO_F, f.qe.ZERO_F, f.qe.ZERO_F, f.qe.ZERO_F}
-	field.PrintHash(f.field, currentDigest)
 	for i, sibling := range proof.Siblings {
 		bit := leafIndexBits[i]
 
@@ -130,11 +129,30 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits
 		rightHashCompress[3] = rightHash[3]
 
 		currentDigest = SelectHash(f.field, bit, leftHashCompress, rightHashCompress)
-		field.PrintHash(f.field, currentDigest)
 	}
+
+	// We assume that the cap_height is 4.  Create two levels of the Lookup2 circuit
+	if len(capIndexBits) != 4 || len(merkleCap) != 16 {
+		panic("capIndexBits length should be 4 and the merkleCap length should be 16")
+	}
+
+	const NUM_LEAF_LOOKUPS = 4
+	var leafLookups [NUM_LEAF_LOOKUPS]Hash
+	// First create the "leaf" lookup2 circuits
+	// The will use the least significant bits of the capIndexBits array
+	for i := 0; i < NUM_LEAF_LOOKUPS; i++ {
+		leafLookups[i] = Lookup2Hash(
+			f.field, capIndexBits[0], capIndexBits[1],
+			merkleCap[i*NUM_LEAF_LOOKUPS], merkleCap[i*NUM_LEAF_LOOKUPS+1], merkleCap[i*NUM_LEAF_LOOKUPS+2], merkleCap[i*NUM_LEAF_LOOKUPS+3],
+		)
+	}
+
+	// Use the most 2 significant bits of the capIndexBits array for the "root" lookup
+	merkleCapEntry := Lookup2Hash(f.field, capIndexBits[2], capIndexBits[3], leafLookups[0], leafLookups[1], leafLookups[2], leafLookups[3])
+	AssertIsEqualHash(f.field, currentDigest, merkleCapEntry)
 }
 
-func (f *FriChip) verifyInitialProof(xIndexBits []frontend.Variable, proof *FriInitialTreeProof, initialMerkleCaps []MerkleCap, capIndex F) {
+func (f *FriChip) verifyInitialProof(xIndexBits []frontend.Variable, proof *FriInitialTreeProof, initialMerkleCaps []MerkleCap, capIndexBits []frontend.Variable) {
 	if len(proof.EvalsProofs) != len(initialMerkleCaps) {
 		panic("length of eval proofs in fri proof should equal length of initial merkle caps")
 	}
@@ -143,7 +161,7 @@ func (f *FriChip) verifyInitialProof(xIndexBits []frontend.Variable, proof *FriI
 		evals := proof.EvalsProofs[i].Elements
 		merkleProof := proof.EvalsProofs[i].MerkleProof
 		cap := initialMerkleCaps[i]
-		f.verifyMerkleProofToCapWithCapIndex(evals, xIndexBits, capIndex, cap, &merkleProof)
+		f.verifyMerkleProofToCapWithCapIndex(evals, xIndexBits, capIndexBits, cap, &merkleProof)
 	}
 }
 
@@ -182,9 +200,9 @@ func (f *FriChip) verifyQueryRound(
 ) {
 	f.assertNoncanonicalIndicesOK()
 	xIndexBits := f.qe.field.ToBinary(xIndex, int(nLog))
-	capIndex := f.qe.field.FromBinary(xIndexBits[len(xIndexBits)-int(f.friParams.Config.CapHeight):]...).(F)
+	capIndexBits := xIndexBits[len(xIndexBits)-int(f.friParams.Config.CapHeight):]
 
-	f.verifyInitialProof(xIndexBits, &roundProof.InitialTreesProof, initialMerkleCaps, capIndex)
+	f.verifyInitialProof(xIndexBits, &roundProof.InitialTreesProof, initialMerkleCaps, capIndexBits)
 }
 
 func (f *FriChip) VerifyFriProof(
