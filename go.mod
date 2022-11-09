@@ -30,4 +30,4 @@ require (
 
 // For now, use a forked version of gnark so that the emaulated fields are
 // mod'ed when printed.  See here:  https://github.com/kevjue/gnark/commit/0b216679a380b4b8d29f10dd96f34e8a5702463e
-replace github.com/consensys/gnark v0.7.2-0.20220921094618-a121a3074ee8 => github.com/kevjue/gnark v0.7.2-0.20221031212238-0b216679a380
+replace github.com/consensys/gnark v0.7.2-0.20220921094618-a121a3074ee8 => github.com/kevjue/gnark v0.7.2-0.20221109003544-edd49e7202a7

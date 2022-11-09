@@ -1,6 +1,7 @@
 package field
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -35,4 +36,11 @@ var r EmulatedField
 
 func EmulatedFieldModulus() *big.Int {
 	return r.Modulus()
+}
+
+func PrintHash(f frontend.API, h Hash) {
+	for i := 0; i < 4; i++ {
+		fmt.Println("Hash Limb", i)
+		f.Println(h[i])
+	}
 }

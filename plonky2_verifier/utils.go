@@ -4,6 +4,8 @@ import (
 	"fmt"
 	. "gnark-ed25519/field"
 	"math/bits"
+
+	"github.com/consensys/gnark/frontend"
 )
 
 func reduceWithPowers(qe *QuadraticExtensionAPI, terms []QuadraticExtension, scalar QuadraticExtension) QuadraticExtension {
@@ -29,4 +31,13 @@ func log2Strict(n uint) int {
 		panic(fmt.Sprintf("Not a power of two: %d", n))
 	}
 	return res
+}
+
+func SelectHash(fieldAPI frontend.API, bit frontend.Variable, leftHash, rightHash Hash) Hash {
+	var returnHash Hash
+	for i := 0; i < 4; i++ {
+		returnHash[i] = fieldAPI.Select(bit, leftHash[i], rightHash[i]).(F)
+	}
+
+	return returnHash
 }

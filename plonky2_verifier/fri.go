@@ -100,30 +100,37 @@ func (f *FriChip) hashOrNoop(data []F) Hash {
 
 func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits []frontend.Variable, capIndex F, merkleCap MerkleCap, proof *MerkleProof) {
 	currentDigest := f.hashOrNoop(leafData)
-
-	if len(leafIndexBits) != len(proof.Siblings) {
-		panic("len(leafIndexBits) != len(proof.Siblings)")
-	}
-
 	fourZeros := [4]F{f.qe.ZERO_F, f.qe.ZERO_F, f.qe.ZERO_F, f.qe.ZERO_F}
-	for i, bit := range leafIndexBits {
-		sibling := proof.Siblings[i]
+	field.PrintHash(f.field, currentDigest)
+	for i, sibling := range proof.Siblings {
+		bit := leafIndexBits[i]
 
 		var leftSiblingState poseidon.PoseidonState
 		copy(leftSiblingState[0:4], sibling[0:4])
 		copy(leftSiblingState[4:8], currentDigest[0:4])
 		copy(leftSiblingState[8:12], fourZeros[0:4])
+
 		leftHash := f.poseidonChip.Poseidon(leftSiblingState)
-		leftHashCompress := leftHash[0:4]
+		var leftHashCompress Hash
+		leftHashCompress[0] = leftHash[0]
+		leftHashCompress[1] = leftHash[1]
+		leftHashCompress[2] = leftHash[2]
+		leftHashCompress[3] = leftHash[3]
 
 		var rightSiblingState poseidon.PoseidonState
 		copy(rightSiblingState[0:4], currentDigest[0:4])
 		copy(rightSiblingState[4:8], sibling[0:4])
 		copy(rightSiblingState[8:12], fourZeros[0:4])
-		rightHash := f.poseidonChip.Poseidon(rightSiblingState)
-		rightHashCompress := rightHash[0:4]
 
-		currentDigest = f.api.Select(bit, leftHashCompress, rightHashCompress).(Hash)
+		rightHash := f.poseidonChip.Poseidon(rightSiblingState)
+		var rightHashCompress Hash
+		rightHashCompress[0] = rightHash[0]
+		rightHashCompress[1] = rightHash[1]
+		rightHashCompress[2] = rightHash[2]
+		rightHashCompress[3] = rightHash[3]
+
+		currentDigest = SelectHash(f.field, bit, leftHashCompress, rightHashCompress)
+		field.PrintHash(f.field, currentDigest)
 	}
 }
 

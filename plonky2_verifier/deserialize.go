@@ -59,19 +59,18 @@ type MerkleProofRaw struct {
 }
 
 func (m *MerkleProofRaw) UnmarshalJSON(data []byte) error {
-	var siblingDict map[string]interface{}
-	if err := json.Unmarshal(data, &siblingDict); err != nil {
+	type SiblingObject struct {
+		Siblings []map[string][]uint64 // "siblings"
+	}
+
+	var siblings SiblingObject
+	if err := json.Unmarshal(data, &siblings); err != nil {
 		panic(err)
 	}
 
-	siblings := siblingDict["siblings"].([]interface{})
-	m.hash = make([][]uint64, len(siblings))
-	for siblingIdx, sibling := range siblings {
-		siblingHash := sibling.(map[string]interface{})["elements"].([]interface{})
-		m.hash[siblingIdx] = make([]uint64, 4)
-		for siblingElementIdx, siblingElement := range siblingHash {
-			m.hash[siblingIdx][siblingElementIdx] = uint64(siblingElement.(float64))
-		}
+	m.hash = make([][]uint64, len(siblings.Siblings))
+	for siblingIdx, sibling := range siblings.Siblings {
+		m.hash[siblingIdx] = sibling["elements"]
 	}
 
 	return nil
