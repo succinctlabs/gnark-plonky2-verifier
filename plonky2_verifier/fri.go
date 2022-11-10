@@ -12,26 +12,6 @@ import (
 	"github.com/consensys/gnark/frontend"
 )
 
-type FriOpeningBatch struct {
-	values []QuadraticExtension
-}
-
-type FriOpenings struct {
-	Batches []FriOpeningBatch
-}
-
-func (c *OpeningSet) ToFriOpenings() FriOpenings {
-	values := c.Constants
-	values = append(values, c.PlonkSigmas...)
-	values = append(values, c.Wires...)
-	values = append(values, c.PlonkZs...)
-	values = append(values, c.PartialProducts...)
-	values = append(values, c.QuotientPolys...)
-	zetaBatch := FriOpeningBatch{values: values}
-	zetaNextBatch := FriOpeningBatch{values: c.PlonkZsNext}
-	return FriOpenings{Batches: []FriOpeningBatch{zetaBatch, zetaNextBatch}}
-}
-
 type FriChip struct {
 	api      frontend.API
 	fieldAPI frontend.API
@@ -190,22 +170,10 @@ func (f *FriChip) assertNoncanonicalIndicesOK() {
 	}
 }
 
-func (f *FriChip) verifyQueryRound(
-	challenges *FriChallenges,
-	precomputedReducedEval []QuadraticExtension,
-	initialMerkleCaps []MerkleCap,
-	proof *FriProof,
-	xIndex F,
-	n uint64,
+func (f *FriChip) calculateSubgroupX(
+	xIndexBits []frontend.Variable,
 	nLog uint64,
-	roundProof *FriQueryRound,
-) {
-	f.assertNoncanonicalIndicesOK()
-	xIndexBits := f.fieldAPI.ToBinary(xIndex, int(nLog))
-	capIndexBits := xIndexBits[len(xIndexBits)-int(f.friParams.Config.CapHeight):]
-
-	f.verifyInitialProof(xIndexBits, &roundProof.InitialTreesProof, initialMerkleCaps, capIndexBits)
-
+) F {
 	// Compute x from its index
 	// `subgroup_x` is `subgroup[x_index]`, i.e., the actual field element in the domain.
 	// TODO - Make these as global values
@@ -240,10 +208,105 @@ func (f *FriChip) verifyQueryRound(
 		).(F)
 	}
 
-	subgroupX := f.fieldAPI.Mul(g, product).(F)
+	return f.fieldAPI.Mul(g, product).(F)
+}
+
+func (f *FriChip) friCombineInitial(
+	instance FriInstanceInfo,
+	proof FriInitialTreeProof,
+	friAlpha QuadraticExtension,
+	subgroupX_QE QuadraticExtension,
+	precomputedReducedEval []QuadraticExtension,
+) QuadraticExtension {
+	sum := f.qeAPI.ZERO_QE
+
+	if len(instance.Batches) != len(precomputedReducedEval) {
+		panic("len(openings) != len(precomputedReducedEval)")
+	}
+
+	for i := 0; i < len(instance.Batches); i++ {
+		batch := instance.Batches[i]
+		reducedOpenings := precomputedReducedEval[i]
+
+		point := batch.Point
+		evals := make([]QuadraticExtension, 0)
+		for _, polynomial := range batch.Polynomials {
+			evals = append(
+				evals,
+				QuadraticExtension{proof.EvalsProofs[polynomial.OracleIndex].Elements[polynomial.PolynomialInfo], field.ZERO_F},
+			)
+		}
+
+		reducedEvals := reduceWithPowers(f.qeAPI, evals, friAlpha)
+		numerator := f.qeAPI.SubExtension(reducedEvals, reducedOpenings)
+		denominator := f.qeAPI.SubExtension(subgroupX_QE, point)
+		sum = f.qeAPI.MulExtension(f.qeAPI.ExpU64Extension(friAlpha, uint64(len(evals))), sum)
+		sum = f.qeAPI.AddExtension(
+			f.qeAPI.DivExtension(
+				numerator,
+				denominator,
+			),
+			sum,
+		)
+	}
+
+	return f.qeAPI.MulExtension(sum, subgroupX_QE)
+}
+
+func (f *FriChip) finalPolyEval(finalPoly PolynomialCoeffs, point QuadraticExtension) QuadraticExtension {
+	ret := f.qeAPI.ZERO_QE
+	for i := len(finalPoly.Coeffs) - 1; i >= 0; i-- {
+		ret = f.qeAPI.AddExtension(
+			f.qeAPI.MulExtension(
+				ret,
+				point,
+			),
+			finalPoly.Coeffs[i],
+		)
+	}
+	return ret
+}
+
+func (f *FriChip) verifyQueryRound(
+	instance FriInstanceInfo,
+	challenges *FriChallenges,
+	precomputedReducedEval []QuadraticExtension,
+	initialMerkleCaps []MerkleCap,
+	proof *FriProof,
+	xIndex F,
+	n uint64,
+	nLog uint64,
+	roundProof *FriQueryRound,
+) {
+	f.assertNoncanonicalIndicesOK()
+	xIndexBits := f.fieldAPI.ToBinary(xIndex, int(nLog))
+	capIndexBits := xIndexBits[len(xIndexBits)-int(f.friParams.Config.CapHeight):]
+
+	f.verifyInitialProof(xIndexBits, &roundProof.InitialTreesProof, initialMerkleCaps, capIndexBits)
+
+	subgroupX := f.calculateSubgroupX(
+		xIndexBits,
+		nLog,
+	)
+
+	subgroupX_QE := QuadraticExtension{subgroupX, field.ZERO_F}
+
+	oldEval := f.friCombineInitial(
+		instance,
+		roundProof.InitialTreesProof,
+		challenges.FriAlpha,
+		subgroupX_QE,
+		precomputedReducedEval,
+	)
+
+	finalPolyEval := f.finalPolyEval(proof.FinalPoly, subgroupX_QE)
+
+	f.fieldAPI.AssertIsEqual(oldEval[0], finalPolyEval[0])
+	f.fieldAPI.AssertIsEqual(oldEval[1], finalPolyEval[1])
 }
 
 func (f *FriChip) VerifyFriProof(
+	instance FriInstanceInfo,
 	openings FriOpenings,
 	friChallenges *FriChallenges,
 	initialMerkleCaps []MerkleCap,
@@ -281,6 +344,7 @@ func (f *FriChip) VerifyFriProof(
 		roundProof := friProof.QueryRoundProofs[idx]
 
 		f.verifyQueryRound(
+			instance,
 			friChallenges,
 			precomputedReducedEvals,
 			initialMerkleCaps,

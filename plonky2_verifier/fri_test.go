@@ -68,6 +68,7 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	}
 
 	friChip.VerifyFriProof(
+		commonCircuitData.GetFriInstance(),
 		proofWithPis.Proof.Openings.ToFriOpenings(),
 		&friChallenges,
 		initialMerkleCaps,

@@ -2,7 +2,9 @@ package plonky2_verifier
 
 import (
 	"fmt"
+	"gnark-ed25519/field"
 	. "gnark-ed25519/field"
+	"math/bits"
 
 	"github.com/consensys/gnark/frontend"
 )
@@ -12,7 +14,6 @@ type QuadraticExtensionAPI struct {
 
 	W        F
 	DTH_ROOT F
-	ZERO_F   F
 
 	ONE     QuadraticExtension
 	ZERO_QE QuadraticExtension
@@ -66,7 +67,7 @@ func (c *QuadraticExtensionAPI) InverseExtension(a QuadraticExtension) Quadratic
 	a1_is_zero := c.fieldAPI.IsZero(a[1])
 
 	// assert that a0_is_zero OR a1_is_zero == false
-	c.fieldAPI.AssertIsEqual(c.fieldAPI.Mul(a0_is_zero, a1_is_zero).(F), c.ZERO_F)
+	c.fieldAPI.AssertIsEqual(c.fieldAPI.Mul(a0_is_zero, a1_is_zero).(F), field.ZERO_F)
 
 	a_pow_r_minus_1 := QuadraticExtension{a[0], c.fieldAPI.Mul(a[1], c.DTH_ROOT).(F)}
 	a_pow_r := c.MulExtension(a_pow_r_minus_1, a)
@@ -78,7 +79,35 @@ func (c *QuadraticExtensionAPI) ScalarMulExtension(a QuadraticExtension, scalar 
 }
 
 func (c *QuadraticExtensionAPI) FieldToQE(a F) QuadraticExtension {
-	return QuadraticExtension{a, c.ZERO_F}
+	return QuadraticExtension{a, field.ZERO_F}
+}
+
+// / Exponentiate `base` to the power of a known `exponent`.
+func (c *QuadraticExtensionAPI) ExpU64Extension(a QuadraticExtension, exponent uint64) QuadraticExtension {
+	switch exponent {
+	case 0:
+		return c.ONE
+	case 1:
+		return a
+	case 2:
+		return c.SquareExtension(a)
+	default:
+	}
+
+	current := a
+	product := c.ONE
+
+	for i := 0; i < bits.Len64(exponent); i++ {
+		if i != 0 {
+			current = c.SquareExtension(current)
+		}
+
+		if (exponent >> i & 1) != 0 {
+			product = c.MulExtension(product, current)
+		}
+	}
+
+	return product
 }
 
 func (c *QuadraticExtensionAPI) Println(a QuadraticExtension) {
