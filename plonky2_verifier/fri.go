@@ -6,7 +6,9 @@ import (
 	. "gnark-ed25519/field"
 	"gnark-ed25519/poseidon"
 	"math"
+	"math/big"
 
+	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/frontend"
 )
 
@@ -31,9 +33,9 @@ func (c *OpeningSet) ToFriOpenings() FriOpenings {
 }
 
 type FriChip struct {
-	api   frontend.API
-	field frontend.API
-	qe    *QuadraticExtensionAPI
+	api      frontend.API
+	fieldAPI frontend.API
+	qeAPI    *QuadraticExtensionAPI
 
 	poseidonChip *poseidon.PoseidonChip
 
@@ -41,11 +43,11 @@ type FriChip struct {
 	verifierOnlyCircuitData *VerifierOnlyCircuitData
 }
 
-func NewFriChip(api frontend.API, field frontend.API, qe *QuadraticExtensionAPI, poseidonChip *poseidon.PoseidonChip, friParams *FriParams) *FriChip {
+func NewFriChip(api frontend.API, fieldAPI frontend.API, qeAPI *QuadraticExtensionAPI, poseidonChip *poseidon.PoseidonChip, friParams *FriParams) *FriChip {
 	return &FriChip{
 		api:          api,
-		field:        field,
-		qe:           qe,
+		fieldAPI:     fieldAPI,
+		qeAPI:        qeAPI,
 		poseidonChip: poseidonChip,
 		friParams:    friParams,
 	}
@@ -56,7 +58,7 @@ func (f *FriChip) assertLeadingZeros(powWitness F, friConfig FriConfig) {
 	// Note that this is assuming that the Goldilocks field is being used.  Specfically that the
 	// field is 64 bits long
 	maxPowWitness := uint64(math.Pow(2, float64(64-friConfig.ProofOfWorkBits))) - 1
-	f.field.AssertIsLessOrEqual(powWitness, field.NewFieldElement(maxPowWitness))
+	f.fieldAPI.AssertIsLessOrEqual(powWitness, field.NewFieldElement(maxPowWitness))
 }
 
 func (f *FriChip) fromOpeningsAndAlpha(openings *FriOpenings, alpha QuadraticExtension) []QuadraticExtension {
@@ -65,7 +67,7 @@ func (f *FriChip) fromOpeningsAndAlpha(openings *FriOpenings, alpha QuadraticExt
 
 	reducedOpenings := make([]QuadraticExtension, 0, 2)
 	for _, batch := range openings.Batches {
-		reducedOpenings = append(reducedOpenings, reduceWithPowers(f.qe, batch.values, alpha))
+		reducedOpenings = append(reducedOpenings, reduceWithPowers(f.qeAPI, batch.values, alpha))
 	}
 
 	return reducedOpenings
@@ -79,7 +81,7 @@ func (f *FriChip) hashOrNoop(data []F) Hash {
 			elements[i] = inputElement
 		}
 		for i := len(data); i < 4; i++ {
-			elements[i] = f.qe.ZERO_F
+			elements[i] = field.ZERO_F
 		}
 
 		return elements
@@ -100,7 +102,7 @@ func (f *FriChip) hashOrNoop(data []F) Hash {
 
 func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits []frontend.Variable, capIndexBits []frontend.Variable, merkleCap MerkleCap, proof *MerkleProof) {
 	currentDigest := f.hashOrNoop(leafData)
-	fourZeros := [4]F{f.qe.ZERO_F, f.qe.ZERO_F, f.qe.ZERO_F, f.qe.ZERO_F}
+	fourZeros := [4]F{field.ZERO_F, field.ZERO_F, field.ZERO_F, field.ZERO_F}
 	for i, sibling := range proof.Siblings {
 		bit := leafIndexBits[i]
 
@@ -128,7 +130,7 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits
 		rightHashCompress[2] = rightHash[2]
 		rightHashCompress[3] = rightHash[3]
 
-		currentDigest = SelectHash(f.field, bit, leftHashCompress, rightHashCompress)
+		currentDigest = SelectHash(f.fieldAPI, bit, leftHashCompress, rightHashCompress)
 	}
 
 	// We assume that the cap_height is 4.  Create two levels of the Lookup2 circuit
@@ -142,14 +144,14 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits
 	// The will use the least significant bits of the capIndexBits array
 	for i := 0; i < NUM_LEAF_LOOKUPS; i++ {
 		leafLookups[i] = Lookup2Hash(
-			f.field, capIndexBits[0], capIndexBits[1],
+			f.fieldAPI, capIndexBits[0], capIndexBits[1],
 			merkleCap[i*NUM_LEAF_LOOKUPS], merkleCap[i*NUM_LEAF_LOOKUPS+1], merkleCap[i*NUM_LEAF_LOOKUPS+2], merkleCap[i*NUM_LEAF_LOOKUPS+3],
 		)
 	}
 
 	// Use the most 2 significant bits of the capIndexBits array for the "root" lookup
-	merkleCapEntry := Lookup2Hash(f.field, capIndexBits[2], capIndexBits[3], leafLookups[0], leafLookups[1], leafLookups[2], leafLookups[3])
-	AssertIsEqualHash(f.field, currentDigest, merkleCapEntry)
+	merkleCapEntry := Lookup2Hash(f.fieldAPI, capIndexBits[2], capIndexBits[3], leafLookups[0], leafLookups[1], leafLookups[2], leafLookups[3])
+	AssertIsEqualHash(f.fieldAPI, currentDigest, merkleCapEntry)
 }
 
 func (f *FriChip) verifyInitialProof(xIndexBits []frontend.Variable, proof *FriInitialTreeProof, initialMerkleCaps []MerkleCap, capIndexBits []frontend.Variable) {
@@ -178,9 +180,9 @@ func (f *FriChip) verifyInitialProof(xIndexBits []frontend.Variable, proof *FriI
 // /
 // / Here we compare the probabilities as a sanity check, to verify the claim above.
 func (f *FriChip) assertNoncanonicalIndicesOK() {
-	numAmbiguousElems := uint64(math.MaxUint64) - EmulatedFieldModulus().Uint64() + 1
+	numAmbiguousElems := uint64(math.MaxUint64) - goldilocks.Modulus().Uint64() + 1
 	queryError := f.friParams.Config.rate()
-	pAmbiguous := float64(numAmbiguousElems) / float64(EmulatedFieldModulus().Uint64())
+	pAmbiguous := float64(numAmbiguousElems) / float64(goldilocks.Modulus().Uint64())
 
 	// TODO:  Check that pAmbiguous value is the same as the one in plonky2 verifier
 	if pAmbiguous >= queryError*1e-5 {
@@ -199,10 +201,46 @@ func (f *FriChip) verifyQueryRound(
 	roundProof *FriQueryRound,
 ) {
 	f.assertNoncanonicalIndicesOK()
-	xIndexBits := f.qe.field.ToBinary(xIndex, int(nLog))
+	xIndexBits := f.fieldAPI.ToBinary(xIndex, int(nLog))
 	capIndexBits := xIndexBits[len(xIndexBits)-int(f.friParams.Config.CapHeight):]
 
 	f.verifyInitialProof(xIndexBits, &roundProof.InitialTreesProof, initialMerkleCaps, capIndexBits)
+
+	// Compute x from its index
+	// `subgroup_x` is `subgroup[x_index]`, i.e., the actual field element in the domain.
+	// TODO - Make these as global values
+	g := field.NewFieldElement(field.GOLDILOCKS_MULTIPLICATIVE_GROUP_GENERATOR.Uint64())
+	base := field.GoldilocksPrimitiveRootOfUnity(nLog)
+
+	product := ONE_F
+	// Create a reverse list of xIndexBits
+	xIndexBitsRev := make([]frontend.Variable, 0)
+	for i := len(xIndexBits) - 1; i >= 0; i-- {
+		xIndexBitsRev = append(xIndexBitsRev, xIndexBits[i])
+	}
+
+	for i, bit := range xIndexBitsRev {
+		pow := int64(1 << i)
+		// If the bit is on, we multiply product by base^pow.
+		// We can arithmetize this as:
+		//     product *= 1 + bit (base^pow - 1)
+		//     product = (base^pow - 1) product bit + product
+		basePow := goldilocks.NewElement(0)
+		basePow.Exp(base, big.NewInt(pow))
+
+		basePowElement := NewFieldElement(basePow.Uint64() - 1)
+
+		product = f.fieldAPI.Add(
+			f.fieldAPI.Mul(
+				basePowElement,
+				product,
+				bit,
+			),
+			product,
+		).(F)
+	}
+
+	subgroupX := f.fieldAPI.Mul(g, product).(F)
 }
 
 func (f *FriChip) VerifyFriProof(

@@ -57,3 +57,10 @@ func AssertIsEqualHash(fieldAPI frontend.API, h1, h2 Hash) {
 		fieldAPI.AssertIsEqual(h1[0], h2[0])
 	}
 }
+
+func PrintHash(f frontend.API, h Hash) {
+	for i := 0; i < 4; i++ {
+		fmt.Println("Hash Limb", i)
+		f.Println(h[i])
+	}
+}

@@ -1,10 +1,8 @@
 package field
 
 import (
-	"fmt"
-	"math/big"
-
 	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 )
@@ -32,15 +30,22 @@ func NewFieldAPI(api frontend.API) frontend.API {
 	return field
 }
 
-var r EmulatedField
+var ONE_F = NewFieldElement(1)
+var ZERO_F = NewFieldElement(0)
 
-func EmulatedFieldModulus() *big.Int {
-	return r.Modulus()
-}
+var GOLDILOCKS_MULTIPLICATIVE_GROUP_GENERATOR = goldilocks.NewElement(7)
+var GOLDILOCKS_TWO_ADICITY = uint64(32)
+var GOLDILOCKS_POWER_OF_TWO_GENERATOR = goldilocks.NewElement(1753635133440165772)
 
-func PrintHash(f frontend.API, h Hash) {
-	for i := 0; i < 4; i++ {
-		fmt.Println("Hash Limb", i)
-		f.Println(h[i])
+func GoldilocksPrimitiveRootOfUnity(nLog uint64) goldilocks.Element {
+	if nLog > GOLDILOCKS_TWO_ADICITY {
+		panic("nLog is greater than GOLDILOCKS_TWO_ADICITY")
 	}
+
+	res := goldilocks.NewElement(GOLDILOCKS_POWER_OF_TWO_GENERATOR.Uint64())
+	for i := 0; i < int(GOLDILOCKS_TWO_ADICITY-nLog); i++ {
+		res.Square(&res)
+	}
+
+	return res
 }
