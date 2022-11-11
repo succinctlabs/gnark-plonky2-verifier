@@ -56,7 +56,6 @@ func (c *CommonCircuitData) polynomialInfoFromRange(oracleIdx uint64, startPolyI
 	}
 
 	return returnArr
-
 }
 
 // Range of the sigma polynomials in the `constants_sigmas_commitment`.

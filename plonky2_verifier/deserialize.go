@@ -251,6 +251,27 @@ func DeserializeProofWithPublicInputs(path string) ProofWithPublicInputs {
 	return proofWithPis
 }
 
+func ReductionArityBits(
+	arityBits uint64,
+	finalPolyBits uint64,
+	degreeBits uint64,
+	rateBits uint64,
+	capHeight uint64,
+	numQueries uint64,
+) []uint64 {
+	returnArr := make([]uint64, 0)
+
+	for degreeBits > finalPolyBits && degreeBits+rateBits-arityBits >= capHeight {
+		returnArr = append(returnArr, arityBits)
+		if degreeBits < arityBits {
+			panic("degreeBits < arityBits")
+		}
+		degreeBits -= arityBits
+	}
+
+	return returnArr
+}
+
 func DeserializeCommonCircuitData(path string) CommonCircuitData {
 	jsonFile, err := os.Open(path)
 	if err != nil {
@@ -286,6 +307,14 @@ func DeserializeCommonCircuitData(path string) CommonCircuitData {
 	commonCircuitData.FriParams.Config.CapHeight = raw.FriParams.Config.CapHeight
 	commonCircuitData.FriParams.Config.ProofOfWorkBits = raw.FriParams.Config.ProofOfWorkBits
 	commonCircuitData.FriParams.Config.NumQueryRounds = raw.FriParams.Config.NumQueryRounds
+	commonCircuitData.FriParams.ReductionArityBits = ReductionArityBits(
+		raw.FriParams.ReductionArityBits[0].(uint64),
+		raw.FriParams.ReductionArityBits[1].(uint64),
+		raw.FriParams.DegreeBits,
+		raw.FriParams.Config.RateBits,
+		raw.FriParams.Config.CapHeight,
+		raw.FriParams.Config.NumQueryRounds,
+	)
 
 	commonCircuitData.DegreeBits = raw.DegreeBits
 	commonCircuitData.QuotientDegreeFactor = raw.QuotientDegreeFactor
