@@ -21,6 +21,10 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	poseidonChip := poseidon.NewPoseidonChip(api, field)
 	friChip := NewFriChip(api, field, qe, poseidonChip, &commonCircuitData.FriParams)
 
+	zeta := QuadraticExtension{
+		NewFieldElementFromString("14887793628029982930"),
+		NewFieldElementFromString("1136137158284059037"),
+	}
 	friChallenges := FriChallenges{
 		FriAlpha: QuadraticExtension{
 			NewFieldElementFromString("14641715242626918707"),
@@ -68,7 +72,7 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	}
 
 	friChip.VerifyFriProof(
-		commonCircuitData.GetFriInstance(),
+		commonCircuitData.GetFriInstance(qe, zeta, commonCircuitData.DegreeBits),
 		proofWithPis.Proof.Openings.ToFriOpenings(),
 		&friChallenges,
 		initialMerkleCaps,
