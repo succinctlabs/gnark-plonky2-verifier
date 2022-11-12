@@ -34,7 +34,10 @@ type ProofWithPublicInputsRaw struct {
 				InitialTreesProof struct {
 					EvalsProofs []EvalProofRaw `json:"evals_proofs"`
 				} `json:"initial_trees_proof"`
-				Steps []interface{} `json:"steps"`
+				Steps []struct {
+					Evals       [][]uint64     `json:"evals"`
+					MerkleProof MerkleProofRaw `json:"merkle_proof"`
+				} `json:"steps"`
 			} `json:"query_round_proofs"`
 			FinalPoly struct {
 				Coeffs [][]uint64 `json:"coeffs"`
@@ -91,7 +94,7 @@ type CommonCircuitDataRaw struct {
 			CapHeight         uint64 `json:"cap_height"`
 			ProofOfWorkBits   uint64 `json:"proof_of_work_bits"`
 			ReductionStrategy struct {
-				ConstantArityBits []int `json:"ConstantArityBits"`
+				ConstantArityBits []uint64 `json:"ConstantArityBits"`
 			} `json:"reduction_strategy"`
 			NumQueryRounds uint64 `json:"num_query_rounds"`
 		} `json:"fri_config"`
@@ -106,9 +109,9 @@ type CommonCircuitDataRaw struct {
 			} `json:"reduction_strategy"`
 			NumQueryRounds uint64 `json:"num_query_rounds"`
 		} `json:"config"`
-		Hiding             bool          `json:"hiding"`
-		DegreeBits         uint64        `json:"degree_bits"`
-		ReductionArityBits []interface{} `json:"reduction_arity_bits"`
+		Hiding             bool     `json:"hiding"`
+		DegreeBits         uint64   `json:"degree_bits"`
+		ReductionArityBits []uint64 `json:"reduction_arity_bits"`
 	} `json:"fri_params"`
 	DegreeBits    uint64 `json:"degree_bits"`
 	SelectorsInfo struct {
@@ -181,7 +184,10 @@ func DeserializeFriProof(openingProofRaw struct {
 		InitialTreesProof struct {
 			EvalsProofs []EvalProofRaw
 		}
-		Steps []interface{}
+		Steps []struct {
+			Evals       [][]uint64
+			MerkleProof MerkleProofRaw
+		}
 	}
 	FinalPoly struct {
 		Coeffs [][]uint64
@@ -201,6 +207,13 @@ func DeserializeFriProof(openingProofRaw struct {
 		for j := 0; j < numEvalProofs; j++ {
 			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].Elements = utils.Uint64ArrayToFArray(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].leafElements)
 			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Siblings = utils.Uint64ArrayToHashArray(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].merkleProof.hash)
+		}
+
+		numSteps := len(openingProofRaw.QueryRoundProofs[i].Steps)
+		openingProof.QueryRoundProofs[i].Steps = make([]FriQueryStep, numSteps)
+		for j := 0; j < numSteps; j++ {
+			openingProof.QueryRoundProofs[i].Steps[j].Evals = utils.Uint64ArrayToQuadraticExtensionArray(openingProofRaw.QueryRoundProofs[i].Steps[j].Evals)
+			openingProof.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings = utils.Uint64ArrayToHashArray(openingProofRaw.QueryRoundProofs[i].Steps[j].MerkleProof.hash)
 		}
 	}
 
@@ -241,7 +254,10 @@ func DeserializeProofWithPublicInputs(path string) ProofWithPublicInputs {
 			InitialTreesProof struct {
 				EvalsProofs []EvalProofRaw
 			}
-			Steps []interface{}
+			Steps []struct {
+				Evals       [][]uint64
+				MerkleProof MerkleProofRaw
+			}
 		}
 		FinalPoly  struct{ Coeffs [][]uint64 }
 		PowWitness uint64
@@ -306,13 +322,7 @@ func DeserializeCommonCircuitData(path string) CommonCircuitData {
 	commonCircuitData.FriParams.Config.CapHeight = raw.FriParams.Config.CapHeight
 	commonCircuitData.FriParams.Config.ProofOfWorkBits = raw.FriParams.Config.ProofOfWorkBits
 	commonCircuitData.FriParams.Config.NumQueryRounds = raw.FriParams.Config.NumQueryRounds
-	commonCircuitData.FriParams.ReductionArityBits = ReductionArityBits(
-		raw.FriParams.ReductionArityBits[0].(uint64),
-		raw.FriParams.ReductionArityBits[1].(uint64),
-		raw.FriParams.DegreeBits,
-		raw.FriParams.Config.RateBits,
-		raw.FriParams.Config.CapHeight,
-	)
+	commonCircuitData.FriParams.ReductionArityBits = raw.FriParams.ReductionArityBits
 
 	commonCircuitData.DegreeBits = raw.DegreeBits
 	commonCircuitData.QuotientDegreeFactor = raw.QuotientDegreeFactor
