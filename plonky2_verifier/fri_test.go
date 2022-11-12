@@ -9,9 +9,9 @@ import (
 	"github.com/consensys/gnark/test"
 )
 
-type TestFriCircuit struct{}
+type TestFibonacciFriCircuit struct{}
 
-func (circuit *TestFriCircuit) Define(api frontend.API) error {
+func (circuit *TestFibonacciFriCircuit) Define(api frontend.API) error {
 	proofWithPis := DeserializeProofWithPublicInputs("./data/fibonacci/proof_with_public_inputs.json")
 	commonCircuitData := DeserializeCommonCircuitData("./data/fibonacci/common_circuit_data.json")
 	verifierOnlyCircuitData := DeserializeVerifierOnlyCircuitData("./data/fibonacci/verifier_only_circuit_data.json")
@@ -82,12 +82,111 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	return nil
 }
 
-func TestFriProof(t *testing.T) {
+func TestFibonacciFriProof(t *testing.T) {
 	assert := test.NewAssert(t)
 
 	testCase := func() {
-		circuit := TestFriCircuit{}
-		witness := TestFriCircuit{}
+		circuit := TestFibonacciFriCircuit{}
+		witness := TestFibonacciFriCircuit{}
+		err := test.IsSolved(&circuit, &witness, TEST_CURVE.ScalarField())
+		assert.NoError(err)
+	}
+
+	testCase()
+}
+
+type TestLargeDummyFriCircuit struct{}
+
+func (circuit *TestLargeDummyFriCircuit) Define(api frontend.API) error {
+	proofWithPis := DeserializeProofWithPublicInputs("./data/dummy_2^14_gates/proof_with_public_inputs.json")
+	commonCircuitData := DeserializeCommonCircuitData("./data/dummy_2^14_gates/common_circuit_data.json")
+	verifierOnlyCircuitData := DeserializeVerifierOnlyCircuitData("./data/dummy_2^14_gates/verifier_only_circuit_data.json")
+
+	field := NewFieldAPI(api)
+	qe := NewQuadraticExtensionAPI(field, commonCircuitData.DegreeBits)
+	poseidonChip := poseidon.NewPoseidonChip(api, field)
+	friChip := NewFriChip(api, field, qe, poseidonChip, &commonCircuitData.FriParams)
+
+	zeta := QuadraticExtension{
+		NewFieldElementFromString("17377750363769967882"),
+		NewFieldElementFromString("11921191651424768462"),
+	}
+	friChallenges := FriChallenges{
+		FriAlpha: QuadraticExtension{
+			NewFieldElementFromString("16721004555774385479"),
+			NewFieldElementFromString("10688151135543754663"),
+		},
+		FriBetas: []QuadraticExtension{
+			{
+				NewFieldElementFromString("3312441922957827805"),
+				NewFieldElementFromString("15128092514958289671"),
+			},
+			{
+				NewFieldElementFromString("13630530769060141802"),
+				NewFieldElementFromString("14559883974933163008"),
+			},
+			{
+				NewFieldElementFromString("16146508250083930687"),
+				NewFieldElementFromString("5176346568444408396"),
+			},
+		},
+		FriPowResponse: NewFieldElement(4389),
+		FriQueryIndicies: []F{
+			NewFieldElementFromString("16334967868590615051"),
+			NewFieldElementFromString("2911473540496037915"),
+			NewFieldElementFromString("14887216056886344225"),
+			NewFieldElementFromString("7808811227805914295"),
+			NewFieldElementFromString("2018594961417375749"),
+			NewFieldElementFromString("3733368398777208435"),
+			NewFieldElementFromString("2623035669037055104"),
+			NewFieldElementFromString("299243030573481514"),
+			NewFieldElementFromString("7189789717962704433"),
+			NewFieldElementFromString("14566344026886816268"),
+			NewFieldElementFromString("12555390069003437453"),
+			NewFieldElementFromString("17225508403199418233"),
+			NewFieldElementFromString("5088797913879903292"),
+			NewFieldElementFromString("9715691392773433023"),
+			NewFieldElementFromString("7565836764713256165"),
+			NewFieldElementFromString("1500143546029322929"),
+			NewFieldElementFromString("1245802417104422080"),
+			NewFieldElementFromString("6831959786661245110"),
+			NewFieldElementFromString("17271054758535453780"),
+			NewFieldElementFromString("6225460404576395409"),
+			NewFieldElementFromString("15932661092896277351"),
+			NewFieldElementFromString("12452534049198240575"),
+			NewFieldElementFromString("4225199666055520177"),
+			NewFieldElementFromString("13235091290587791090"),
+			NewFieldElementFromString("2562357622728700774"),
+			NewFieldElementFromString("17676678042980201498"),
+			NewFieldElementFromString("5837067135702409874"),
+			NewFieldElementFromString("11238419549114325157"),
+		},
+	}
+
+	initialMerkleCaps := []MerkleCap{
+		verifierOnlyCircuitData.ConstantSigmasCap,
+		proofWithPis.Proof.WiresCap,
+		proofWithPis.Proof.PlonkZsPartialProductsCap,
+		proofWithPis.Proof.QuotientPolysCap,
+	}
+
+	friChip.VerifyFriProof(
+		commonCircuitData.GetFriInstance(qe, zeta, commonCircuitData.DegreeBits),
+		proofWithPis.Proof.Openings.ToFriOpenings(),
+		&friChallenges,
+		initialMerkleCaps,
+		&proofWithPis.Proof.OpeningProof,
+	)
+
+	return nil
+}
+
+func TestLargeDummyFriProof(t *testing.T) {
+	assert := test.NewAssert(t)
+
+	testCase := func() {
+		circuit := TestLargeDummyFriCircuit{}
+		witness := TestLargeDummyFriCircuit{}
 		err := test.IsSolved(&circuit, &witness, TEST_CURVE.ScalarField())
 		assert.NoError(err)
 	}

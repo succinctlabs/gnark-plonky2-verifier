@@ -257,7 +257,6 @@ func ReductionArityBits(
 	degreeBits uint64,
 	rateBits uint64,
 	capHeight uint64,
-	numQueries uint64,
 ) []uint64 {
 	returnArr := make([]uint64, 0)
 
@@ -313,7 +312,6 @@ func DeserializeCommonCircuitData(path string) CommonCircuitData {
 		raw.FriParams.DegreeBits,
 		raw.FriParams.Config.RateBits,
 		raw.FriParams.Config.CapHeight,
-		raw.FriParams.Config.NumQueryRounds,
 	)
 
 	commonCircuitData.DegreeBits = raw.DegreeBits
