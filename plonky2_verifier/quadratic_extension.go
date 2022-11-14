@@ -2,7 +2,6 @@ package plonky2_verifier
 
 import (
 	"fmt"
-	"gnark-ed25519/field"
 	. "gnark-ed25519/field"
 	"math/bits"
 
@@ -67,7 +66,7 @@ func (c *QuadraticExtensionAPI) InverseExtension(a QuadraticExtension) Quadratic
 	a1_is_zero := c.fieldAPI.IsZero(a[1])
 
 	// assert that a0_is_zero OR a1_is_zero == false
-	c.fieldAPI.AssertIsEqual(c.fieldAPI.Mul(a0_is_zero, a1_is_zero).(F), field.ZERO_F)
+	c.fieldAPI.AssertIsEqual(c.fieldAPI.Mul(a0_is_zero, a1_is_zero).(F), ZERO_F)
 
 	a_pow_r_minus_1 := QuadraticExtension{a[0], c.fieldAPI.Mul(a[1], c.DTH_ROOT).(F)}
 	a_pow_r := c.MulExtension(a_pow_r_minus_1, a)
@@ -79,7 +78,7 @@ func (c *QuadraticExtensionAPI) ScalarMulExtension(a QuadraticExtension, scalar 
 }
 
 func (c *QuadraticExtensionAPI) FieldToQE(a F) QuadraticExtension {
-	return QuadraticExtension{a, field.ZERO_F}
+	return QuadraticExtension{a, ZERO_F}
 }
 
 // / Exponentiate `base` to the power of a known `exponent`.
@@ -108,6 +107,22 @@ func (c *QuadraticExtensionAPI) ExpU64Extension(a QuadraticExtension, exponent u
 	}
 
 	return product
+}
+
+func (c *QuadraticExtensionAPI) reduceWithPowers(terms []QuadraticExtension, scalar QuadraticExtension) QuadraticExtension {
+	sum := c.ZERO_QE
+
+	for i := len(terms) - 1; i >= 0; i-- {
+		sum = c.AddExtension(
+			c.MulExtension(
+				sum,
+				scalar,
+			),
+			terms[i],
+		)
+	}
+
+	return sum
 }
 
 func (c *QuadraticExtensionAPI) Println(a QuadraticExtension) {
