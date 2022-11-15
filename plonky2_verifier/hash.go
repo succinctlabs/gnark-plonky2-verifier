@@ -7,8 +7,6 @@ import (
 	"github.com/consensys/gnark/frontend"
 )
 
-type Hash = [4]F
-
 func SelectHash(fieldAPI frontend.API, bit frontend.Variable, leftHash, rightHash Hash) Hash {
 	var returnHash Hash
 	for i := 0; i < 4; i++ {
