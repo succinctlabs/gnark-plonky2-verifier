@@ -1,10 +1,36 @@
 package plonky2_verifier
 
 import (
+	"gnark-ed25519/field"
 	. "gnark-ed25519/field"
 
 	"github.com/consensys/gnark/frontend"
 )
+
+type PlonkOracle struct {
+	index    uint64
+	blinding bool
+}
+
+var CONSTANTS_SIGMAS = PlonkOracle{
+	index:    0,
+	blinding: false,
+}
+
+var WIRES = PlonkOracle{
+	index:    1,
+	blinding: true,
+}
+
+var ZS_PARTIAL_PRODUCTS = PlonkOracle{
+	index:    2,
+	blinding: true,
+}
+
+var QUOTIENT = PlonkOracle{
+	index:    3,
+	blinding: true,
+}
 
 type PlonkChip struct {
 	api frontend.API
@@ -30,7 +56,7 @@ func NewPlonkChip(api frontend.API, qe *QuadraticExtensionAPI, commonData Common
 
 		DEGREE:        NewFieldElement(1 << commonData.DegreeBits),
 		DEGREE_BITS_F: NewFieldElement(commonData.DegreeBits),
-		DEGREE_QE:     QuadraticExtension{NewFieldElement(1 << commonData.DegreeBits), NewFieldElement(0)},
+		DEGREE_QE:     QuadraticExtension{NewFieldElement(1 << commonData.DegreeBits), field.ZERO_F},
 	}
 }
 
@@ -46,7 +72,7 @@ func (p *PlonkChip) evalL0(x QuadraticExtension, xPowN QuadraticExtension) Quadr
 	// L_0(x) = (x^n - 1) / (n * (x - 1))
 	evalZeroPoly := p.qe.SubExtension(
 		xPowN,
-		p.qe.ONE,
+		p.qe.ONE_QE,
 	)
 	denominator := p.qe.SubExtension(
 		p.qe.ScalarMulExtension(x, p.DEGREE),
@@ -109,7 +135,7 @@ func (p *PlonkChip) evalVanishingPoly(zetaPowN QuadraticExtension) []QuadraticEx
 		// L_0(zeta) (Z(zeta) - 1) = 0
 		z1_term := p.qe.MulExtension(
 			l0Zeta,
-			p.qe.SubExtension(p.openings.PlonkZs[i], p.qe.ONE))
+			p.qe.SubExtension(p.openings.PlonkZs[i], p.qe.ONE_QE))
 		vanishingZ1Terms = append(vanishingZ1Terms, z1_term)
 
 		numeratorValues := make([]QuadraticExtension, 0, p.commonData.Config.NumRoutedWires)
@@ -187,7 +213,7 @@ func (p *PlonkChip) Verify() {
 	vanishingPolysZeta := p.evalVanishingPoly(zetaPowN)
 
 	// Calculate Z(H)
-	zHZeta := p.qe.SubExtension(zetaPowN, p.qe.ONE)
+	zHZeta := p.qe.SubExtension(zetaPowN, p.qe.ONE_QE)
 
 	// `quotient_polys_zeta` holds `num_challenges * quotient_degree_factor` evaluations.
 	// Each chunk of `quotient_degree_factor` holds the evaluations of `t_0(zeta),...,t_{quotient_degree_factor-1}(zeta)`
@@ -197,8 +223,7 @@ func (p *PlonkChip) Verify() {
 	for i := 0; i < len(p.openings.QuotientPolys); i += int(p.commonData.QuotientDegreeFactor) {
 		prod := p.qe.MulExtension(
 			zHZeta,
-			reduceWithPowers(
-				p.qe,
+			p.qe.ReduceWithPowers(
 				p.openings.QuotientPolys[i:i+int(p.commonData.QuotientDegreeFactor)],
 				zetaPowN,
 			),

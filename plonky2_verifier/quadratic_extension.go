@@ -14,7 +14,7 @@ type QuadraticExtensionAPI struct {
 	W        F
 	DTH_ROOT F
 
-	ONE     QuadraticExtension
+	ONE_QE  QuadraticExtension
 	ZERO_QE QuadraticExtension
 }
 
@@ -27,7 +27,7 @@ func NewQuadraticExtensionAPI(fieldAPI frontend.API, degreeBits uint64) *Quadrat
 		W:        NewFieldElement(7),
 		DTH_ROOT: NewFieldElement(18446744069414584320),
 
-		ONE:     QuadraticExtension{ONE_F, ZERO_F},
+		ONE_QE:  QuadraticExtension{ONE_F, ZERO_F},
 		ZERO_QE: QuadraticExtension{ZERO_F, ZERO_F},
 	}
 }
@@ -58,6 +58,10 @@ func (c *QuadraticExtensionAPI) DivExtension(a QuadraticExtension, b QuadraticEx
 	return c.MulExtension(a, c.InverseExtension(b))
 }
 
+func (c *QuadraticExtensionAPI) IsZero(a QuadraticExtension) frontend.Variable {
+	return c.fieldAPI.Mul(c.fieldAPI.IsZero(a[0]), c.fieldAPI.IsZero(a[1]))
+}
+
 // TODO: Instead of calculating the inverse within the circuit, can witness the
 // inverse and assert that a_inverse * a = 1.  Should reduce # of constraints.
 func (c *QuadraticExtensionAPI) InverseExtension(a QuadraticExtension) QuadraticExtension {
@@ -85,7 +89,7 @@ func (c *QuadraticExtensionAPI) FieldToQE(a F) QuadraticExtension {
 func (c *QuadraticExtensionAPI) ExpU64Extension(a QuadraticExtension, exponent uint64) QuadraticExtension {
 	switch exponent {
 	case 0:
-		return c.ONE
+		return c.ONE_QE
 	case 1:
 		return a
 	case 2:
@@ -94,7 +98,7 @@ func (c *QuadraticExtensionAPI) ExpU64Extension(a QuadraticExtension, exponent u
 	}
 
 	current := a
-	product := c.ONE
+	product := c.ONE_QE
 
 	for i := 0; i < bits.Len64(exponent); i++ {
 		if i != 0 {
@@ -123,6 +127,16 @@ func (c *QuadraticExtensionAPI) ReduceWithPowers(terms []QuadraticExtension, sca
 	}
 
 	return sum
+}
+
+func (c *QuadraticExtensionAPI) Select(b0 frontend.Variable, qe0, qe1 QuadraticExtension) QuadraticExtension {
+	var retQE QuadraticExtension
+
+	for i := 0; i < 2; i++ {
+		retQE[i] = c.fieldAPI.Select(b0, qe0[i], qe1[i]).(F)
+	}
+
+	return retQE
 }
 
 func (c *QuadraticExtensionAPI) Lookup2(b0 frontend.Variable, b1 frontend.Variable, qe0, qe1, qe2, qe3 QuadraticExtension) QuadraticExtension {

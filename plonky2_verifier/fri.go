@@ -277,6 +277,54 @@ func (f *FriChip) finalPolyEval(finalPoly PolynomialCoeffs, point QuadraticExten
 	return ret
 }
 
+func (f *FriChip) interpolate(x QuadraticExtension, xPoints []QuadraticExtension, yPoints []QuadraticExtension, barycentricWeights []QuadraticExtension) QuadraticExtension {
+	if len(xPoints) != len(yPoints) || len(xPoints) != len(barycentricWeights) {
+		panic("length of xPoints, yPoints, and barycentricWeights are inconsistent")
+	}
+
+	lX := f.qeAPI.ONE_QE
+	for i := 0; i < len(xPoints); i++ {
+		lX = f.qeAPI.MulExtension(
+			lX,
+			f.qeAPI.SubExtension(
+				x,
+				xPoints[i],
+			),
+		)
+	}
+
+	sum := f.qeAPI.ZERO_QE
+	for i := 0; i < len(xPoints); i++ {
+		sum = f.qeAPI.AddExtension(
+			f.qeAPI.MulExtension(
+				f.qeAPI.DivExtension(
+					barycentricWeights[i],
+					f.qeAPI.SubExtension(
+						x,
+						xPoints[i],
+					),
+				),
+				yPoints[i],
+			),
+			sum,
+		)
+	}
+
+	interpolation := f.qeAPI.MulExtension(lX, sum)
+
+	returnField := interpolation
+	// Now check if x is already within the xPoints
+	for i := 0; i < len(xPoints); i++ {
+		returnField = f.qeAPI.Select(
+			f.qeAPI.IsZero(f.qeAPI.SubExtension(x, xPoints[i])),
+			yPoints[i],
+			returnField,
+		)
+	}
+
+	return returnField
+}
+
 func (f *FriChip) computeEvaluation(
 	x F,
 	xIndexWithinCosetBits []frontend.Variable,
@@ -314,34 +362,35 @@ func (f *FriChip) computeEvaluation(
 	start := f.expFromBitsConstBase(gInv, revXIndexWithinCosetBits)
 	cosetStart := f.fieldAPI.Mul(start, x).(F)
 
-	xPoints := make([]F, len(evals))
+	xPoints := make([]QuadraticExtension, len(evals))
 	yPoints := permutedEvals
 
 	// TODO: Make g_F a constant
 	g_F := NewFieldElement(g.Uint64())
-	xPoints[0] = cosetStart
+	xPoints[0] = f.qeAPI.FieldToQE(cosetStart)
 	for i := 1; i < len(evals); i++ {
-		xPoints[i] = f.fieldAPI.Mul(xPoints[i-1], g_F).(F)
+		xPoints[i] = f.qeAPI.FieldToQE(f.fieldAPI.Mul(xPoints[i-1], g_F).(F))
 	}
 
 	// TODO:  This is n^2.  Is there a way to do this better?
 	// Compute the barycentric weights
-	barycentricWeights := make([]F, len(xPoints))
+	barycentricWeights := make([]QuadraticExtension, len(xPoints))
 	for i := 0; i < len(xPoints); i++ {
-		barycentricWeights[i] = ONE_F
+		barycentricWeights[i] = f.qeAPI.ONE_QE
 		for j := 0; j < len(xPoints); j++ {
 			if i != j {
-				barycentricWeights[i] = f.fieldAPI.Mul(
-					f.fieldAPI.Sub(xPoints[i], xPoints[j]),
+				barycentricWeights[i] = f.qeAPI.MulExtension(
+					f.qeAPI.SubExtension(xPoints[i], xPoints[j]),
 					barycentricWeights[i],
-				).(F)
+				)
 			}
 		}
 		// Take the inverse of the barycentric weights
 		// TODO: Can provide a witness to this value
-		barycentricWeights[i] = f.fieldAPI.Inverse(barycentricWeights[i]).(F)
+		barycentricWeights[i] = f.qeAPI.InverseExtension(barycentricWeights[i])
 	}
 
+	return f.interpolate(beta, xPoints, yPoints, barycentricWeights)
 }
 
 func (f *FriChip) verifyQueryRound(
@@ -405,7 +454,7 @@ func (f *FriChip) verifyQueryRound(
 		newEval := f.qeAPI.Lookup2(xIndexWithinCosetBits[2], xIndexWithinCosetBits[3], evals[0], evals[1], evals[2], evals[3])
 		f.qeAPI.AssertIsEqual(newEval, oldEval)
 
-		oldEval := f.computeEvaluation(
+		oldEval = f.computeEvaluation(
 			subgroupX,
 			xIndexWithinCosetBits,
 			arityBits,
