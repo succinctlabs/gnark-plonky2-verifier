@@ -109,7 +109,7 @@ func (c *QuadraticExtensionAPI) ExpU64Extension(a QuadraticExtension, exponent u
 	return product
 }
 
-func (c *QuadraticExtensionAPI) reduceWithPowers(terms []QuadraticExtension, scalar QuadraticExtension) QuadraticExtension {
+func (c *QuadraticExtensionAPI) ReduceWithPowers(terms []QuadraticExtension, scalar QuadraticExtension) QuadraticExtension {
 	sum := c.ZERO_QE
 
 	for i := len(terms) - 1; i >= 0; i-- {
@@ -123,6 +123,22 @@ func (c *QuadraticExtensionAPI) reduceWithPowers(terms []QuadraticExtension, sca
 	}
 
 	return sum
+}
+
+func (c *QuadraticExtensionAPI) Lookup2(b0 frontend.Variable, b1 frontend.Variable, qe0, qe1, qe2, qe3 QuadraticExtension) QuadraticExtension {
+	var retQE QuadraticExtension
+
+	for i := 0; i < 2; i++ {
+		retQE[i] = c.fieldAPI.Lookup2(b0, b1, qe0[i], qe1[i], qe2[i], qe3[i]).(F)
+	}
+
+	return retQE
+}
+
+func (c *QuadraticExtensionAPI) AssertIsEqual(a, b QuadraticExtension) {
+	for i := 0; i < 2; i++ {
+		c.fieldAPI.AssertIsEqual(a[0], b[0])
+	}
 }
 
 func (c *QuadraticExtensionAPI) Println(a QuadraticExtension) {

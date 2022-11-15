@@ -7,6 +7,7 @@ import (
 	"gnark-ed25519/poseidon"
 	"math"
 	"math/big"
+	"math/bits"
 
 	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/frontend"
@@ -47,7 +48,7 @@ func (f *FriChip) fromOpeningsAndAlpha(openings *FriOpenings, alpha QuadraticExt
 
 	reducedOpenings := make([]QuadraticExtension, 0, 2)
 	for _, batch := range openings.Batches {
-		reducedOpenings = append(reducedOpenings, reduceWithPowers(f.qeAPI, batch.values, alpha))
+		reducedOpenings = append(reducedOpenings, f.qeAPI.ReduceWithPowers(batch.values, alpha))
 	}
 
 	return reducedOpenings
@@ -170,24 +171,12 @@ func (f *FriChip) assertNoncanonicalIndicesOK() {
 	}
 }
 
-func (f *FriChip) calculateSubgroupX(
-	xIndexBits []frontend.Variable,
-	nLog uint64,
+func (f *FriChip) expFromBitsConstBase(
+	base goldilocks.Element,
+	exponentBits []frontend.Variable,
 ) F {
-	// Compute x from its index
-	// `subgroup_x` is `subgroup[x_index]`, i.e., the actual field element in the domain.
-	// TODO - Make these as global values
-	g := field.NewFieldElement(field.GOLDILOCKS_MULTIPLICATIVE_GROUP_GENERATOR.Uint64())
-	base := field.GoldilocksPrimitiveRootOfUnity(nLog)
-
 	product := ONE_F
-	// Create a reverse list of xIndexBits
-	xIndexBitsRev := make([]frontend.Variable, 0)
-	for i := len(xIndexBits) - 1; i >= 0; i-- {
-		xIndexBitsRev = append(xIndexBitsRev, xIndexBits[i])
-	}
-
-	for i, bit := range xIndexBitsRev {
+	for i, bit := range exponentBits {
 		pow := int64(1 << i)
 		// If the bit is on, we multiply product by base^pow.
 		// We can arithmetize this as:
@@ -207,6 +196,27 @@ func (f *FriChip) calculateSubgroupX(
 			product,
 		).(F)
 	}
+
+	return product
+}
+
+func (f *FriChip) calculateSubgroupX(
+	xIndexBits []frontend.Variable,
+	nLog uint64,
+) F {
+	// Compute x from its index
+	// `subgroup_x` is `subgroup[x_index]`, i.e., the actual field element in the domain.
+	// TODO - Make these as global values
+	g := field.NewFieldElement(field.GOLDILOCKS_MULTIPLICATIVE_GROUP_GENERATOR.Uint64())
+	base := field.GoldilocksPrimitiveRootOfUnity(nLog)
+
+	// Create a reverse list of xIndexBits
+	xIndexBitsRev := make([]frontend.Variable, 0)
+	for i := len(xIndexBits) - 1; i >= 0; i-- {
+		xIndexBitsRev = append(xIndexBitsRev, xIndexBits[i])
+	}
+
+	product := f.expFromBitsConstBase(base, xIndexBitsRev)
 
 	return f.fieldAPI.Mul(g, product).(F)
 }
@@ -237,7 +247,7 @@ func (f *FriChip) friCombineInitial(
 			)
 		}
 
-		reducedEvals := reduceWithPowers(f.qeAPI, evals, friAlpha)
+		reducedEvals := f.qeAPI.ReduceWithPowers(evals, friAlpha)
 		numerator := f.qeAPI.SubExtension(reducedEvals, reducedOpenings)
 		denominator := f.qeAPI.SubExtension(subgroupX_QE, point)
 		sum = f.qeAPI.MulExtension(f.qeAPI.ExpU64Extension(friAlpha, uint64(len(evals))), sum)
@@ -265,6 +275,44 @@ func (f *FriChip) finalPolyEval(finalPoly PolynomialCoeffs, point QuadraticExten
 		)
 	}
 	return ret
+}
+
+func (f *FriChip) computeEvaluation(
+	x F,
+	xIndexWithinCosetBits []frontend.Variable,
+	arityBits uint64,
+	evals []QuadraticExtension,
+	beta QuadraticExtension,
+) QuadraticExtension {
+	arity := 1 << arityBits
+	if (len(evals)) != arity {
+		panic("len(evals) ! arity")
+	}
+
+	g := field.GoldilocksPrimitiveRootOfUnity(arityBits)
+	gInv := goldilocks.NewElement(0)
+	gInv.Exp(g, big.NewInt(int64(arity-1)))
+
+	// The evaluation vector needs to be reordered first.  Permute the evals array such that each
+	// element's new index is the bit reverse of it's original index.
+	// TODO:  Optimization - Since the size of the evals array should be constant (e.g. 2^arityBits),
+	//        we can just hard code the permutation.
+	permutedEvals := make([]QuadraticExtension, len(evals))
+	for i := uint(0); i < uint(len(evals)); i++ {
+		bitLen := bits.Len(i)
+		rightPadLen := arityBits - uint64(bitLen)
+		newIndex := bits.Reverse(i) << rightPadLen
+		permutedEvals[newIndex] = evals[i]
+	}
+
+	// Want `g^(arity - rev_x_index_within_coset)` as in the out-of-circuit version. Compute it
+	// as `(g^-1)^rev_x_index_within_coset`.
+	revXIndexWithinCosetBits := make([]frontend.Variable, len(xIndexWithinCosetBits))
+	for i := 0; i < len(xIndexWithinCosetBits); i++ {
+		revXIndexWithinCosetBits[len(xIndexWithinCosetBits)-1-i] = xIndexWithinCosetBits[i]
+	}
+	start := f.expFromBitsConstBase(gInv, revXIndexWithinCosetBits)
+	cosetStart := f.fieldAPI.Mul(start, x)
 }
 
 func (f *FriChip) verifyQueryRound(
@@ -299,10 +347,67 @@ func (f *FriChip) verifyQueryRound(
 		precomputedReducedEval,
 	)
 
+	for i, arityBits := range f.friParams.ReductionArityBits {
+		evals := roundProof.Steps[i].Evals
+
+		cosetIndexBits := xIndexBits[arityBits:]
+		xIndexWithinCosetBits := xIndexBits[:arityBits]
+
+		// Assumes that the arity bits will be 4.  That means that the range of
+		// xIndexWithCoset is [0,2^4-1].  This is based on plonky2's circuit recursive
+		// config:  https://github.com/mir-protocol/plonky2/blob/main/plonky2/src/plonk/circuit_data.rs#L63
+		// Will use a two levels tree of 4-selector gadgets.
+		if arityBits != 4 {
+			panic("assuming arity bits is 4")
+		}
+
+		const NUM_LEAF_LOOKUPS = 4
+		var leafLookups [NUM_LEAF_LOOKUPS]QuadraticExtension
+		// First create the "leaf" lookup2 circuits
+		// The will use the least significant bits of the xIndexWithCosetBits array
+		for i := 0; i < NUM_LEAF_LOOKUPS; i++ {
+			leafLookups[i] = f.qeAPI.Lookup2(
+				xIndexWithinCosetBits[0], xIndexWithinCosetBits[1],
+				evals[i*NUM_LEAF_LOOKUPS], evals[i*NUM_LEAF_LOOKUPS+1], evals[i*NUM_LEAF_LOOKUPS+2], evals[i*NUM_LEAF_LOOKUPS+3],
+			)
+		}
+
+		// Use the most 2 significant bits of the xIndexWithCosetBits array for the "root" lookup
+		newEval := f.qeAPI.Lookup2(xIndexWithinCosetBits[2], xIndexWithinCosetBits[3], evals[0], evals[1], evals[2], evals[3])
+		f.qeAPI.AssertIsEqual(newEval, oldEval)
+
+		oldEval := f.computeEvaluation(
+			subgroupX,
+			xIndexWithinCosetBits,
+			arityBits,
+			evals,
+			challenges.FriBetas[i],
+		)
+
+		// Convert evals (array of QE) to fields by taking their 0th degree coefficients
+		fieldEvals := make([]F, len(evals))
+		for j := 0; j < len(evals); j++ {
+			fieldEvals[j] = evals[j][0]
+		}
+		f.verifyMerkleProofToCapWithCapIndex(
+			fieldEvals,
+			cosetIndexBits,
+			capIndexBits,
+			proof.CommitPhaseMerkleCaps[i],
+			&roundProof.Steps[i].MerkleProof,
+		)
+
+		// Update the point x to x^arity.
+		for j := uint64(0); j < arityBits; j++ {
+			subgroupX = f.fieldAPI.Mul(subgroupX, subgroupX).(F)
+		}
+
+		xIndexBits = cosetIndexBits
+	}
+
 	finalPolyEval := f.finalPolyEval(proof.FinalPoly, subgroupX_QE)
 
-	f.fieldAPI.AssertIsEqual(oldEval[0], finalPolyEval[0])
-	f.fieldAPI.AssertIsEqual(oldEval[1], finalPolyEval[1])
+	f.qeAPI.AssertIsEqual(oldEval, finalPolyEval)
 }
 
 func (f *FriChip) VerifyFriProof(
