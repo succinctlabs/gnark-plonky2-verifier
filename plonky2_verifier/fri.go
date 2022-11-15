@@ -312,7 +312,36 @@ func (f *FriChip) computeEvaluation(
 		revXIndexWithinCosetBits[len(xIndexWithinCosetBits)-1-i] = xIndexWithinCosetBits[i]
 	}
 	start := f.expFromBitsConstBase(gInv, revXIndexWithinCosetBits)
-	cosetStart := f.fieldAPI.Mul(start, x)
+	cosetStart := f.fieldAPI.Mul(start, x).(F)
+
+	xPoints := make([]F, len(evals))
+	yPoints := permutedEvals
+
+	// TODO: Make g_F a constant
+	g_F := NewFieldElement(g.Uint64())
+	xPoints[0] = cosetStart
+	for i := 1; i < len(evals); i++ {
+		xPoints[i] = f.fieldAPI.Mul(xPoints[i-1], g_F).(F)
+	}
+
+	// TODO:  This is n^2.  Is there a way to do this better?
+	// Compute the barycentric weights
+	barycentricWeights := make([]F, len(xPoints))
+	for i := 0; i < len(xPoints); i++ {
+		barycentricWeights[i] = ONE_F
+		for j := 0; j < len(xPoints); j++ {
+			if i != j {
+				barycentricWeights[i] = f.fieldAPI.Mul(
+					f.fieldAPI.Sub(xPoints[i], xPoints[j]),
+					barycentricWeights[i],
+				).(F)
+			}
+		}
+		// Take the inverse of the barycentric weights
+		// TODO: Can provide a witness to this value
+		barycentricWeights[i] = f.fieldAPI.Inverse(barycentricWeights[i]).(F)
+	}
+
 }
 
 func (f *FriChip) verifyQueryRound(
