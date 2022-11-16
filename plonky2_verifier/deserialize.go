@@ -29,7 +29,7 @@ type ProofWithPublicInputsRaw struct {
 			QuotientPolys   [][]uint64 `json:"quotient_polys"`
 		} `json:"openings"`
 		OpeningProof struct {
-			CommitPhaseMerkleCaps []interface{} `json:"commit_phase_merkle_caps"`
+			CommitPhaseMerkleCaps []MerkleCapsRaw `json:"commit_phase_merkle_caps"`
 			QueryRoundProofs      []struct {
 				InitialTreesProof struct {
 					EvalsProofs []EvalProofRaw `json:"evals_proofs"`
@@ -46,6 +46,23 @@ type ProofWithPublicInputsRaw struct {
 		} `json:"opening_proof"`
 	} `json:"proof"`
 	PublicInputs []uint64 `json:"public_inputs"`
+}
+
+type MerkleCapsRaw struct {
+	hashes [][]uint64
+}
+
+func (m *MerkleCapsRaw) UnmarshalJSON(data []byte) error {
+	var merkleCaps []map[string][]uint64
+	if err := json.Unmarshal(data, &merkleCaps); err != nil {
+		panic(err)
+	}
+
+	m.hashes = make([][]uint64, len(merkleCaps))
+	for i := 0; i < len(merkleCaps); i++ {
+		m.hashes[i] = merkleCaps[i]["elements"]
+	}
+	return nil
 }
 
 type EvalProofRaw struct {
@@ -179,7 +196,7 @@ func DeserializeOpeningSet(openingSetRaw struct {
 }
 
 func DeserializeFriProof(openingProofRaw struct {
-	CommitPhaseMerkleCaps []interface{}
+	CommitPhaseMerkleCaps []MerkleCapsRaw
 	QueryRoundProofs      []struct {
 		InitialTreesProof struct {
 			EvalsProofs []EvalProofRaw
@@ -197,6 +214,11 @@ func DeserializeFriProof(openingProofRaw struct {
 	var openingProof FriProof
 	openingProof.PowWitness = NewFieldElement(openingProofRaw.PowWitness)
 	openingProof.FinalPoly.Coeffs = utils.Uint64ArrayToQuadraticExtensionArray(openingProofRaw.FinalPoly.Coeffs)
+
+	openingProof.CommitPhaseMerkleCaps = make([]MerkleCap, len(openingProofRaw.CommitPhaseMerkleCaps))
+	for i := 0; i < len(openingProofRaw.CommitPhaseMerkleCaps); i++ {
+		openingProof.CommitPhaseMerkleCaps[i] = utils.Uint64ArrayToHashArray(openingProofRaw.CommitPhaseMerkleCaps[i].hashes)
+	}
 
 	numQueryRoundProofs := len(openingProofRaw.QueryRoundProofs)
 	openingProof.QueryRoundProofs = make([]FriQueryRound, numQueryRoundProofs)
@@ -249,7 +271,7 @@ func DeserializeProofWithPublicInputs(path string) ProofWithPublicInputs {
 		QuotientPolys   [][]uint64
 	}(raw.Proof.Openings))
 	proofWithPis.Proof.OpeningProof = DeserializeFriProof(struct {
-		CommitPhaseMerkleCaps []interface{}
+		CommitPhaseMerkleCaps []MerkleCapsRaw
 		QueryRoundProofs      []struct {
 			InitialTreesProof struct {
 				EvalsProofs []EvalProofRaw

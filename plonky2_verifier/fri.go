@@ -336,6 +336,9 @@ func (f *FriChip) computeEvaluation(
 	if (len(evals)) != arity {
 		panic("len(evals) ! arity")
 	}
+	if arityBits > 8 {
+		panic("currently assuming that arityBits is <= 8")
+	}
 
 	g := field.GoldilocksPrimitiveRootOfUnity(arityBits)
 	gInv := goldilocks.NewElement(0)
@@ -346,10 +349,8 @@ func (f *FriChip) computeEvaluation(
 	// TODO:  Optimization - Since the size of the evals array should be constant (e.g. 2^arityBits),
 	//        we can just hard code the permutation.
 	permutedEvals := make([]QuadraticExtension, len(evals))
-	for i := uint(0); i < uint(len(evals)); i++ {
-		bitLen := bits.Len(i)
-		rightPadLen := arityBits - uint64(bitLen)
-		newIndex := bits.Reverse(i) << rightPadLen
+	for i := uint8(0); i < uint8(len(evals)); i++ {
+		newIndex := bits.Reverse8(i) >> arityBits
 		permutedEvals[newIndex] = evals[i]
 	}
 
@@ -366,10 +367,10 @@ func (f *FriChip) computeEvaluation(
 	yPoints := permutedEvals
 
 	// TODO: Make g_F a constant
-	g_F := NewFieldElement(g.Uint64())
+	g_F := f.qeAPI.FieldToQE(NewFieldElement(g.Uint64()))
 	xPoints[0] = f.qeAPI.FieldToQE(cosetStart)
 	for i := 1; i < len(evals); i++ {
-		xPoints[i] = f.qeAPI.FieldToQE(f.fieldAPI.Mul(xPoints[i-1], g_F).(F))
+		xPoints[i] = f.qeAPI.MulExtension(xPoints[i-1], g_F)
 	}
 
 	// TODO:  This is n^2.  Is there a way to do this better?
@@ -445,13 +446,25 @@ func (f *FriChip) verifyQueryRound(
 		// The will use the least significant bits of the xIndexWithCosetBits array
 		for i := 0; i < NUM_LEAF_LOOKUPS; i++ {
 			leafLookups[i] = f.qeAPI.Lookup2(
-				xIndexWithinCosetBits[0], xIndexWithinCosetBits[1],
-				evals[i*NUM_LEAF_LOOKUPS], evals[i*NUM_LEAF_LOOKUPS+1], evals[i*NUM_LEAF_LOOKUPS+2], evals[i*NUM_LEAF_LOOKUPS+3],
+				xIndexWithinCosetBits[0],
+				xIndexWithinCosetBits[1],
+				evals[i*NUM_LEAF_LOOKUPS],
+				evals[i*NUM_LEAF_LOOKUPS+1],
+				evals[i*NUM_LEAF_LOOKUPS+2],
+				evals[i*NUM_LEAF_LOOKUPS+3],
 			)
 		}
 
 		// Use the most 2 significant bits of the xIndexWithCosetBits array for the "root" lookup
-		newEval := f.qeAPI.Lookup2(xIndexWithinCosetBits[2], xIndexWithinCosetBits[3], evals[0], evals[1], evals[2], evals[3])
+		newEval := f.qeAPI.Lookup2(
+			xIndexWithinCosetBits[2],
+			xIndexWithinCosetBits[3],
+			leafLookups[0],
+			leafLookups[1],
+			leafLookups[2],
+			leafLookups[3],
+		)
+
 		f.qeAPI.AssertIsEqual(newEval, oldEval)
 
 		oldEval = f.computeEvaluation(
@@ -463,9 +476,10 @@ func (f *FriChip) verifyQueryRound(
 		)
 
 		// Convert evals (array of QE) to fields by taking their 0th degree coefficients
-		fieldEvals := make([]F, len(evals))
+		fieldEvals := make([]F, 0, 2*len(evals))
 		for j := 0; j < len(evals); j++ {
-			fieldEvals[j] = evals[j][0]
+			fieldEvals = append(fieldEvals, evals[j][0])
+			fieldEvals = append(fieldEvals, evals[j][1])
 		}
 		f.verifyMerkleProofToCapWithCapIndex(
 			fieldEvals,
@@ -483,6 +497,7 @@ func (f *FriChip) verifyQueryRound(
 		xIndexBits = cosetIndexBits
 	}
 
+	subgroupX_QE = f.qeAPI.FieldToQE(subgroupX)
 	finalPolyEval := f.finalPolyEval(proof.FinalPoly, subgroupX_QE)
 
 	f.qeAPI.AssertIsEqual(oldEval, finalPolyEval)
