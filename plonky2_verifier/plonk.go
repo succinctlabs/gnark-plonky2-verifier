@@ -1,7 +1,6 @@
 package plonky2_verifier
 
 import (
-	"gnark-ed25519/field"
 	. "gnark-ed25519/field"
 
 	"github.com/consensys/gnark/frontend"
@@ -33,36 +32,34 @@ var QUOTIENT = PlonkOracle{
 }
 
 type PlonkChip struct {
-	api frontend.API
-	qe  *QuadraticExtensionAPI
+	api   frontend.API
+	qeAPI *QuadraticExtensionAPI
 
-	commonData      CommonCircuitData
-	proofChallenges ProofChallenges
-	openings        OpeningSet
+	commonData CommonCircuitData
 
 	DEGREE        F
 	DEGREE_BITS_F F
 	DEGREE_QE     QuadraticExtension
 }
 
-func NewPlonkChip(api frontend.API, qe *QuadraticExtensionAPI, commonData CommonCircuitData) *PlonkChip {
+func NewPlonkChip(api frontend.API, qeAPI *QuadraticExtensionAPI, commonData CommonCircuitData) *PlonkChip {
 	// TODO:  Should degreeBits be verified that it fits within the field and that degree is within uint64?
 
 	return &PlonkChip{
-		api: api,
-		qe:  qe,
+		api:   api,
+		qeAPI: qeAPI,
 
 		commonData: commonData,
 
 		DEGREE:        NewFieldElement(1 << commonData.DegreeBits),
 		DEGREE_BITS_F: NewFieldElement(commonData.DegreeBits),
-		DEGREE_QE:     QuadraticExtension{NewFieldElement(1 << commonData.DegreeBits), field.ZERO_F},
+		DEGREE_QE:     QuadraticExtension{NewFieldElement(1 << commonData.DegreeBits), ZERO_F},
 	}
 }
 
 func (p *PlonkChip) expPowerOf2Extension(x QuadraticExtension) QuadraticExtension {
 	for i := uint64(0); i < p.commonData.DegreeBits; i++ {
-		x = p.qe.SquareExtension(x)
+		x = p.qeAPI.SquareExtension(x)
 	}
 
 	return x
@@ -70,15 +67,15 @@ func (p *PlonkChip) expPowerOf2Extension(x QuadraticExtension) QuadraticExtensio
 
 func (p *PlonkChip) evalL0(x QuadraticExtension, xPowN QuadraticExtension) QuadraticExtension {
 	// L_0(x) = (x^n - 1) / (n * (x - 1))
-	evalZeroPoly := p.qe.SubExtension(
+	evalZeroPoly := p.qeAPI.SubExtension(
 		xPowN,
-		p.qe.ONE_QE,
+		p.qeAPI.ONE_QE,
 	)
-	denominator := p.qe.SubExtension(
-		p.qe.ScalarMulExtension(x, p.DEGREE),
+	denominator := p.qeAPI.SubExtension(
+		p.qeAPI.ScalarMulExtension(x, p.DEGREE),
 		p.DEGREE_QE,
 	)
-	return p.qe.DivExtension(
+	return p.qeAPI.DivExtension(
 		evalZeroPoly,
 		denominator,
 	)
@@ -88,14 +85,15 @@ func (p *PlonkChip) checkPartialProducts(
 	numerators []QuadraticExtension,
 	denominators []QuadraticExtension,
 	challengeNum uint64,
+	openings OpeningSet,
 ) []QuadraticExtension {
 	numPartProds := p.commonData.NumPartialProducts
 	quotDegreeFactor := p.commonData.QuotientDegreeFactor
 
 	productAccs := make([]QuadraticExtension, 0, numPartProds+2)
-	productAccs = append(productAccs, p.openings.PlonkZs[challengeNum])
-	productAccs = append(productAccs, p.openings.PartialProducts[challengeNum*numPartProds:(challengeNum+1)*numPartProds]...)
-	productAccs = append(productAccs, p.openings.PlonkZsNext[challengeNum])
+	productAccs = append(productAccs, openings.PlonkZs[challengeNum])
+	productAccs = append(productAccs, openings.PartialProducts[challengeNum*numPartProds:(challengeNum+1)*numPartProds]...)
+	productAccs = append(productAccs, openings.PlonkZsNext[challengeNum])
 
 	partialProductChecks := make([]QuadraticExtension, 0, numPartProds)
 
@@ -104,13 +102,13 @@ func (p *PlonkChip) checkPartialProducts(
 		numeProduct := numerators[ppStartIdx]
 		denoProduct := denominators[ppStartIdx]
 		for j := uint64(1); j < quotDegreeFactor; j++ {
-			numeProduct = p.qe.MulExtension(numeProduct, numerators[ppStartIdx+j])
-			denoProduct = p.qe.MulExtension(denoProduct, denominators[ppStartIdx+j])
+			numeProduct = p.qeAPI.MulExtension(numeProduct, numerators[ppStartIdx+j])
+			denoProduct = p.qeAPI.MulExtension(denoProduct, denominators[ppStartIdx+j])
 		}
 
-		partialProductCheck := p.qe.SubExtension(
-			p.qe.MulExtension(productAccs[i], numeProduct),
-			p.qe.MulExtension(productAccs[i+1], denoProduct),
+		partialProductCheck := p.qeAPI.SubExtension(
+			p.qeAPI.MulExtension(productAccs[i], numeProduct),
+			p.qeAPI.MulExtension(productAccs[i+1], denoProduct),
 		)
 
 		partialProductChecks = append(partialProductChecks, partialProductCheck)
@@ -118,24 +116,24 @@ func (p *PlonkChip) checkPartialProducts(
 	return partialProductChecks
 }
 
-func (p *PlonkChip) evalVanishingPoly(zetaPowN QuadraticExtension) []QuadraticExtension {
+func (p *PlonkChip) evalVanishingPoly(proofChallenges ProofChallenges, openings OpeningSet, zetaPowN QuadraticExtension) []QuadraticExtension {
 	// Calculate the k[i] * x
 	sIDs := make([]QuadraticExtension, p.commonData.Config.NumRoutedWires)
 
 	for i := uint64(0); i < p.commonData.Config.NumRoutedWires; i++ {
-		sIDs[i] = p.qe.ScalarMulExtension(p.proofChallenges.PlonkZeta, p.commonData.KIs[i])
+		sIDs[i] = p.qeAPI.ScalarMulExtension(proofChallenges.PlonkZeta, p.commonData.KIs[i])
 	}
 
 	// Calculate L_0(zeta)
-	l0Zeta := p.evalL0(p.proofChallenges.PlonkZeta, zetaPowN)
+	l0Zeta := p.evalL0(proofChallenges.PlonkZeta, zetaPowN)
 
 	vanishingZ1Terms := make([]QuadraticExtension, 0, p.commonData.Config.NumChallenges)
 	vanishingPartialProductsTerms := make([]QuadraticExtension, 0, p.commonData.Config.NumChallenges*p.commonData.NumPartialProducts)
 	for i := uint64(0); i < p.commonData.Config.NumChallenges; i++ {
 		// L_0(zeta) (Z(zeta) - 1) = 0
-		z1_term := p.qe.MulExtension(
+		z1_term := p.qeAPI.MulExtension(
 			l0Zeta,
-			p.qe.SubExtension(p.openings.PlonkZs[i], p.qe.ONE_QE))
+			p.qeAPI.SubExtension(openings.PlonkZs[i], p.qeAPI.ONE_QE))
 		vanishingZ1Terms = append(vanishingZ1Terms, z1_term)
 
 		numeratorValues := make([]QuadraticExtension, 0, p.commonData.Config.NumRoutedWires)
@@ -144,23 +142,23 @@ func (p *PlonkChip) evalVanishingPoly(zetaPowN QuadraticExtension) []QuadraticEx
 			// The numerator is `beta * s_id + wire_value + gamma`, and the denominator is
 			// `beta * s_sigma + wire_value + gamma`.
 
-			wireValuePlusGamma := p.qe.AddExtension(
-				p.openings.Wires[j],
-				p.qe.FieldToQE(p.proofChallenges.PlonkGammas[i]),
+			wireValuePlusGamma := p.qeAPI.AddExtension(
+				openings.Wires[j],
+				p.qeAPI.FieldToQE(proofChallenges.PlonkGammas[i]),
 			)
 
-			numerator := p.qe.AddExtension(
-				p.qe.MulExtension(
-					p.qe.FieldToQE(p.proofChallenges.PlonkBetas[i]),
+			numerator := p.qeAPI.AddExtension(
+				p.qeAPI.MulExtension(
+					p.qeAPI.FieldToQE(proofChallenges.PlonkBetas[i]),
 					sIDs[j],
 				),
 				wireValuePlusGamma,
 			)
 
-			denominator := p.qe.AddExtension(
-				p.qe.MulExtension(
-					p.qe.FieldToQE(p.proofChallenges.PlonkBetas[i]),
-					p.openings.PlonkSigmas[j],
+			denominator := p.qeAPI.AddExtension(
+				p.qeAPI.MulExtension(
+					p.qeAPI.FieldToQE(proofChallenges.PlonkBetas[i]),
+					openings.PlonkSigmas[j],
 				),
 				wireValuePlusGamma,
 			)
@@ -171,7 +169,7 @@ func (p *PlonkChip) evalVanishingPoly(zetaPowN QuadraticExtension) []QuadraticEx
 
 		vanishingPartialProductsTerms = append(
 			vanishingPartialProductsTerms,
-			p.checkPartialProducts(numeratorValues, denominatorValues, i)...,
+			p.checkPartialProducts(numeratorValues, denominatorValues, i, openings)...,
 		)
 	}
 
@@ -179,7 +177,7 @@ func (p *PlonkChip) evalVanishingPoly(zetaPowN QuadraticExtension) []QuadraticEx
 
 	reducedValues := make([]QuadraticExtension, p.commonData.Config.NumChallenges)
 	for i := uint64(0); i < p.commonData.Config.NumChallenges; i++ {
-		reducedValues[i] = p.qe.ZERO_QE
+		reducedValues[i] = p.qeAPI.ZERO_QE
 	}
 
 	// TODO:  Enable this check once the custom gate evaluations are added to the
@@ -193,11 +191,11 @@ func (p *PlonkChip) evalVanishingPoly(zetaPowN QuadraticExtension) []QuadraticEx
 	// reverse iterate the vanishingPartialProductsTerms array
 	for i := len(vanishingTerms) - 1; i >= 0; i-- {
 		for j := uint64(0); j < p.commonData.Config.NumChallenges; j++ {
-			reducedValues[j] = p.qe.AddExtension(
+			reducedValues[j] = p.qeAPI.AddExtension(
 				vanishingTerms[i],
-				p.qe.ScalarMulExtension(
+				p.qeAPI.ScalarMulExtension(
 					reducedValues[j],
-					p.proofChallenges.PlonkAlphas[j],
+					proofChallenges.PlonkAlphas[j],
 				),
 			)
 		}
@@ -206,30 +204,38 @@ func (p *PlonkChip) evalVanishingPoly(zetaPowN QuadraticExtension) []QuadraticEx
 	return reducedValues
 }
 
-func (p *PlonkChip) Verify() {
+func (p *PlonkChip) Verify(proofChallenges ProofChallenges, openings OpeningSet) {
 	// Calculate zeta^n
-	zetaPowN := p.expPowerOf2Extension(p.proofChallenges.PlonkZeta)
+	zetaPowN := p.expPowerOf2Extension(proofChallenges.PlonkZeta)
 
-	vanishingPolysZeta := p.evalVanishingPoly(zetaPowN)
+	vanishingPolysZeta := p.evalVanishingPoly(proofChallenges, openings, zetaPowN)
 
 	// Calculate Z(H)
-	zHZeta := p.qe.SubExtension(zetaPowN, p.qe.ONE_QE)
+	zHZeta := p.qeAPI.SubExtension(zetaPowN, p.qeAPI.ONE_QE)
 
 	// `quotient_polys_zeta` holds `num_challenges * quotient_degree_factor` evaluations.
 	// Each chunk of `quotient_degree_factor` holds the evaluations of `t_0(zeta),...,t_{quotient_degree_factor-1}(zeta)`
 	// where the "real" quotient polynomial is `t(X) = t_0(X) + t_1(X)*X^n + t_2(X)*X^{2n} + ...`.
 	// So to reconstruct `t(zeta)` we can compute `reduce_with_powers(chunk, zeta^n)` for each
 	// `quotient_degree_factor`-sized chunk of the original evaluations.
-	for i := 0; i < len(p.openings.QuotientPolys); i += int(p.commonData.QuotientDegreeFactor) {
-		prod := p.qe.MulExtension(
+	for i := 0; i < len(vanishingPolysZeta); i++ {
+		quotientPolysStartIdx := i * len(vanishingPolysZeta)
+		quotientPolysEndIdx := quotientPolysStartIdx + len(vanishingPolysZeta)
+		prod := p.qeAPI.MulExtension(
 			zHZeta,
-			p.qe.ReduceWithPowers(
-				p.openings.QuotientPolys[i:i+int(p.commonData.QuotientDegreeFactor)],
+			p.qeAPI.ReduceWithPowers(
+				openings.QuotientPolys[quotientPolysStartIdx:quotientPolysEndIdx],
 				zetaPowN,
 			),
 		)
 
 		// TODO: Uncomment this after adding in the custom gates evaluations
-		//p.api.AssertIsEqual(vanishingPolysZeta[i], prod)
+		//p.qeAPI.AssertIsEqual(vanishingPolysZeta[i], prod)
+
+		// For now, just put in a dummy equality check so that VS stops complaining about unused variables
+		p.qeAPI.AssertIsEqual(
+			p.qeAPI.MulExtension(vanishingPolysZeta[i], p.qeAPI.ZERO_QE),
+			p.qeAPI.MulExtension(prod, p.qeAPI.ZERO_QE),
+		)
 	}
 }

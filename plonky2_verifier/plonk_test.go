@@ -38,10 +38,8 @@ func (circuit *TestPlonkCircuit) Define(api frontend.API) error {
 	}
 
 	plonkChip := NewPlonkChip(api, qe, commonCircuitData)
-	plonkChip.proofChallenges = proofChallenges
-	plonkChip.openings = proofWithPis.Proof.Openings
 
-	plonkChip.Verify()
+	plonkChip.Verify(proofChallenges, proofWithPis.Proof.Openings)
 	return nil
 }
 
