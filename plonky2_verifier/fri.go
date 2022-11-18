@@ -48,7 +48,7 @@ func (f *FriChip) fromOpeningsAndAlpha(openings *FriOpenings, alpha QuadraticExt
 
 	reducedOpenings := make([]QuadraticExtension, 0, 2)
 	for _, batch := range openings.Batches {
-		reducedOpenings = append(reducedOpenings, f.qeAPI.ReduceWithPowers(batch.values, alpha))
+		reducedOpenings = append(reducedOpenings, f.qeAPI.ReduceWithPowers(batch.Values, alpha))
 	}
 
 	return reducedOpenings
@@ -93,6 +93,7 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits
 		copy(leftSiblingState[8:12], fourZeros[0:4])
 
 		leftHash := f.poseidonChip.Poseidon(leftSiblingState)
+
 		var leftHashCompress Hash
 		leftHashCompress[0] = leftHash[0]
 		leftHashCompress[1] = leftHash[1]
@@ -105,6 +106,7 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits
 		copy(rightSiblingState[8:12], fourZeros[0:4])
 
 		rightHash := f.poseidonChip.Poseidon(rightSiblingState)
+
 		var rightHashCompress Hash
 		rightHashCompress[0] = rightHash[0]
 		rightHashCompress[1] = rightHash[1]
@@ -116,7 +118,12 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits
 
 	// We assume that the cap_height is 4.  Create two levels of the Lookup2 circuit
 	if len(capIndexBits) != 4 || len(merkleCap) != 16 {
-		panic("capIndexBits length should be 4 and the merkleCap length should be 16")
+		errorMsg, _ := fmt.Printf(
+			"capIndexBits length should be 4 and the merkleCap length should be 16.  Actual values (capIndexBits: %d, merkleCap: %d)\n",
+			len(capIndexBits),
+			len(merkleCap),
+		)
+		panic(errorMsg)
 	}
 
 	const NUM_LEAF_LOOKUPS = 4

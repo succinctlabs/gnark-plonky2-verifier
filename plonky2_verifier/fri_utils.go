@@ -6,7 +6,7 @@ import (
 )
 
 type FriOpeningBatch struct {
-	values []QuadraticExtension
+	Values []QuadraticExtension
 }
 
 type FriOpenings struct {
@@ -14,14 +14,14 @@ type FriOpenings struct {
 }
 
 func (c *OpeningSet) ToFriOpenings() FriOpenings {
-	values := c.Constants
-	values = append(values, c.PlonkSigmas...)
-	values = append(values, c.Wires...)
-	values = append(values, c.PlonkZs...)
-	values = append(values, c.PartialProducts...)
-	values = append(values, c.QuotientPolys...)
-	zetaBatch := FriOpeningBatch{values: values}
-	zetaNextBatch := FriOpeningBatch{values: c.PlonkZsNext}
+	values := c.Constants                         // num_constants + 1
+	values = append(values, c.PlonkSigmas...)     // num_routed_wires
+	values = append(values, c.Wires...)           // num_wires
+	values = append(values, c.PlonkZs...)         // num_challenges
+	values = append(values, c.PartialProducts...) // num_challenges * num_partial_products
+	values = append(values, c.QuotientPolys...)   // num_challenges * quotient_degree_factor
+	zetaBatch := FriOpeningBatch{Values: values}
+	zetaNextBatch := FriOpeningBatch{Values: c.PlonkZsNext}
 	return FriOpenings{Batches: []FriOpeningBatch{zetaBatch, zetaNextBatch}}
 }
 
@@ -156,7 +156,7 @@ func (c *CommonCircuitData) GetFriInstance(qeAPI *QuadraticExtensionAPI, zeta Qu
 	}
 
 	g := field.GoldilocksPrimitiveRootOfUnity(degreeBits)
-	zetaNext := qeAPI.MulExtension(QuadraticExtension{field.NewFieldElement(g.Uint64()), field.ZERO_F}, zeta)
+	zetaNext := qeAPI.MulExtension(qeAPI.FieldToQE(field.NewFieldElement(g.Uint64())), zeta)
 
 	zetaNextBath := FriBatchInfo{
 		Point:       zetaNext,

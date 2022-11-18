@@ -37,6 +37,10 @@ func (c *PoseidonChip) Poseidon(input PoseidonState) PoseidonState {
 func (c *PoseidonChip) HashNToMNoPad(input []F, nbOutputs int) []F {
 	var state PoseidonState
 
+	for i := 0; i < WIDTH; i++ {
+		state[i] = ZERO_F
+	}
+
 	for i := 0; i < len(input); i += SPONGE_RATE {
 		for j := 0; j < SPONGE_RATE; j++ {
 			if i+j < len(input) {

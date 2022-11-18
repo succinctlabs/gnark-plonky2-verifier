@@ -67,7 +67,7 @@ func (c *ChallengerChip) ObserveExtensionElements(elements []QuadraticExtension)
 
 func (c *ChallengerChip) ObserveOpenings(openings FriOpenings) {
 	for i := 0; i < len(openings.Batches); i++ {
-		c.ObserveExtensionElements(openings.Batches[i].values)
+		c.ObserveExtensionElements(openings.Batches[i].Values)
 	}
 }
 
