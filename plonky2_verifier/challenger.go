@@ -11,13 +11,13 @@ import (
 type ChallengerChip struct {
 	api          frontend.API
 	field        frontend.API
-	poseidonChip poseidon.PoseidonChip
+	poseidonChip *poseidon.PoseidonChip
 	spongeState  [poseidon.SPONGE_WIDTH]F
 	inputBuffer  []F
 	outputBuffer []F
 }
 
-func NewChallengerChip(api frontend.API, field frontend.API, poseidonChip poseidon.PoseidonChip) *ChallengerChip {
+func NewChallengerChip(api frontend.API, field frontend.API, poseidonChip *poseidon.PoseidonChip) *ChallengerChip {
 	var spongeState [poseidon.SPONGE_WIDTH]F
 	var inputBuffer []F
 	var outputBuffer []F

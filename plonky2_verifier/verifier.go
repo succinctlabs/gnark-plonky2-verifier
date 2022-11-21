@@ -1,7 +1,6 @@
 package plonky2_verifier
 
 import (
-	"fmt"
 	. "gnark-ed25519/field"
 	"gnark-ed25519/poseidon"
 
@@ -10,8 +9,22 @@ import (
 
 type VerifierChip struct {
 	api          frontend.API
-	field        frontend.API
-	poseidonChip poseidon.PoseidonChip
+	fieldAPI     frontend.API
+	qeAPI        *QuadraticExtensionAPI
+	poseidonChip *poseidon.PoseidonChip
+	plonkChip    *PlonkChip
+	friChip      *FriChip
+}
+
+func NewVerifierChip(api frontend.API, fieldAPI frontend.API, qeAPI *QuadraticExtensionAPI, poseidonChip *poseidon.PoseidonChip, plonkChip *PlonkChip, friChip *FriChip) *VerifierChip {
+	return &VerifierChip{
+		api:          api,
+		fieldAPI:     fieldAPI,
+		qeAPI:        qeAPI,
+		poseidonChip: poseidonChip,
+		plonkChip:    plonkChip,
+		friChip:      friChip,
+	}
 }
 
 func (c *VerifierChip) GetPublicInputsHash(publicInputs []F) Hash {
@@ -21,7 +34,7 @@ func (c *VerifierChip) GetPublicInputsHash(publicInputs []F) Hash {
 func (c *VerifierChip) GetChallenges(proofWithPis ProofWithPublicInputs, publicInputsHash Hash, commonData CommonCircuitData) ProofChallenges {
 	config := commonData.Config
 	numChallenges := config.NumChallenges
-	challenger := NewChallengerChip(c.api, c.field, c.poseidonChip)
+	challenger := NewChallengerChip(c.api, c.fieldAPI, c.poseidonChip)
 
 	var circuitDigest = commonData.CircuitDigest
 
@@ -59,5 +72,21 @@ func (c *VerifierChip) Verify(proofWithPis ProofWithPublicInputs, verifierData V
 
 	publicInputsHash := c.GetPublicInputsHash(proofWithPis.PublicInputs)
 	proofChallenges := c.GetChallenges(proofWithPis, publicInputsHash, commonData)
-	fmt.Printf("%+v\n", proofChallenges)
+
+	c.plonkChip.Verify(proofChallenges, proofWithPis.Proof.Openings)
+
+	initialMerkleCaps := []MerkleCap{
+		verifierData.ConstantSigmasCap,
+		proofWithPis.Proof.WiresCap,
+		proofWithPis.Proof.PlonkZsPartialProductsCap,
+		proofWithPis.Proof.QuotientPolysCap,
+	}
+
+	c.friChip.VerifyFriProof(
+		commonData.GetFriInstance(c.qeAPI, proofChallenges.PlonkZeta, commonData.DegreeBits),
+		proofWithPis.Proof.Openings.ToFriOpenings(),
+		&proofChallenges.FriChallenges,
+		initialMerkleCaps,
+		&proofWithPis.Proof.OpeningProof,
+	)
 }

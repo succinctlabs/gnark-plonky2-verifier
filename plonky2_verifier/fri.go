@@ -17,6 +17,7 @@ type FriChip struct {
 	api      frontend.API
 	fieldAPI frontend.API
 	qeAPI    *QuadraticExtensionAPI
+	hashAPI  *HashAPI
 
 	poseidonChip *poseidon.PoseidonChip
 
@@ -24,7 +25,14 @@ type FriChip struct {
 	verifierOnlyCircuitData *VerifierOnlyCircuitData
 }
 
-func NewFriChip(api frontend.API, fieldAPI frontend.API, qeAPI *QuadraticExtensionAPI, poseidonChip *poseidon.PoseidonChip, friParams *FriParams) *FriChip {
+func NewFriChip(
+	api frontend.API,
+	fieldAPI frontend.API,
+	qeAPI *QuadraticExtensionAPI,
+	hashAPI *HashAPI,
+	poseidonChip *poseidon.PoseidonChip,
+	friParams *FriParams,
+) *FriChip {
 	return &FriChip{
 		api:          api,
 		fieldAPI:     fieldAPI,
@@ -113,7 +121,7 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits
 		rightHashCompress[2] = rightHash[2]
 		rightHashCompress[3] = rightHash[3]
 
-		currentDigest = SelectHash(f.fieldAPI, bit, leftHashCompress, rightHashCompress)
+		currentDigest = f.hashAPI.SelectHash(bit, leftHashCompress, rightHashCompress)
 	}
 
 	// We assume that the cap_height is 4.  Create two levels of the Lookup2 circuit
@@ -131,15 +139,15 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits
 	// First create the "leaf" lookup2 circuits
 	// The will use the least significant bits of the capIndexBits array
 	for i := 0; i < NUM_LEAF_LOOKUPS; i++ {
-		leafLookups[i] = Lookup2Hash(
-			f.fieldAPI, capIndexBits[0], capIndexBits[1],
+		leafLookups[i] = f.hashAPI.Lookup2Hash(
+			capIndexBits[0], capIndexBits[1],
 			merkleCap[i*NUM_LEAF_LOOKUPS], merkleCap[i*NUM_LEAF_LOOKUPS+1], merkleCap[i*NUM_LEAF_LOOKUPS+2], merkleCap[i*NUM_LEAF_LOOKUPS+3],
 		)
 	}
 
 	// Use the most 2 significant bits of the capIndexBits array for the "root" lookup
-	merkleCapEntry := Lookup2Hash(f.fieldAPI, capIndexBits[2], capIndexBits[3], leafLookups[0], leafLookups[1], leafLookups[2], leafLookups[3])
-	AssertIsEqualHash(f.fieldAPI, currentDigest, merkleCapEntry)
+	merkleCapEntry := f.hashAPI.Lookup2Hash(capIndexBits[2], capIndexBits[3], leafLookups[0], leafLookups[1], leafLookups[2], leafLookups[3])
+	f.hashAPI.AssertIsEqualHash(currentDigest, merkleCapEntry)
 }
 
 func (f *FriChip) verifyInitialProof(xIndexBits []frontend.Variable, proof *FriInitialTreeProof, initialMerkleCaps []MerkleCap, capIndexBits []frontend.Variable) {

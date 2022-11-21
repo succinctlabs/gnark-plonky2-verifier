@@ -22,7 +22,7 @@ type TestChallengerCircuit struct {
 func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	field := field.NewFieldAPI(api)
 	poseidonChip := NewPoseidonChip(api, field)
-	challengerChip := NewChallengerChip(api, field, *poseidonChip)
+	challengerChip := NewChallengerChip(api, field, poseidonChip)
 
 	var circuitDigest [4]F
 	for i := 0; i < len(circuitDigest); i++ {

@@ -18,8 +18,9 @@ func (circuit *TestFibonacciFriCircuit) Define(api frontend.API) error {
 
 	field := NewFieldAPI(api)
 	qe := NewQuadraticExtensionAPI(field, commonCircuitData.DegreeBits)
+	hash := NewHashAPI(field)
 	poseidonChip := poseidon.NewPoseidonChip(api, field)
-	friChip := NewFriChip(api, field, qe, poseidonChip, &commonCircuitData.FriParams)
+	friChip := NewFriChip(api, field, qe, hash, poseidonChip, &commonCircuitData.FriParams)
 
 	zeta := QuadraticExtension{
 		NewFieldElementFromString("14887793628029982930"),
@@ -104,8 +105,9 @@ func (circuit *TestLargeDummyFriCircuit) Define(api frontend.API) error {
 
 	field := NewFieldAPI(api)
 	qe := NewQuadraticExtensionAPI(field, commonCircuitData.DegreeBits)
+	hash := NewHashAPI(field)
 	poseidonChip := poseidon.NewPoseidonChip(api, field)
-	friChip := NewFriChip(api, field, qe, poseidonChip, &commonCircuitData.FriParams)
+	friChip := NewFriChip(api, field, qe, hash, poseidonChip, &commonCircuitData.FriParams)
 
 	zeta := QuadraticExtension{
 		NewFieldElementFromString("17377750363769967882"),
