@@ -37,6 +37,7 @@ func NewFriChip(
 		api:          api,
 		fieldAPI:     fieldAPI,
 		qeAPI:        qeAPI,
+		hashAPI:      hashAPI,
 		poseidonChip: poseidonChip,
 		friParams:    friParams,
 	}
