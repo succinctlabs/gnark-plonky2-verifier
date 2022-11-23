@@ -174,19 +174,12 @@ func (p *PlonkChip) evalVanishingPoly(proofChallenges ProofChallenges, openings 
 	}
 
 	vanishingTerms := append(vanishingZ1Terms, vanishingPartialProductsTerms...)
+	vanishingTerms = append(vanishingTerms, []QuadraticExtension{p.qeAPI.ZERO_QE, p.qeAPI.ZERO_QE, p.qeAPI.ZERO_QE, p.qeAPI.ZERO_QE}...)
 
 	reducedValues := make([]QuadraticExtension, p.commonData.Config.NumChallenges)
 	for i := uint64(0); i < p.commonData.Config.NumChallenges; i++ {
 		reducedValues[i] = p.qeAPI.ZERO_QE
 	}
-
-	// TODO:  Enable this check once the custom gate evaluations are added to the
-	//        vanishingTerms array
-	/*
-		if len(vanishingTerms) != int(p.commonData.QuotientDegreeFactor) {
-			panic("evalVanishingPoly: len(vanishingTerms) != int(p.commonData.QuotientDegreeFactor)")
-		}
-	*/
 
 	// reverse iterate the vanishingPartialProductsTerms array
 	for i := len(vanishingTerms) - 1; i >= 0; i-- {
@@ -219,8 +212,8 @@ func (p *PlonkChip) Verify(proofChallenges ProofChallenges, openings OpeningSet)
 	// So to reconstruct `t(zeta)` we can compute `reduce_with_powers(chunk, zeta^n)` for each
 	// `quotient_degree_factor`-sized chunk of the original evaluations.
 	for i := 0; i < len(vanishingPolysZeta); i++ {
-		quotientPolysStartIdx := i * len(vanishingPolysZeta)
-		quotientPolysEndIdx := quotientPolysStartIdx + len(vanishingPolysZeta)
+		quotientPolysStartIdx := i * int(p.commonData.QuotientDegreeFactor)
+		quotientPolysEndIdx := quotientPolysStartIdx + int(p.commonData.QuotientDegreeFactor)
 		prod := p.qeAPI.MulExtension(
 			zHZeta,
 			p.qeAPI.ReduceWithPowers(
@@ -229,13 +222,6 @@ func (p *PlonkChip) Verify(proofChallenges ProofChallenges, openings OpeningSet)
 			),
 		)
 
-		// TODO: Uncomment this after adding in the custom gates evaluations
-		//p.qeAPI.AssertIsEqual(vanishingPolysZeta[i], prod)
-
-		// For now, just put in a dummy equality check so that VS stops complaining about unused variables
-		p.qeAPI.AssertIsEqual(
-			p.qeAPI.MulExtension(vanishingPolysZeta[i], p.qeAPI.ZERO_QE),
-			p.qeAPI.MulExtension(prod, p.qeAPI.ZERO_QE),
-		)
+		p.qeAPI.AssertIsEqual(vanishingPolysZeta[i], prod)
 	}
 }

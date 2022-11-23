@@ -9,7 +9,7 @@ import (
 	"github.com/consensys/gnark/test"
 )
 
-type TestVerifierCircuit struct {
+type TestVerifierChallengesCircuit struct {
 	fieldAPI frontend.API           `gnark:"-"`
 	qeAPI    *QuadraticExtensionAPI `gnark:"-"`
 	hashAPI  *HashAPI               `gnark:"-"`
@@ -35,7 +35,7 @@ type TestVerifierCircuit struct {
 	verifierChip *VerifierChip
 }
 
-func (c *TestVerifierCircuit) GetChallengesSanityCheck(
+func (c *TestVerifierChallengesCircuit) GetChallengesSanityCheck(
 	proofWithPis ProofWithPublicInputs,
 	verifierData VerifierOnlyCircuitData,
 	commonData CommonCircuitData,
@@ -90,7 +90,7 @@ func (c *TestVerifierCircuit) GetChallengesSanityCheck(
 	}
 }
 
-func (c *TestVerifierCircuit) Define(api frontend.API) error {
+func (c *TestVerifierChallengesCircuit) Define(api frontend.API) error {
 	proofWithPis := DeserializeProofWithPublicInputs(c.proofWithPIsFilename)
 	commonCircuitData := DeserializeCommonCircuitData(c.commonCircuitDataFilename)
 	verfierOnlyCircuitData := DeserializeVerifierOnlyCircuitData(c.verifierOnlyCircuitDataFilename)
@@ -112,7 +112,7 @@ func TestFibonacciVerifierWitness(t *testing.T) {
 	assert := test.NewAssert(t)
 
 	testCase := func() {
-		circuit := TestVerifierCircuit{
+		circuit := TestVerifierChallengesCircuit{
 			proofWithPIsFilename:            "./data/fibonacci/proof_with_public_inputs.json",
 			commonCircuitDataFilename:       "./data/fibonacci/common_circuit_data.json",
 			verifierOnlyCircuitDataFilename: "./data/fibonacci/verifier_only_circuit_data.json",
@@ -183,7 +183,7 @@ func TestFibonacciVerifierWitness(t *testing.T) {
 				NewFieldElement(13636347200053048758),
 			},
 		}
-		witness := TestVerifierCircuit{}
+		witness := TestVerifierChallengesCircuit{}
 		err := test.IsSolved(&circuit, &witness, TEST_CURVE.ScalarField())
 		assert.NoError(err)
 	}
@@ -195,7 +195,7 @@ func TestDummyVerifierWitness(t *testing.T) {
 	assert := test.NewAssert(t)
 
 	testCase := func() {
-		circuit := TestVerifierCircuit{
+		circuit := TestVerifierChallengesCircuit{
 			proofWithPIsFilename:            "./data/dummy_2^14_gates/proof_with_public_inputs.json",
 			commonCircuitDataFilename:       "./data/dummy_2^14_gates/common_circuit_data.json",
 			verifierOnlyCircuitDataFilename: "./data/dummy_2^14_gates/verifier_only_circuit_data.json",
@@ -279,10 +279,56 @@ func TestDummyVerifierWitness(t *testing.T) {
 				NewFieldElement(11238419549114325157),
 			},
 		}
-		witness := TestVerifierCircuit{} // No real witness as the test circuit's Define function will inject in the witness
+		witness := TestVerifierChallengesCircuit{} // No real witness as the test circuit's Define function will inject in the witness
 		err := test.IsSolved(&circuit, &witness, TEST_CURVE.ScalarField())
 		assert.NoError(err)
 	}
 
+	testCase()
+}
+
+type TestVerifierCircuit struct {
+	proofWithPIsFilename            string `gnark:"-"`
+	commonCircuitDataFilename       string `gnark:"-"`
+	verifierOnlyCircuitDataFilename string `gnark:"-"`
+}
+
+func (c *TestVerifierCircuit) Define(api frontend.API) error {
+	proofWithPis := DeserializeProofWithPublicInputs(c.proofWithPIsFilename)
+	commonCircuitData := DeserializeCommonCircuitData(c.commonCircuitDataFilename)
+	verfierOnlyCircuitData := DeserializeVerifierOnlyCircuitData(c.verifierOnlyCircuitDataFilename)
+
+	fieldAPI := NewFieldAPI(api)
+	qeAPI := NewQuadraticExtensionAPI(fieldAPI, commonCircuitData.DegreeBits)
+	hashAPI := NewHashAPI(fieldAPI)
+	poseidonChip := NewPoseidonChip(api, fieldAPI)
+	plonkChip := NewPlonkChip(api, qeAPI, commonCircuitData)
+	friChip := NewFriChip(api, fieldAPI, qeAPI, hashAPI, poseidonChip, &commonCircuitData.FriParams)
+	verifierChip := VerifierChip{
+		api:          api,
+		fieldAPI:     fieldAPI,
+		qeAPI:        qeAPI,
+		poseidonChip: poseidonChip,
+		plonkChip:    plonkChip,
+		friChip:      friChip,
+	}
+	verifierChip.Verify(proofWithPis, verfierOnlyCircuitData, commonCircuitData)
+	return nil
+}
+
+func TestDummyVerifier(t *testing.T) {
+	assert := test.NewAssert(t)
+
+	testCase := func() {
+		circuit := TestVerifierCircuit{
+			proofWithPIsFilename:            "./data/dummy_2^14_gates/proof_with_public_inputs.json",
+			commonCircuitDataFilename:       "./data/dummy_2^14_gates/common_circuit_data.json",
+			verifierOnlyCircuitDataFilename: "./data/dummy_2^14_gates/verifier_only_circuit_data.json",
+		}
+
+		witness := TestVerifierCircuit{}
+		err := test.IsSolved(&circuit, &witness, TEST_CURVE.ScalarField())
+		assert.NoError(err)
+	}
 	testCase()
 }

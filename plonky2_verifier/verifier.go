@@ -82,6 +82,25 @@ func (c *VerifierChip) Verify(proofWithPis ProofWithPublicInputs, verifierData V
 		proofWithPis.Proof.QuotientPolysCap,
 	}
 
+	// Seems like there is a bug in the emulated field code.
+	// Add ZERO to all of the fri challenges values to reduce them.
+	proofChallenges.PlonkZeta[0] = c.fieldAPI.Add(proofChallenges.PlonkZeta[0], ZERO_F).(F)
+	proofChallenges.PlonkZeta[1] = c.fieldAPI.Add(proofChallenges.PlonkZeta[1], ZERO_F).(F)
+
+	proofChallenges.FriChallenges.FriAlpha[0] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriAlpha[0], ZERO_F).(F)
+	proofChallenges.FriChallenges.FriAlpha[1] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriAlpha[1], ZERO_F).(F)
+
+	for i := 0; i < len(proofChallenges.FriChallenges.FriBetas); i++ {
+		proofChallenges.FriChallenges.FriBetas[i][0] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriBetas[i][0], ZERO_F).(F)
+		proofChallenges.FriChallenges.FriBetas[i][1] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriBetas[i][1], ZERO_F).(F)
+	}
+
+	proofChallenges.FriChallenges.FriPowResponse = c.fieldAPI.Add(proofChallenges.FriChallenges.FriPowResponse, ZERO_F).(F)
+
+	for i := 0; i < len(proofChallenges.FriChallenges.FriQueryIndicies); i++ {
+		proofChallenges.FriChallenges.FriQueryIndicies[i] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriQueryIndicies[i], ZERO_F).(F)
+	}
+
 	c.friChip.VerifyFriProof(
 		commonData.GetFriInstance(c.qeAPI, proofChallenges.PlonkZeta, commonData.DegreeBits),
 		proofWithPis.Proof.Openings.ToFriOpenings(),
