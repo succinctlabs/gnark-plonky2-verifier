@@ -14,15 +14,15 @@ import (
 )
 
 type FriChip struct {
-	api      frontend.API
-	fieldAPI frontend.API
-	qeAPI    *QuadraticExtensionAPI
-	hashAPI  *HashAPI
+	api      frontend.API           `gnark:"-"`
+	fieldAPI frontend.API           `gnark:"-"`
+	qeAPI    *QuadraticExtensionAPI `gnark:"-"`
+	hashAPI  *HashAPI               `gnark:"-"`
 
 	poseidonChip *poseidon.PoseidonChip
 
-	friParams               *FriParams
-	verifierOnlyCircuitData *VerifierOnlyCircuitData
+	friParams               *FriParams               `gnark:"-"`
+	verifierOnlyCircuitData *VerifierOnlyCircuitData `gnark:"-"`
 }
 
 func NewFriChip(

@@ -17,8 +17,8 @@ const SPONGE_RATE = 8
 
 type PoseidonState = [WIDTH]F
 type PoseidonChip struct {
-	api   frontend.API
-	field frontend.API
+	api   frontend.API `gnark:"-"`
+	field frontend.API `gnark:"-"`
 }
 
 func NewPoseidonChip(api frontend.API, field frontend.API) *PoseidonChip {

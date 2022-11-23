@@ -32,14 +32,14 @@ var QUOTIENT = PlonkOracle{
 }
 
 type PlonkChip struct {
-	api   frontend.API
-	qeAPI *QuadraticExtensionAPI
+	api   frontend.API           `gnark:"-"`
+	qeAPI *QuadraticExtensionAPI `gnark:"-"`
 
-	commonData CommonCircuitData
+	commonData CommonCircuitData `gnark:"-"`
 
-	DEGREE        F
-	DEGREE_BITS_F F
-	DEGREE_QE     QuadraticExtension
+	DEGREE        F                  `gnark:"-"`
+	DEGREE_BITS_F F                  `gnark:"-"`
+	DEGREE_QE     QuadraticExtension `gnark:"-"`
 }
 
 func NewPlonkChip(api frontend.API, qeAPI *QuadraticExtensionAPI, commonData CommonCircuitData) *PlonkChip {

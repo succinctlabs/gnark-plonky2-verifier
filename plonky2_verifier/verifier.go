@@ -8,9 +8,9 @@ import (
 )
 
 type VerifierChip struct {
-	api          frontend.API
-	fieldAPI     frontend.API
-	qeAPI        *QuadraticExtensionAPI
+	api          frontend.API           `gnark:"-"`
+	fieldAPI     frontend.API           `gnark:"-"`
+	qeAPI        *QuadraticExtensionAPI `gnark:"-"`
 	poseidonChip *poseidon.PoseidonChip
 	plonkChip    *PlonkChip
 	friChip      *FriChip

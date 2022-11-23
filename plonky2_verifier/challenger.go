@@ -9,8 +9,8 @@ import (
 )
 
 type ChallengerChip struct {
-	api          frontend.API
-	field        frontend.API
+	api          frontend.API `gnark:"-"`
+	field        frontend.API `gnark:"-"`
 	poseidonChip *poseidon.PoseidonChip
 	spongeState  [poseidon.SPONGE_WIDTH]F
 	inputBuffer  []F
@@ -21,6 +21,11 @@ func NewChallengerChip(api frontend.API, field frontend.API, poseidonChip *posei
 	var spongeState [poseidon.SPONGE_WIDTH]F
 	var inputBuffer []F
 	var outputBuffer []F
+
+	for i := 0; i < poseidon.SPONGE_WIDTH; i++ {
+		spongeState[i] = ZERO_F
+	}
+
 	return &ChallengerChip{
 		api:          api,
 		field:        field,
