@@ -1,15 +1,6 @@
+# gnark-plonky2-verifier
 
-# gnark-ed25519
-ed25519 implementation in Gnark
-
-To test:
+To run the benchmark,
 ```
-go test gnark-ed25519/edwards_curve
+go run benchmark.go
 ```
-
-To build and run:
-```
-go build gnark-ed25519 && ./gnark-ed25519
-```
-
-if it panics on compilation.... make vriables capitalzie

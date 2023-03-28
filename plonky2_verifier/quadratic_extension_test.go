@@ -1,8 +1,8 @@
 package plonky2_verifier
 
 import (
-	"gnark-ed25519/field"
-	. "gnark-ed25519/field"
+	"gnark-plonky2-verifier/field"
+	. "gnark-plonky2-verifier/field"
 	"testing"
 
 	"github.com/consensys/gnark/frontend"

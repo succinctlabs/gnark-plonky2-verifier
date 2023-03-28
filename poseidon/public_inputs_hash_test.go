@@ -1,8 +1,8 @@
 package poseidon
 
 import (
-	. "gnark-ed25519/field"
-	"gnark-ed25519/utils"
+	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/utils"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc"

@@ -1,7 +1,7 @@
 package utils
 
 import (
-	. "gnark-ed25519/field"
+	. "gnark-plonky2-verifier/field"
 	"math/big"
 
 	"github.com/consensys/gnark/frontend"

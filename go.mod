@@ -1,4 +1,4 @@
-module gnark-ed25519
+module gnark-plonky2-verifier
 
 go 1.19
 

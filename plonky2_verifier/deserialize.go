@@ -2,8 +2,8 @@ package plonky2_verifier
 
 import (
 	"encoding/json"
-	. "gnark-ed25519/field"
-	"gnark-ed25519/utils"
+	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/utils"
 	"io/ioutil"
 	"os"
 )

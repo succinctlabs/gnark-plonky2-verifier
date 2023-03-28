@@ -2,9 +2,9 @@ package plonky2_verifier
 
 import (
 	"fmt"
-	"gnark-ed25519/field"
-	. "gnark-ed25519/field"
-	"gnark-ed25519/poseidon"
+	"gnark-plonky2-verifier/field"
+	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/poseidon"
 	"math"
 	"math/big"
 	"math/bits"
