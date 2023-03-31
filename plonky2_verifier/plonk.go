@@ -117,6 +117,8 @@ func (p *PlonkChip) checkPartialProducts(
 }
 
 func (p *PlonkChip) evalVanishingPoly(proofChallenges ProofChallenges, openings OpeningSet, zetaPowN QuadraticExtension) []QuadraticExtension {
+	// TODO: evaluate_gate_contraints logic should be implemented here.  See https://github.com/mir-protocol/plonky2/blob/main/plonky2/src/plonk/vanishing_poly.rs#L39
+
 	// Calculate the k[i] * x
 	sIDs := make([]QuadraticExtension, p.commonData.Config.NumRoutedWires)
 
