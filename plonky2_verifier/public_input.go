@@ -26,7 +26,3 @@ func (p *PublicInputGate) EvalUnfiltered(pc *PlonkChip, vars EvaluationVars) []Q
 
 	return constraints
 }
-
-func (p *PublicInputGate) EvalFiltered(vars EvaluationVars) []QuadraticExtension {
-	return nil
-}
