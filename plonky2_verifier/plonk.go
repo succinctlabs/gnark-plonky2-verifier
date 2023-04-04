@@ -116,17 +116,6 @@ func (p *PlonkChip) checkPartialProducts(
 	return partialProductChecks
 }
 
-func (p *PlonkChip) evalFiltered(
-	g gate,
-	vars EvaluationVars,
-	row int,
-	selectorIndex int,
-	groupRange Range,
-	numSelectors int
-) []QuadraticExtension {
-	
-}
-
 func (p *PlonkChip) evaluateGateConstraints(
 	commonData CommonCircuitData,
 	x QuadraticExtension,
@@ -142,8 +131,24 @@ func (p *PlonkChip) evaluateGateConstraints(
 	constraints := make([]QuadraticExtension, commonData.NumGateConstraints)
 
 	for i, gate := range commonData.Gates {
-		selectorIndex := commonData.selector
+		selectorIndex := commonData.SelectorsInfo.selectorIndices[i]
+
+		gateConstraints := p.evalFiltered(
+			gate,
+			vars,
+			i,
+			int(selectorIndex),
+			commonData.SelectorsInfo.groups[selectorIndex],
+			commonData.SelectorsInfo.NumSelectors(),
+		)
+
+		for _, constraint := range gateConstraints {
+			// assert j < commonData.NumGateConstraints
+			constraints[i] = p.qeAPI.AddExtension(constraints[i], constraint)
+		}
 	}
+
+	return constraints
 }
 
 func (p *PlonkChip) evalVanishingPoly(proofChallenges ProofChallenges, openings OpeningSet, zetaPowN QuadraticExtension) []QuadraticExtension {
