@@ -12,6 +12,6 @@ type SelectorsInfo struct {
 	groups          []Range
 }
 
-func (s *SelectorsInfo) NumSelectors() int {
-	return len(s.groups)
+func (s *SelectorsInfo) NumSelectors() uint64 {
+	return uint64(len(s.groups))
 }

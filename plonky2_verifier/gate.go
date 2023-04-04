@@ -9,7 +9,7 @@ type gate interface {
 }
 
 func (p *PlonkChip) computeFilter(
-	row int,
+	row uint64,
 	groupRange Range,
 	s QuadraticExtension,
 	manySelector bool,
@@ -33,10 +33,10 @@ func (p *PlonkChip) computeFilter(
 func (p *PlonkChip) evalFiltered(
 	g gate,
 	vars EvaluationVars,
-	row int,
-	selectorIndex int,
+	row uint64,
+	selectorIndex uint64,
 	groupRange Range,
-	numSelectors int,
+	numSelectors uint64,
 ) []QuadraticExtension {
 	filter := p.computeFilter(row, groupRange, vars.localConstants[selectorIndex], numSelectors > 1)
 

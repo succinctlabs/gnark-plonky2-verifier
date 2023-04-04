@@ -14,6 +14,6 @@ type EvaluationVars struct {
 	publicInputsHash HashOut
 }
 
-func (e *EvaluationVars) RemovePrefix(numSelectors int) {
+func (e *EvaluationVars) RemovePrefix(numSelectors uint64) {
 	e.localConstants = e.localConstants[numSelectors:]
 }

@@ -7,8 +7,8 @@ import (
 type PublicInputGate struct {
 }
 
-func (p *PublicInputGate) WiresPublicInputsHash() []int {
-	return []int{0, 1, 2, 3}
+func (p *PublicInputGate) WiresPublicInputsHash() []uint64 {
+	return []uint64{0, 1, 2, 3}
 }
 
 func (p *PublicInputGate) EvalUnfiltered(pc *PlonkChip, vars EvaluationVars) []QuadraticExtension {

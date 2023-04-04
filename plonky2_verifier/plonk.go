@@ -136,8 +136,8 @@ func (p *PlonkChip) evaluateGateConstraints(
 		gateConstraints := p.evalFiltered(
 			gate,
 			vars,
-			i,
-			int(selectorIndex),
+			uint64(i),
+			selectorIndex,
 			commonData.SelectorsInfo.groups[selectorIndex],
 			commonData.SelectorsInfo.NumSelectors(),
 		)
