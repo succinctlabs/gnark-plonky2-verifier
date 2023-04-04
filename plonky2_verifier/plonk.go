@@ -116,8 +116,38 @@ func (p *PlonkChip) checkPartialProducts(
 	return partialProductChecks
 }
 
+func (p *PlonkChip) evalFiltered(
+	g gate,
+	vars EvaluationVars,
+	row int,
+	selectorIndex int,
+	groupRange Range,
+	numSelectors int
+) []QuadraticExtension {
+	
+}
+
+func (p *PlonkChip) evaluateGateConstraints(
+	commonData CommonCircuitData,
+	x QuadraticExtension,
+	vars EvaluationVars,
+	localZs []QuadraticExtension,
+	nextZs []QuadraticExtension,
+	partialProducts []QuadraticExtension,
+	sSigmas []QuadraticExtension,
+	betas []F,
+	gammas []F,
+	alphas []F,
+) []QuadraticExtension {
+	constraints := make([]QuadraticExtension, commonData.NumGateConstraints)
+
+	for i, gate := range commonData.Gates {
+		selectorIndex := commonData.selector
+	}
+}
+
 func (p *PlonkChip) evalVanishingPoly(proofChallenges ProofChallenges, openings OpeningSet, zetaPowN QuadraticExtension) []QuadraticExtension {
-	// TODO: evaluate_gate_contraints logic should be implemented here.  See https://github.com/mir-protocol/plonky2/blob/main/plonky2/src/plonk/vanishing_poly.rs#L39
+	// TODO: evaluate_gate_constraints logic should be implemented here.  See https://github.com/mir-protocol/plonky2/blob/main/plonky2/src/plonk/vanishing_poly.rs#L39
 
 	// Calculate the k[i] * x
 	sIDs := make([]QuadraticExtension, p.commonData.Config.NumRoutedWires)
