@@ -15,7 +15,7 @@ func (p *PublicInputGate) EvalUnfiltered(pc *PlonkChip, vars EvaluationVars) []Q
 	constraints := []QuadraticExtension{}
 
 	wires := p.WiresPublicInputsHash()
-	hash_parts := vars.publicInputsHash.elements
+	hash_parts := vars.publicInputsHash
 	for i := 0; i < 4; i++ {
 		wire := wires[i]
 		hash_part := hash_parts[i]

@@ -2,6 +2,7 @@ package plonky2_verifier
 
 import (
 	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/poseidon"
 	"testing"
 
 	"github.com/consensys/gnark/frontend"
@@ -34,7 +35,10 @@ func (circuit *TestPlonkCircuit) Define(api frontend.API) error {
 
 	plonkChip := NewPlonkChip(api, qe, commonCircuitData)
 
-	plonkChip.Verify(proofChallenges, proofWithPis.Proof.Openings)
+	poseidonChip := poseidon.NewPoseidonChip(api, field)
+	publicInputsHash := poseidonChip.HashNoPad(proofWithPis.PublicInputs)
+
+	plonkChip.Verify(proofChallenges, proofWithPis.Proof.Openings, publicInputsHash)
 	return nil
 }
 
