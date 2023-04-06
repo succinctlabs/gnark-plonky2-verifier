@@ -21,14 +21,14 @@ type TestQuadraticExtensionMulCircuit struct {
 }
 
 func (c *TestQuadraticExtensionMulCircuit) Define(api frontend.API) error {
-	field := field.NewFieldAPI(api)
+	fieldAPI := field.NewFieldAPI(api)
 	degreeBits := 3
-	c.qeAPI = NewQuadraticExtensionAPI(field, uint64(degreeBits))
+	c.qeAPI = NewQuadraticExtensionAPI(fieldAPI, uint64(degreeBits))
 
 	actualRes := c.qeAPI.MulExtension(c.operand1, c.operand2)
 
-	field.AssertIsEqual(actualRes[0], c.expectedResult[0])
-	field.AssertIsEqual(actualRes[1], c.expectedResult[1])
+	fieldAPI.AssertIsEqual(actualRes[0], c.expectedResult[0])
+	fieldAPI.AssertIsEqual(actualRes[1], c.expectedResult[1])
 
 	return nil
 }
@@ -55,14 +55,14 @@ type TestQuadraticExtensionDivCircuit struct {
 }
 
 func (c *TestQuadraticExtensionDivCircuit) Define(api frontend.API) error {
-	field := field.NewFieldAPI(api)
+	fieldAPI := field.NewFieldAPI(api)
 	degreeBits := 3
-	c.qeAPI = NewQuadraticExtensionAPI(field, uint64(degreeBits))
+	c.qeAPI = NewQuadraticExtensionAPI(fieldAPI, uint64(degreeBits))
 
 	actualRes := c.qeAPI.DivExtension(c.operand1, c.operand2)
 
-	field.AssertIsEqual(actualRes[0], c.expectedResult[0])
-	field.AssertIsEqual(actualRes[1], c.expectedResult[1])
+	fieldAPI.AssertIsEqual(actualRes[0], c.expectedResult[0])
+	fieldAPI.AssertIsEqual(actualRes[1], c.expectedResult[1])
 
 	return nil
 }

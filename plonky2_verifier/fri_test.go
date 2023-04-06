@@ -29,7 +29,7 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	fieldAPI := NewFieldAPI(api)
 	qeAPI := NewQuadraticExtensionAPI(fieldAPI, commonCircuitData.DegreeBits)
 	hashAPI := NewHashAPI(fieldAPI)
-	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI)
+	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
 	friChip := NewFriChip(api, fieldAPI, qeAPI, hashAPI, poseidonChip, &commonCircuitData.FriParams)
 
 	friChallenges := FriChallenges{

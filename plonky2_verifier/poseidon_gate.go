@@ -74,6 +74,8 @@ type PoseidonGate struct {
 func (p *PoseidonGate) EvalUnfiltered(pc *PlonkChip, vars EvaluationVars) []QuadraticExtension {
 	constraints := []QuadraticExtension{}
 
+	poseidonChip := poseidon.NewPoseidonChip(pc.api, NewFieldAPI(pc.api), pc.qeAPI)
+
 	// Assert that `swap` is binary.
 	swap := vars.localWires[p.WireSwap()]
 	notSwap := pc.qeAPI.SubExtension(pc.qeAPI.FieldToQE(ONE_F), swap)
@@ -90,7 +92,7 @@ func (p *PoseidonGate) EvalUnfiltered(pc *PlonkChip, vars EvaluationVars) []Quad
 	}
 
 	// Compute the possibly-swapped input layer.
-	state := make([]QuadraticExtension, poseidon.SPONGE_WIDTH)
+	var state [poseidon.SPONGE_WIDTH]QuadraticExtension
 	for i := uint64(0); i < 4; i++ {
 		deltaI := vars.localWires[p.WireDelta(i)]
 		inputLhs := vars.localWires[p.WireInput(i)]
@@ -106,7 +108,7 @@ func (p *PoseidonGate) EvalUnfiltered(pc *PlonkChip, vars EvaluationVars) []Quad
 
 	// First set of full rounds.
 	for r := uint64(0); r < poseidon.HALF_N_FULL_ROUNDS; r++ {
-		// TODO: constantLayerField(state, round_ctr)
+		state = poseidonChip.ConstantLayerExtension(state, &round_ctr)
 		if r != 0 {
 			for i := uint64(0); i < poseidon.SPONGE_WIDTH; i++ {
 				sBoxIn := vars.localWires[p.WireFullSBox0(r, i)]
@@ -114,37 +116,37 @@ func (p *PoseidonGate) EvalUnfiltered(pc *PlonkChip, vars EvaluationVars) []Quad
 				state[i] = sBoxIn
 			}
 		}
-		// TODO: sboxLayerField(state)
-		// TODO: state = mdsLayerField(state)
+		state = poseidonChip.SBoxLayerExtension(state)
+		state = poseidonChip.MdsLayerExtension(state)
 		round_ctr++
 	}
 
 	// Partial rounds.
-	// TODO: partialFirstConstantLayer(state)
-	// TODO: state = mdsParitalLayerInit(state)
+	state = poseidonChip.PartialFirstConstantLayerExtension(state)
+	state = poseidonChip.MdsPartialLayerInitExtension(state)
 	for r := uint64(0); r < poseidon.N_PARTIAL_ROUNDS-1; r++ {
 		sBoxIn := vars.localWires[p.WirePartialSBox(r)]
 		constraints = append(constraints, pc.qeAPI.SubExtension(state[0], sBoxIn))
-		// TODO: state[0] = sBoxMonomial(sBoxIn)
-		// TODO: state[0] += NewFieldElement(FAST_PARTIAL_ROUND_CONSTANTS[r])
-		// TODO: state = mdsParitalLayerFastField(state, r)
+		state[0] = poseidonChip.SBoxMonomialExtension(sBoxIn)
+		state[0] = pc.qeAPI.AddExtension(state[0], pc.qeAPI.FieldToQE(NewFieldElement(poseidon.FAST_PARTIAL_ROUND_CONSTANTS[r])))
+		state = poseidonChip.MdsPartialLayerFastExtension(state, int(r))
 	}
 	sBoxIn := vars.localWires[p.WirePartialSBox(poseidon.N_PARTIAL_ROUNDS-1)]
 	constraints = append(constraints, pc.qeAPI.SubExtension(state[0], sBoxIn))
-	// TODO: state[0] = sBoxMonomial(sBoxIn)
-	// TODO: state = mdsPartialLayerLastField(state, poseidon.N_PARTIAL_ROUNDS - 1)
+	state[0] = poseidonChip.SBoxMonomialExtension(sBoxIn)
+	state = poseidonChip.MdsPartialLayerFastExtension(state, poseidon.N_PARTIAL_ROUNDS-1)
 	round_ctr += poseidon.N_PARTIAL_ROUNDS
 
 	// Second set of full rounds.
 	for r := uint64(0); r < poseidon.HALF_N_FULL_ROUNDS; r++ {
-		// TODO: constantLayerField(state, round_ctr)
+		poseidonChip.ConstantLayerExtension(state, &round_ctr)
 		for i := uint64(0); i < poseidon.SPONGE_WIDTH; i++ {
 			sBoxIn := vars.localWires[p.WireFullSBox1(r, i)]
 			constraints = append(constraints, pc.qeAPI.SubExtension(state[i], sBoxIn))
 			state[i] = sBoxIn
 		}
-		// TODO: sboxLayerField(state)
-		// TODO: state = mdsLayerField(state)
+		state = poseidonChip.MdsLayerExtension(state)
+		state = poseidonChip.SBoxLayerExtension(state)
 		round_ctr++
 	}
 

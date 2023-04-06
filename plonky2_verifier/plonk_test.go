@@ -23,8 +23,8 @@ func (circuit *TestPlonkCircuit) Define(api frontend.API) error {
 	proofWithPis := DeserializeProofWithPublicInputs(circuit.proofWithPIsFilename)
 	commonCircuitData := DeserializeCommonCircuitData(circuit.commonCircuitDataFilename)
 
-	field := NewFieldAPI(api)
-	qe := NewQuadraticExtensionAPI(field, commonCircuitData.DegreeBits)
+	fieldAPI := NewFieldAPI(api)
+	qeAPI := NewQuadraticExtensionAPI(fieldAPI, commonCircuitData.DegreeBits)
 
 	proofChallenges := ProofChallenges{
 		PlonkBetas:  circuit.plonkBetas,
@@ -33,9 +33,9 @@ func (circuit *TestPlonkCircuit) Define(api frontend.API) error {
 		PlonkZeta:   circuit.plonkZeta,
 	}
 
-	plonkChip := NewPlonkChip(api, qe, commonCircuitData)
+	plonkChip := NewPlonkChip(api, qeAPI, commonCircuitData)
 
-	poseidonChip := poseidon.NewPoseidonChip(api, field)
+	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
 	publicInputsHash := poseidonChip.HashNoPad(proofWithPis.PublicInputs)
 
 	plonkChip.Verify(proofChallenges, proofWithPis.Proof.Openings, publicInputsHash)

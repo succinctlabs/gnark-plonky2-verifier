@@ -18,22 +18,22 @@ type TestPublicInputsHashCircuit struct {
 }
 
 func (circuit *TestPublicInputsHashCircuit) Define(api frontend.API) error {
-	field := NewFieldAPI(api)
+	fieldAPI := NewFieldAPI(api)
 
 	// BN254 -> Binary(64) -> F
 	var input [3]F
 	for i := 0; i < 3; i++ {
-		input[i] = field.FromBinary(api.ToBinary(circuit.In[i], 64)).(F)
+		input[i] = fieldAPI.FromBinary(api.ToBinary(circuit.In[i], 64)).(F)
 	}
 
-	poseidonChip := &PoseidonChip{api: api, field: field}
+	poseidonChip := &PoseidonChip{api: api, fieldAPI: fieldAPI}
 	output := poseidonChip.HashNoPad(input[:])
 
 	// Check that output is correct
 	for i := 0; i < 4; i++ {
-		field.AssertIsEqual(
+		fieldAPI.AssertIsEqual(
 			output[i],
-			field.FromBinary(api.ToBinary(circuit.Out[i])).(F),
+			fieldAPI.FromBinary(api.ToBinary(circuit.Out[i])).(F),
 		)
 	}
 
