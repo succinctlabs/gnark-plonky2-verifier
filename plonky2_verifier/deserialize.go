@@ -130,8 +130,8 @@ type CommonCircuitDataRaw struct {
 		DegreeBits         uint64   `json:"degree_bits"`
 		ReductionArityBits []uint64 `json:"reduction_arity_bits"`
 	} `json:"fri_params"`
-	Gates         []string `json:"gates"`
 	DegreeBits    uint64   `json:"degree_bits"`
+	Gates         []string `json:"gates"`
 	SelectorsInfo struct {
 		SelectorIndices []uint64 `json:"selector_indices"`
 		Groups          []struct {
@@ -346,13 +346,22 @@ func DeserializeCommonCircuitData(path string) CommonCircuitData {
 	commonCircuitData.FriParams.Config.ProofOfWorkBits = raw.FriParams.Config.ProofOfWorkBits
 	commonCircuitData.FriParams.Config.NumQueryRounds = raw.FriParams.Config.NumQueryRounds
 	commonCircuitData.FriParams.ReductionArityBits = raw.FriParams.ReductionArityBits
+	commonCircuitData.DegreeBits = raw.DegreeBits
 
 	commonCircuitData.Gates = []gate{}
 	for _, gate := range raw.Gates {
 		commonCircuitData.Gates = append(commonCircuitData.Gates, GateInstanceFromId(gate))
 	}
 
-	commonCircuitData.DegreeBits = raw.DegreeBits
+	commonCircuitData.SelectorsInfo.selectorIndices = raw.SelectorsInfo.SelectorIndices
+	commonCircuitData.SelectorsInfo.groups = []Range{}
+	for _, group := range raw.SelectorsInfo.Groups {
+		commonCircuitData.SelectorsInfo.groups = append(commonCircuitData.SelectorsInfo.groups, Range{
+			start: group.Start,
+			end:   group.End,
+		})
+	}
+
 	commonCircuitData.QuotientDegreeFactor = raw.QuotientDegreeFactor
 	commonCircuitData.NumGateConstraints = raw.NumGateConstraints
 	commonCircuitData.NumConstants = raw.NumConstants
