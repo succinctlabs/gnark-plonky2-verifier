@@ -131,8 +131,10 @@ func (p *PlonkChip) evaluateGateConstraints(vars EvaluationVars) []QuadraticExte
 			p.commonData.SelectorsInfo.NumSelectors(),
 		)
 
-		for _, constraint := range gateConstraints {
-			// assert j < commonData.NumGateConstraints
+		for j, constraint := range gateConstraints {
+			if uint64(j) >= p.commonData.NumGateConstraints {
+				panic("num_constraints() gave too low of a number")
+			}
 			constraints[i] = p.qeAPI.AddExtension(constraints[i], constraint)
 		}
 	}

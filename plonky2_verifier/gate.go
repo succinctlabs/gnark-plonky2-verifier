@@ -2,10 +2,51 @@ package plonky2_verifier
 
 import (
 	. "gnark-plonky2-verifier/field"
+	"strconv"
+	"strings"
 )
 
 type gate interface {
-	EvalUnfiltered(vars EvaluationVars) []QuadraticExtension
+	Id() string
+	EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []QuadraticExtension
+}
+
+func GateInstanceFromId(gateId string) gate {
+	if strings.HasPrefix(gateId, "ArithmeticGate") {
+		numOpsRaw := strings.Split(gateId, ":")[1]
+		numOpsRaw = strings.Split(numOpsRaw, "}")[0]
+		numOpsRaw = strings.TrimSpace(numOpsRaw)
+		numOps, err := strconv.Atoi(numOpsRaw)
+		if err != nil {
+			panic("Invalid gate ID for ArithmeticGate")
+		}
+		return NewArithmeticGate(uint64(numOps))
+	}
+
+	if gateId == "ConstantGate" {
+		numConstsRaw := strings.Split(gateId, ":")[1]
+		numConstsRaw = strings.Split(numConstsRaw, "}")[0]
+		numConstsRaw = strings.TrimSpace(numConstsRaw)
+		numConsts, err := strconv.Atoi(numConstsRaw)
+		if err != nil {
+			panic("Invalid gate ID")
+		}
+		return NewConstantGate(uint64(numConsts))
+	}
+
+	if gateId == "NoopGate" {
+		return NewNoopGate()
+	}
+
+	if gateId == "PublicInputGate" {
+		return NewPublicInputGate()
+	}
+
+	if strings.HasPrefix(gateId, "PoseidonGate") {
+		return NewPoseidonGate()
+	}
+
+	panic("Unknown gate ID")
 }
 
 func (p *PlonkChip) computeFilter(
@@ -42,7 +83,7 @@ func (p *PlonkChip) evalFiltered(
 
 	vars.RemovePrefix(numSelectors)
 
-	unfiltered := g.EvalUnfiltered(vars)
+	unfiltered := g.EvalUnfiltered(p, vars)
 	for i := range unfiltered {
 		unfiltered[i] = p.qeAPI.MulExtension(unfiltered[i], filter)
 	}

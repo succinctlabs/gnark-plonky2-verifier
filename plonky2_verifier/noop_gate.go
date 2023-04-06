@@ -7,6 +7,14 @@ import (
 type NoopGate struct {
 }
 
-func (p *NoopGate) EvalUnfiltered(pc *PlonkChip, vars EvaluationVars) []QuadraticExtension {
+func NewNoopGate() *NoopGate {
+	return &NoopGate{}
+}
+
+func (g *NoopGate) Id() string {
+	return "NoopGate"
+}
+
+func (g *NoopGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []QuadraticExtension {
 	return []QuadraticExtension{}
 }
