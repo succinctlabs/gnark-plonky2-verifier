@@ -1,6 +1,7 @@
 package plonky2_verifier
 
 import (
+	"fmt"
 	. "gnark-plonky2-verifier/field"
 	"strconv"
 	"strings"
@@ -23,7 +24,7 @@ func GateInstanceFromId(gateId string) gate {
 		return NewArithmeticGate(uint64(numOps))
 	}
 
-	if gateId == "ConstantGate" {
+	if strings.HasPrefix(gateId, "ConstantGate") {
 		numConstsRaw := strings.Split(gateId, ":")[1]
 		numConstsRaw = strings.Split(numConstsRaw, "}")[0]
 		numConstsRaw = strings.TrimSpace(numConstsRaw)
@@ -46,7 +47,7 @@ func GateInstanceFromId(gateId string) gate {
 		return NewPoseidonGate()
 	}
 
-	panic("Unknown gate ID")
+	panic(fmt.Sprintf("Unknown gate ID %s", gateId))
 }
 
 func (p *PlonkChip) computeFilter(
