@@ -112,11 +112,11 @@ func (g *PoseidonGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []Quadr
 		state[i] = vars.localWires[g.WireInput(i)]
 	}
 
-	round_ctr := 0
+	roundCounter := 0
 
 	// First set of full rounds.
 	for r := uint64(0); r < poseidon.HALF_N_FULL_ROUNDS; r++ {
-		state = poseidonChip.ConstantLayerExtension(state, &round_ctr)
+		state = poseidonChip.ConstantLayerExtension(state, &roundCounter)
 		if r != 0 {
 			for i := uint64(0); i < poseidon.SPONGE_WIDTH; i++ {
 				sBoxIn := vars.localWires[g.WireFullSBox0(r, i)]
@@ -126,7 +126,7 @@ func (g *PoseidonGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []Quadr
 		}
 		state = poseidonChip.SBoxLayerExtension(state)
 		state = poseidonChip.MdsLayerExtension(state)
-		round_ctr++
+		roundCounter++
 	}
 
 	// Partial rounds.
@@ -143,11 +143,11 @@ func (g *PoseidonGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []Quadr
 	constraints = append(constraints, p.qeAPI.SubExtension(state[0], sBoxIn))
 	state[0] = poseidonChip.SBoxMonomialExtension(sBoxIn)
 	state = poseidonChip.MdsPartialLayerFastExtension(state, poseidon.N_PARTIAL_ROUNDS-1)
-	round_ctr += poseidon.N_PARTIAL_ROUNDS
+	roundCounter += poseidon.N_PARTIAL_ROUNDS
 
 	// Second set of full rounds.
 	for r := uint64(0); r < poseidon.HALF_N_FULL_ROUNDS; r++ {
-		poseidonChip.ConstantLayerExtension(state, &round_ctr)
+		poseidonChip.ConstantLayerExtension(state, &roundCounter)
 		for i := uint64(0); i < poseidon.SPONGE_WIDTH; i++ {
 			sBoxIn := vars.localWires[g.WireFullSBox1(r, i)]
 			constraints = append(constraints, p.qeAPI.SubExtension(state[i], sBoxIn))
@@ -155,7 +155,7 @@ func (g *PoseidonGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []Quadr
 		}
 		state = poseidonChip.MdsLayerExtension(state)
 		state = poseidonChip.SBoxLayerExtension(state)
-		round_ctr++
+		roundCounter++
 	}
 
 	for i := uint64(0); i < poseidon.SPONGE_WIDTH; i++ {
