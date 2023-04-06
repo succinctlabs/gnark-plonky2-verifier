@@ -23,8 +23,8 @@ type PoseidonChip struct {
 	qeAPI    *QuadraticExtensionAPI `gnark:"-"`
 }
 
-func NewPoseidonChip(api frontend.API, field frontend.API, qeAPI *QuadraticExtensionAPI) *PoseidonChip {
-	return &PoseidonChip{api: api, fieldAPI: field}
+func NewPoseidonChip(api frontend.API, fieldAPI frontend.API, qeAPI *QuadraticExtensionAPI) *PoseidonChip {
+	return &PoseidonChip{api: api, fieldAPI: fieldAPI, qeAPI: qeAPI}
 }
 
 func (c *PoseidonChip) Poseidon(input PoseidonState) PoseidonState {
