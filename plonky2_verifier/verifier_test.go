@@ -101,7 +101,7 @@ func (c *TestVerifierChallengesCircuit) Define(api frontend.API) error {
 	c.fieldAPI = NewFieldAPI(api)
 	c.qeAPI = NewQuadraticExtensionAPI(c.fieldAPI, commonCircuitData.DegreeBits)
 	c.hashAPI = NewHashAPI(c.fieldAPI)
-	poseidonChip := NewPoseidonChip(api, c.fieldAPI)
+	poseidonChip := NewPoseidonChip(api, c.fieldAPI, c.qeAPI)
 	c.verifierChip = &VerifierChip{api: api, fieldAPI: c.fieldAPI, qeAPI: c.qeAPI, poseidonChip: poseidonChip}
 
 	c.GetChallengesSanityCheck(proofWithPis, verfierOnlyCircuitData, commonCircuitData)
@@ -301,7 +301,7 @@ func (c *TestVerifierCircuit) Define(api frontend.API) error {
 	fieldAPI := NewFieldAPI(api)
 	qeAPI := NewQuadraticExtensionAPI(fieldAPI, commonCircuitData.DegreeBits)
 	hashAPI := NewHashAPI(fieldAPI)
-	poseidonChip := NewPoseidonChip(api, fieldAPI)
+	poseidonChip := NewPoseidonChip(api, fieldAPI, qeAPI)
 	plonkChip := NewPlonkChip(api, qeAPI, commonCircuitData)
 	friChip := NewFriChip(api, fieldAPI, qeAPI, hashAPI, poseidonChip, &commonCircuitData.FriParams)
 	verifierChip := VerifierChip{
