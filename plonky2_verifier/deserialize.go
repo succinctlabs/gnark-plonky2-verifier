@@ -155,19 +155,6 @@ type VerifierOnlyCircuitDataRaw struct {
 	} `json:"constants_sigmas_cap"`
 }
 
-type ProofChallengesRaw struct {
-	PlonkBetas    []uint64 `json:"plonk_betas"`
-	PlonkGammas   []uint64 `json:"plonk_gammas"`
-	PlonkAlphas   []uint64 `json:"plonk_alphas"`
-	PlonkZeta     []uint64 `json:"plonk_zeta"`
-	FriChallenges struct {
-		FriAlpha        []uint64   `json:"fri_alpha"`
-		FriBetas        [][]uint64 `json:"fri_betas"`
-		FriPowResponse  uint64     `json:"fri_pow_response"`
-		FriQueryIndices []uint64   `json:"fri_query_indices"`
-	} `json:"fri_challenges"`
-}
-
 func DeserializeMerkleCap(merkleCapRaw []struct{ Elements []uint64 }) MerkleCap {
 	n := len(merkleCapRaw)
 	merkleCap := make([]Hash, n)
@@ -403,33 +390,4 @@ func DeserializeVerifierOnlyCircuitData(path string) VerifierOnlyCircuitData {
 	return VerifierOnlyCircuitData{
 		ConstantSigmasCap: DeserializeMerkleCap([]struct{ Elements []uint64 }(raw.ConstantsSigmasCap)),
 	}
-}
-
-func DeserializeProofChallenges(path string) ProofChallenges {
-	jsonFile, err := os.Open(path)
-	if err != nil {
-		panic(err)
-	}
-
-	defer jsonFile.Close()
-	rawBytes, _ := ioutil.ReadAll(jsonFile)
-
-	var raw ProofChallengesRaw
-	err = json.Unmarshal(rawBytes, &raw)
-	if err != nil {
-		panic(err)
-	}
-
-	var challenges ProofChallenges
-	challenges.PlonkBetas = utils.Uint64ArrayToFArray(raw.PlonkBetas)
-	challenges.PlonkGammas = utils.Uint64ArrayToFArray(raw.PlonkGammas)
-	challenges.PlonkAlphas = utils.Uint64ArrayToFArray(raw.PlonkAlphas)
-	challenges.PlonkZeta = utils.Uint64ArrayToQuadraticExtension(raw.PlonkZeta)
-
-	challenges.FriChallenges.FriAlpha = utils.Uint64ArrayToQuadraticExtension(raw.FriChallenges.FriAlpha)
-	challenges.FriChallenges.FriBetas = utils.Uint64ArrayToQuadraticExtensionArray(raw.FriChallenges.FriBetas)
-	challenges.FriChallenges.FriPowResponse = NewFieldElement(raw.FriChallenges.FriPowResponse)
-	challenges.FriChallenges.FriQueryIndicies = utils.Uint64ArrayToFArray(raw.FriChallenges.FriQueryIndices)
-
-	return challenges
 }

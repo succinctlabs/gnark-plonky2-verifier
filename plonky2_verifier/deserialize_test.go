@@ -22,9 +22,3 @@ func TestDeserializeVerifierOnlyCircuitData(t *testing.T) {
 	fmt.Printf("%+v\n", verifierOnlyCircuitData)
 	panic("look at stdout")
 }
-
-func TestDeserializeProofChallenges(t *testing.T) {
-	challenges := DeserializeProofChallenges("./data/fibonacci/proof_challenges.json")
-	fmt.Printf("%+v\n", challenges)
-	panic("look at stdout")
-}
