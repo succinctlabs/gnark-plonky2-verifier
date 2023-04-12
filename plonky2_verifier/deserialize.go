@@ -130,7 +130,6 @@ type CommonCircuitDataRaw struct {
 		DegreeBits         uint64   `json:"degree_bits"`
 		ReductionArityBits []uint64 `json:"reduction_arity_bits"`
 	} `json:"fri_params"`
-	DegreeBits    uint64   `json:"degree_bits"`
 	Gates         []string `json:"gates"`
 	SelectorsInfo struct {
 		SelectorIndices []uint64 `json:"selector_indices"`
@@ -154,6 +153,19 @@ type VerifierOnlyCircuitDataRaw struct {
 	ConstantsSigmasCap []struct {
 		Elements []uint64 `json:"elements"`
 	} `json:"constants_sigmas_cap"`
+}
+
+type ProofChallengesRaw struct {
+	PlonkBetas    []uint64 `json:"plonk_betas"`
+	PlonkGammas   []uint64 `json:"plonk_gammas"`
+	PlonkAlphas   []uint64 `json:"plonk_alphas"`
+	PlonkZeta     []uint64 `json:"plonk_zeta"`
+	FriChallenges struct {
+		FriAlpha        []uint64   `json:"fri_alpha"`
+		FriBetas        [][]uint64 `json:"fri_betas"`
+		FriPowResponse  uint64     `json:"fri_pow_response"`
+		FriQueryIndices []uint64   `json:"fri_query_indices"`
+	} `json:"fri_challenges"`
 }
 
 func DeserializeMerkleCap(merkleCapRaw []struct{ Elements []uint64 }) MerkleCap {
@@ -341,12 +353,12 @@ func DeserializeCommonCircuitData(path string) CommonCircuitData {
 	commonCircuitData.Config.FriConfig.NumQueryRounds = raw.Config.FriConfig.NumQueryRounds
 
 	commonCircuitData.FriParams.DegreeBits = raw.FriParams.DegreeBits
+	commonCircuitData.DegreeBits = raw.FriParams.DegreeBits
 	commonCircuitData.FriParams.Config.RateBits = raw.FriParams.Config.RateBits
 	commonCircuitData.FriParams.Config.CapHeight = raw.FriParams.Config.CapHeight
 	commonCircuitData.FriParams.Config.ProofOfWorkBits = raw.FriParams.Config.ProofOfWorkBits
 	commonCircuitData.FriParams.Config.NumQueryRounds = raw.FriParams.Config.NumQueryRounds
 	commonCircuitData.FriParams.ReductionArityBits = raw.FriParams.ReductionArityBits
-	commonCircuitData.DegreeBits = raw.DegreeBits
 
 	commonCircuitData.Gates = []gate{}
 	for _, gate := range raw.Gates {
@@ -391,4 +403,33 @@ func DeserializeVerifierOnlyCircuitData(path string) VerifierOnlyCircuitData {
 	return VerifierOnlyCircuitData{
 		ConstantSigmasCap: DeserializeMerkleCap([]struct{ Elements []uint64 }(raw.ConstantsSigmasCap)),
 	}
+}
+
+func DeserializeProofChallenges(path string) ProofChallenges {
+	jsonFile, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+
+	defer jsonFile.Close()
+	rawBytes, _ := ioutil.ReadAll(jsonFile)
+
+	var raw ProofChallengesRaw
+	err = json.Unmarshal(rawBytes, &raw)
+	if err != nil {
+		panic(err)
+	}
+
+	var challenges ProofChallenges
+	challenges.PlonkBetas = utils.Uint64ArrayToFArray(raw.PlonkBetas)
+	challenges.PlonkGammas = utils.Uint64ArrayToFArray(raw.PlonkGammas)
+	challenges.PlonkAlphas = utils.Uint64ArrayToFArray(raw.PlonkAlphas)
+	challenges.PlonkZeta = utils.Uint64ArrayToQuadraticExtension(raw.PlonkZeta)
+
+	challenges.FriChallenges.FriAlpha = utils.Uint64ArrayToQuadraticExtension(raw.FriChallenges.FriAlpha)
+	challenges.FriChallenges.FriBetas = utils.Uint64ArrayToQuadraticExtensionArray(raw.FriChallenges.FriBetas)
+	challenges.FriChallenges.FriPowResponse = NewFieldElement(raw.FriChallenges.FriPowResponse)
+	challenges.FriChallenges.FriQueryIndicies = utils.Uint64ArrayToFArray(raw.FriChallenges.FriQueryIndices)
+
+	return challenges
 }

@@ -62,11 +62,11 @@ func (p *PlonkChip) computeFilter(
 			continue
 		}
 
-		product = p.qeAPI.MulExtension(product, p.qeAPI.SubExtension(p.qeAPI.FieldToQE(NewFieldElement(i)), s))
+		product = p.qeAPI.MulExtension(product, p.qeAPI.SubExtension(s, p.qeAPI.FieldToQE(NewFieldElement(i))))
 	}
 
 	if manySelector {
-		product = p.qeAPI.MulExtension(product, p.qeAPI.SubExtension(p.qeAPI.FieldToQE(NewFieldElement(UNUSED_SELECTOR)), s))
+		product = p.qeAPI.MulExtension(product, p.qeAPI.SubExtension(s, p.qeAPI.FieldToQE(NewFieldElement(UNUSED_SELECTOR))))
 	}
 
 	return product

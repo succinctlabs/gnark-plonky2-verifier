@@ -51,7 +51,7 @@ func (g *ArithmeticGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []Qua
 			p.qeAPI.MulExtension(addend, const1),
 		)
 
-		constraints = append(constraints, p.qeAPI.SubExtension(computedOutput, output))
+		constraints = append(constraints, p.qeAPI.SubExtension(output, computedOutput))
 	}
 
 	return constraints

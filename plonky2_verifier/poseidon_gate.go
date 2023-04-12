@@ -86,8 +86,8 @@ func (g *PoseidonGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []Quadr
 
 	// Assert that `swap` is binary.
 	swap := vars.localWires[g.WireSwap()]
-	notSwap := p.qeAPI.SubExtension(p.qeAPI.FieldToQE(ONE_F), swap)
-	constraints = append(constraints, p.qeAPI.MulExtension(swap, notSwap))
+	swapMinusOne := p.qeAPI.SubExtension(swap, p.qeAPI.FieldToQE(ONE_F))
+	constraints = append(constraints, p.qeAPI.MulExtension(swap, swapMinusOne))
 
 	// Assert that each delta wire is set properly: `delta_i = swap * (rhs - lhs)`.
 	for i := uint64(0); i < 4; i++ {
@@ -132,6 +132,7 @@ func (g *PoseidonGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []Quadr
 	// Partial rounds.
 	state = poseidonChip.PartialFirstConstantLayerExtension(state)
 	state = poseidonChip.MdsPartialLayerInitExtension(state)
+
 	for r := uint64(0); r < poseidon.N_PARTIAL_ROUNDS-1; r++ {
 		sBoxIn := vars.localWires[g.WirePartialSBox(r)]
 		constraints = append(constraints, p.qeAPI.SubExtension(state[0], sBoxIn))
@@ -147,14 +148,14 @@ func (g *PoseidonGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []Quadr
 
 	// Second set of full rounds.
 	for r := uint64(0); r < poseidon.HALF_N_FULL_ROUNDS; r++ {
-		poseidonChip.ConstantLayerExtension(state, &roundCounter)
+		state = poseidonChip.ConstantLayerExtension(state, &roundCounter)
 		for i := uint64(0); i < poseidon.SPONGE_WIDTH; i++ {
 			sBoxIn := vars.localWires[g.WireFullSBox1(r, i)]
 			constraints = append(constraints, p.qeAPI.SubExtension(state[i], sBoxIn))
 			state[i] = sBoxIn
 		}
-		state = poseidonChip.MdsLayerExtension(state)
 		state = poseidonChip.SBoxLayerExtension(state)
+		state = poseidonChip.MdsLayerExtension(state)
 		roundCounter++
 	}
 

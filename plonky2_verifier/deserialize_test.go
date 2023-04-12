@@ -12,13 +12,19 @@ func TestDeserializeProofWithPublicInputs(t *testing.T) {
 }
 
 func TestDeserializeCommonCircuitData(t *testing.T) {
-	proofWithPis := DeserializeCommonCircuitData("./data/fibonacci/common_circuit_data.json")
-	fmt.Printf("%+v\n", proofWithPis)
+	commonCircuitData := DeserializeCommonCircuitData("./data/fibonacci/common_circuit_data.json")
+	fmt.Printf("%+v\n", commonCircuitData)
 	panic("look at stdout")
 }
 
 func TestDeserializeVerifierOnlyCircuitData(t *testing.T) {
-	proofWithPis := DeserializeVerifierOnlyCircuitData("./data/fibonacci/verifier_only_circuit_data.json")
-	fmt.Printf("%+v\n", proofWithPis)
+	verifierOnlyCircuitData := DeserializeVerifierOnlyCircuitData("./data/fibonacci/verifier_only_circuit_data.json")
+	fmt.Printf("%+v\n", verifierOnlyCircuitData)
+	panic("look at stdout")
+}
+
+func TestDeserializeProofChallenges(t *testing.T) {
+	challenges := DeserializeProofChallenges("./data/fibonacci/proof_challenges.json")
+	fmt.Printf("%+v\n", challenges)
 	panic("look at stdout")
 }

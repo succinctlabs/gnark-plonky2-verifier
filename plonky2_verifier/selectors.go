@@ -1,6 +1,6 @@
 package plonky2_verifier
 
-const UNUSED_SELECTOR = ^uint64(0) // max uint
+const UNUSED_SELECTOR = uint64(^uint32(0)) // max uint32
 
 type Range struct {
 	start uint64

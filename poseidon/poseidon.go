@@ -119,14 +119,14 @@ func (c *PoseidonChip) ConstantLayerExtension(state PoseidonStateExtension, roun
 func (c *PoseidonChip) SBoxMonomial(x F) F {
 	x2 := c.fieldAPI.Mul(x, x)
 	x4 := c.fieldAPI.Mul(x2, x2)
-	x3 := c.fieldAPI.Mul(x2, x)
+	x3 := c.fieldAPI.Mul(x, x2)
 	return c.fieldAPI.Mul(x3, x4).(F)
 }
 
 func (c *PoseidonChip) SBoxMonomialExtension(x QuadraticExtension) QuadraticExtension {
-	x2 := c.qeAPI.MulExtension(x, x)
-	x4 := c.qeAPI.MulExtension(x2, x2)
-	x3 := c.qeAPI.MulExtension(x2, x)
+	x2 := c.qeAPI.SquareExtension(x)
+	x4 := c.qeAPI.SquareExtension(x2)
+	x3 := c.qeAPI.MulExtension(x, x2)
 	return c.qeAPI.MulExtension(x3, x4)
 }
 
@@ -310,7 +310,7 @@ func (c *PoseidonChip) MdsPartialLayerFast(state PoseidonState, r int) PoseidonS
 func (c *PoseidonChip) MdsPartialLayerFastExtension(state PoseidonStateExtension, r int) PoseidonStateExtension {
 	s0 := state[0]
 	mds0to0 := c.qeAPI.FieldToQE(NewFieldElement(MDS_MATRIX_CIRC[0] + MDS_MATRIX_DIAG[0]))
-	d := c.qeAPI.AddExtension(s0, mds0to0)
+	d := c.qeAPI.MulExtension(s0, mds0to0)
 	for i := 1; i < 12; i++ {
 		if i < SPONGE_WIDTH {
 			t := c.qeAPI.FieldToQE(NewFieldElement(FAST_PARTIAL_ROUND_W_HATS[r][i-1]))
@@ -323,7 +323,7 @@ func (c *PoseidonChip) MdsPartialLayerFastExtension(state PoseidonStateExtension
 	for i := 1; i < 12; i++ {
 		if i < SPONGE_WIDTH {
 			t := c.qeAPI.FieldToQE(NewFieldElement(FAST_PARTIAL_ROUND_VS[r][i-1]))
-			result[i] = c.qeAPI.AddExtension(state[i], c.qeAPI.MulExtension(state[0], t))
+			result[i] = c.qeAPI.AddExtension(c.qeAPI.MulExtension(state[0], t), state[i])
 		}
 	}
 

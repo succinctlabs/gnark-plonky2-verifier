@@ -131,8 +131,8 @@ func (p *PlonkChip) evaluateGateConstraints(vars EvaluationVars) []QuadraticExte
 			p.commonData.SelectorsInfo.NumSelectors(),
 		)
 
-		for j, constraint := range gateConstraints {
-			if uint64(j) >= p.commonData.NumGateConstraints {
+		for i, constraint := range gateConstraints {
+			if uint64(i) >= p.commonData.NumGateConstraints {
 				panic("num_constraints() gave too low of a number")
 			}
 			constraints[i] = p.qeAPI.AddExtension(constraints[i], constraint)
@@ -202,7 +202,6 @@ func (p *PlonkChip) evalVanishingPoly(vars EvaluationVars, proofChallenges Proof
 	}
 
 	vanishingTerms := append(vanishingZ1Terms, vanishingPartialProductsTerms...)
-	vanishingTerms = append(vanishingTerms, []QuadraticExtension{p.qeAPI.ZERO_QE, p.qeAPI.ZERO_QE, p.qeAPI.ZERO_QE, p.qeAPI.ZERO_QE}...)
 	vanishingTerms = append(vanishingTerms, constraintTerms...)
 
 	reducedValues := make([]QuadraticExtension, p.commonData.Config.NumChallenges)
