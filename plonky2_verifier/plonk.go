@@ -169,7 +169,6 @@ func (p *PlonkChip) evalVanishingPoly(vars EvaluationVars, proofChallenges Proof
 		for j := uint64(0); j < p.commonData.Config.NumRoutedWires; j++ {
 			// The numerator is `beta * s_id + wire_value + gamma`, and the denominator is
 			// `beta * s_sigma + wire_value + gamma`.
-
 			wireValuePlusGamma := p.qeAPI.AddExtension(
 				openings.Wires[j],
 				p.qeAPI.FieldToQE(proofChallenges.PlonkGammas[i]),

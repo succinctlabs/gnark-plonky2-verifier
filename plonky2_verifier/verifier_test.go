@@ -81,12 +81,12 @@ func (c *TestVerifierChallengesCircuit) GetChallengesSanityCheck(
 	// expectedPowResponse := NewFieldElementFromString("92909863298412")
 	// c.field.AssertIsEqual(proofChallenges.FriChallenges.FriPowResponse, expectedPowResponse)
 
-	if len(proofChallenges.FriChallenges.FriQueryIndicies) != int(c.numFriQueries) {
+	if len(proofChallenges.FriChallenges.FriQueryIndices) != int(c.numFriQueries) {
 		c.t.Errorf("len(expectedFriQueryIndices) should equal num fri queries")
 	}
 
 	for i := 0; i < int(c.numFriQueries); i++ {
-		c.fieldAPI.AssertIsEqual(c.expectedFriQueryIndices[i], proofChallenges.FriChallenges.FriQueryIndicies[i])
+		c.fieldAPI.AssertIsEqual(c.expectedFriQueryIndices[i], proofChallenges.FriChallenges.FriQueryIndices[i])
 	}
 }
 

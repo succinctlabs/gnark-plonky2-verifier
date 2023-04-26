@@ -149,6 +149,19 @@ type CommonCircuitDataRaw struct {
 	} `json:"circuit_digest"`
 }
 
+type ProofChallengesRaw struct {
+	PlonkBetas    []uint64 `json:"plonk_betas"`
+	PlonkGammas   []uint64 `json:"plonk_gammas"`
+	PlonkAlphas   []uint64 `json:"plonk_alphas"`
+	PlonkZeta     []uint64 `json:"plonk_zeta"`
+	FriChallenges struct {
+		FriAlpha        []uint64   `json:"fri_alpha"`
+		FriBetas        [][]uint64 `json:"fri_betas"`
+		FriPowResponse  uint64     `json:"fri_pow_response"`
+		FriQueryIndices []uint64   `json:"fri_query_indices"`
+	} `json:"fri_challenges"`
+}
+
 type VerifierOnlyCircuitDataRaw struct {
 	ConstantsSigmasCap []struct {
 		Elements []uint64 `json:"elements"`
@@ -287,6 +300,34 @@ func DeserializeProofWithPublicInputs(path string) ProofWithPublicInputs {
 	proofWithPis.PublicInputs = utils.Uint64ArrayToFArray(raw.PublicInputs)
 
 	return proofWithPis
+}
+
+func DeserializeProofChallenges(path string) ProofChallenges {
+	jsonFile, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+
+	defer jsonFile.Close()
+	rawBytes, _ := ioutil.ReadAll(jsonFile)
+
+	var raw ProofChallengesRaw
+	err = json.Unmarshal(rawBytes, &raw)
+	if err != nil {
+		panic(err)
+	}
+
+	var proofChallenges ProofChallenges
+	proofChallenges.PlonkBetas = utils.Uint64ArrayToFArray(raw.PlonkBetas)
+	proofChallenges.PlonkGammas = utils.Uint64ArrayToFArray(raw.PlonkGammas)
+	proofChallenges.PlonkAlphas = utils.Uint64ArrayToFArray(raw.PlonkAlphas)
+	proofChallenges.PlonkZeta = utils.Uint64ArrayToQuadraticExtension(raw.PlonkZeta)
+	proofChallenges.FriChallenges.FriAlpha = utils.Uint64ArrayToQuadraticExtension(raw.FriChallenges.FriAlpha)
+	proofChallenges.FriChallenges.FriBetas = utils.Uint64ArrayToQuadraticExtensionArray(raw.FriChallenges.FriBetas)
+	proofChallenges.FriChallenges.FriPowResponse = NewFieldElement(raw.FriChallenges.FriPowResponse)
+	proofChallenges.FriChallenges.FriQueryIndices = utils.Uint64ArrayToFArray(raw.FriChallenges.FriQueryIndices)
+
+	return proofChallenges
 }
 
 func ReductionArityBits(

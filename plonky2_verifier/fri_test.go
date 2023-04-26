@@ -33,10 +33,10 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	friChip := NewFriChip(api, fieldAPI, qeAPI, hashAPI, poseidonChip, &commonCircuitData.FriParams)
 
 	friChallenges := FriChallenges{
-		FriAlpha:         circuit.friAlpha,
-		FriBetas:         circuit.friBetas,
-		FriPowResponse:   circuit.friPOWResponse,
-		FriQueryIndicies: circuit.friQueryIndices,
+		FriAlpha:        circuit.friAlpha,
+		FriBetas:        circuit.friBetas,
+		FriPowResponse:  circuit.friPOWResponse,
+		FriQueryIndices: circuit.friQueryIndices,
 	}
 
 	initialMerkleCaps := []MerkleCap{

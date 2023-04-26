@@ -122,8 +122,8 @@ type ProofChallenges struct {
 }
 
 type FriChallenges struct {
-	FriAlpha         QuadraticExtension
-	FriBetas         []QuadraticExtension
-	FriPowResponse   F
-	FriQueryIndicies []F
+	FriAlpha        QuadraticExtension
+	FriBetas        []QuadraticExtension
+	FriPowResponse  F
+	FriQueryIndices []F
 }

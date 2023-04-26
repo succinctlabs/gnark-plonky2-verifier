@@ -97,8 +97,8 @@ func (c *VerifierChip) Verify(proofWithPis ProofWithPublicInputs, verifierData V
 
 	proofChallenges.FriChallenges.FriPowResponse = c.fieldAPI.Add(proofChallenges.FriChallenges.FriPowResponse, ZERO_F).(F)
 
-	for i := 0; i < len(proofChallenges.FriChallenges.FriQueryIndicies); i++ {
-		proofChallenges.FriChallenges.FriQueryIndicies[i] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriQueryIndicies[i], ZERO_F).(F)
+	for i := 0; i < len(proofChallenges.FriChallenges.FriQueryIndices); i++ {
+		proofChallenges.FriChallenges.FriQueryIndices[i] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriQueryIndices[i], ZERO_F).(F)
 	}
 
 	c.friChip.VerifyFriProof(
