@@ -65,6 +65,7 @@ type ProofWithPublicInputs struct {
 
 type VerifierOnlyCircuitData struct {
 	ConstantSigmasCap MerkleCap
+	CircuitDigest     Hash
 }
 
 type FriConfig struct {
@@ -110,7 +111,6 @@ type CommonCircuitData struct {
 	NumPublicInputs      uint64
 	KIs                  []F
 	NumPartialProducts   uint64
-	CircuitDigest        Hash
 }
 
 type ProofChallenges struct {

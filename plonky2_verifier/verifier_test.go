@@ -41,7 +41,7 @@ func (c *TestVerifierChallengesCircuit) GetChallengesSanityCheck(
 	commonData CommonCircuitData,
 ) {
 	publicInputsHash := c.verifierChip.GetPublicInputsHash(proofWithPis.PublicInputs)
-	proofChallenges := c.verifierChip.GetChallenges(proofWithPis, publicInputsHash, commonData)
+	proofChallenges := c.verifierChip.GetChallenges(proofWithPis, publicInputsHash, commonData, verifierData)
 
 	c.hashAPI.AssertIsEqualHash(publicInputsHash, c.expectedPublicInputsHash)
 

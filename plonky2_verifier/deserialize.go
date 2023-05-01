@@ -144,9 +144,6 @@ type CommonCircuitDataRaw struct {
 	NumPublicInputs      uint64   `json:"num_public_inputs"`
 	KIs                  []uint64 `json:"k_is"`
 	NumPartialProducts   uint64   `json:"num_partial_products"`
-	CircuitDigest        struct {
-		Elements []uint64 `json:"elements"`
-	} `json:"circuit_digest"`
 }
 
 type ProofChallengesRaw struct {
@@ -166,6 +163,9 @@ type VerifierOnlyCircuitDataRaw struct {
 	ConstantsSigmasCap []struct {
 		Elements []uint64 `json:"elements"`
 	} `json:"constants_sigmas_cap"`
+	CircuitDigest struct {
+		Elements []uint64 `json:"elements"`
+	} `json:"circuit_digest"`
 }
 
 func DeserializeMerkleCap(merkleCapRaw []struct{ Elements []uint64 }) MerkleCap {
@@ -408,7 +408,6 @@ func DeserializeCommonCircuitData(path string) CommonCircuitData {
 	commonCircuitData.NumPublicInputs = raw.NumPublicInputs
 	commonCircuitData.KIs = utils.Uint64ArrayToFArray(raw.KIs)
 	commonCircuitData.NumPartialProducts = raw.NumPartialProducts
-	copy(commonCircuitData.CircuitDigest[:], utils.Uint64ArrayToFArray(raw.CircuitDigest.Elements))
 
 	return commonCircuitData
 }
@@ -428,7 +427,9 @@ func DeserializeVerifierOnlyCircuitData(path string) VerifierOnlyCircuitData {
 		panic(err)
 	}
 
-	return VerifierOnlyCircuitData{
-		ConstantSigmasCap: DeserializeMerkleCap([]struct{ Elements []uint64 }(raw.ConstantsSigmasCap)),
-	}
+	var verifierOnlyCircuitData VerifierOnlyCircuitData
+	verifierOnlyCircuitData.ConstantSigmasCap = DeserializeMerkleCap([]struct{ Elements []uint64 }(raw.ConstantsSigmasCap))
+	copy(verifierOnlyCircuitData.CircuitDigest[:], utils.Uint64ArrayToFArray(raw.CircuitDigest.Elements))
+
+	return verifierOnlyCircuitData
 }
