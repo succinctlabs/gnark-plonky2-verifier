@@ -20,38 +20,40 @@ type TestChallengerCircuit struct {
 }
 
 func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
-	field := field.NewFieldAPI(api)
-	poseidonChip := NewPoseidonChip(api, field)
-	challengerChip := NewChallengerChip(api, field, poseidonChip)
+	fieldAPI := field.NewFieldAPI(api)
+	degreeBits := 3
+	qeAPI := NewQuadraticExtensionAPI(fieldAPI, uint64(degreeBits))
+	poseidonChip := NewPoseidonChip(api, fieldAPI, qeAPI)
+	challengerChip := NewChallengerChip(api, fieldAPI, poseidonChip)
 
 	var circuitDigest [4]F
 	for i := 0; i < len(circuitDigest); i++ {
-		circuitDigest[i] = field.FromBinary(api.ToBinary(circuit.CircuitDigest[i], 64)).(F)
+		circuitDigest[i] = fieldAPI.FromBinary(api.ToBinary(circuit.CircuitDigest[i], 64)).(F)
 	}
 
 	var publicInputs [3]F
 	for i := 0; i < len(publicInputs); i++ {
-		publicInputs[i] = field.FromBinary(api.ToBinary(circuit.PublicInputs[i], 64)).(F)
+		publicInputs[i] = fieldAPI.FromBinary(api.ToBinary(circuit.PublicInputs[i], 64)).(F)
 	}
 
 	var wiresCap [16][4]F
 	for i := 0; i < len(wiresCap); i++ {
 		for j := 0; j < len(wiresCap[0]); j++ {
-			wiresCap[i][j] = field.FromBinary(api.ToBinary(circuit.WiresCap[i][j], 64)).(F)
+			wiresCap[i][j] = fieldAPI.FromBinary(api.ToBinary(circuit.WiresCap[i][j], 64)).(F)
 		}
 	}
 
 	var plonkZsPartialProductsCap [16][4]F
 	for i := 0; i < len(plonkZsPartialProductsCap); i++ {
 		for j := 0; j < len(plonkZsPartialProductsCap[0]); j++ {
-			plonkZsPartialProductsCap[i][j] = field.FromBinary(api.ToBinary(circuit.PlonkZsPartialProductsCap[i][j], 64)).(F)
+			plonkZsPartialProductsCap[i][j] = fieldAPI.FromBinary(api.ToBinary(circuit.PlonkZsPartialProductsCap[i][j], 64)).(F)
 		}
 	}
 
 	var quotientPolysCap [16][4]F
 	for i := 0; i < len(quotientPolysCap); i++ {
 		for j := 0; j < len(quotientPolysCap[0]); j++ {
-			quotientPolysCap[i][j] = field.FromBinary(api.ToBinary(circuit.QuotientPolysCap[i][j], 64)).(F)
+			quotientPolysCap[i][j] = fieldAPI.FromBinary(api.ToBinary(circuit.QuotientPolysCap[i][j], 64)).(F)
 		}
 	}
 
@@ -72,7 +74,7 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	}
 
 	for i := 0; i < 4; i++ {
-		field.AssertIsEqual(publicInputHash[i], expectedPublicInputHash[i])
+		fieldAPI.AssertIsEqual(publicInputHash[i], expectedPublicInputHash[i])
 	}
 
 	expectedPlonkBetas := [2]F{
@@ -86,8 +88,8 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	}
 
 	for i := 0; i < 2; i++ {
-		field.AssertIsEqual(plonkBetas[i], expectedPlonkBetas[i])
-		field.AssertIsEqual(plonkGammas[i], expectedPlonkGammas[i])
+		fieldAPI.AssertIsEqual(plonkBetas[i], expectedPlonkBetas[i])
+		fieldAPI.AssertIsEqual(plonkGammas[i], expectedPlonkGammas[i])
 	}
 
 	challengerChip.ObserveCap(plonkZsPartialProductsCap[:])
@@ -99,7 +101,7 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	}
 
 	for i := 0; i < 2; i++ {
-		field.AssertIsEqual(plonkAlphas[i], expectedPlonkAlphas[i])
+		fieldAPI.AssertIsEqual(plonkAlphas[i], expectedPlonkAlphas[i])
 	}
 
 	challengerChip.ObserveCap(quotientPolysCap[:])
@@ -111,7 +113,7 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	}
 
 	for i := 0; i < 2; i++ {
-		field.AssertIsEqual(plonkZeta[i], expectedPlonkZeta[i])
+		fieldAPI.AssertIsEqual(plonkZeta[i], expectedPlonkZeta[i])
 	}
 
 	return nil

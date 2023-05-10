@@ -33,6 +33,10 @@ func Uint64ArrayToFArray(input []uint64) []F {
 	return output
 }
 
+func Uint64ArrayToQuadraticExtension(input []uint64) QuadraticExtension {
+	return [2]F{NewFieldElement(input[0]), NewFieldElement(input[1])}
+}
+
 func Uint64ArrayToQuadraticExtensionArray(input [][]uint64) []QuadraticExtension {
 	var output []QuadraticExtension
 	for i := 0; i < len(input); i++ {

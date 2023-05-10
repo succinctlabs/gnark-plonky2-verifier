@@ -2,6 +2,7 @@ package plonky2_verifier
 
 import (
 	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/poseidon"
 	"testing"
 
 	"github.com/consensys/gnark/frontend"
@@ -9,32 +10,28 @@ import (
 )
 
 type TestPlonkCircuit struct {
-	proofWithPIsFilename      string `gnark:"-"`
-	commonCircuitDataFilename string `gnark:"-"`
-
-	plonkBetas  []F
-	plonkGammas []F
-	plonkAlphas []F
-	plonkZeta   QuadraticExtension
+	proofWithPIsFilename            string `gnark:"-"`
+	commonCircuitDataFilename       string `gnark:"-"`
+	verifierOnlyCircuitDataFilename string `gnark:"-"`
 }
 
 func (circuit *TestPlonkCircuit) Define(api frontend.API) error {
 	proofWithPis := DeserializeProofWithPublicInputs(circuit.proofWithPIsFilename)
 	commonCircuitData := DeserializeCommonCircuitData(circuit.commonCircuitDataFilename)
+	verifierOnlyCircuitData := DeserializeVerifierOnlyCircuitData(circuit.verifierOnlyCircuitDataFilename)
 
-	field := NewFieldAPI(api)
-	qe := NewQuadraticExtensionAPI(field, commonCircuitData.DegreeBits)
+	fieldAPI := NewFieldAPI(api)
+	qeAPI := NewQuadraticExtensionAPI(fieldAPI, commonCircuitData.DegreeBits)
+	hashAPI := NewHashAPI(fieldAPI)
+	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
+	friChip := NewFriChip(api, fieldAPI, qeAPI, hashAPI, poseidonChip, &commonCircuitData.FriParams)
+	plonkChip := NewPlonkChip(api, qeAPI, commonCircuitData)
 
-	proofChallenges := ProofChallenges{
-		PlonkBetas:  circuit.plonkBetas,
-		PlonkGammas: circuit.plonkGammas,
-		PlonkAlphas: circuit.plonkAlphas,
-		PlonkZeta:   circuit.plonkZeta,
-	}
+	verifierChip := NewVerifierChip(api, fieldAPI, qeAPI, poseidonChip, plonkChip, friChip)
+	publicInputsHash := verifierChip.GetPublicInputsHash(proofWithPis.PublicInputs)
+	proofChallenges := verifierChip.GetChallenges(proofWithPis, publicInputsHash, commonCircuitData, verifierOnlyCircuitData)
 
-	plonkChip := NewPlonkChip(api, qe, commonCircuitData)
-
-	plonkChip.Verify(proofChallenges, proofWithPis.Proof.Openings)
+	plonkChip.Verify(proofChallenges, proofWithPis.Proof.Openings, publicInputsHash)
 	return nil
 }
 
@@ -43,25 +40,9 @@ func TestPlonkFibonacci(t *testing.T) {
 
 	testCase := func() {
 		circuit := TestPlonkCircuit{
-			proofWithPIsFilename:      "./data/fibonacci/proof_with_public_inputs.json",
-			commonCircuitDataFilename: "./data/fibonacci/common_circuit_data.json",
-
-			plonkBetas: []F{
-				NewFieldElementFromString("4678728155650926271"),
-				NewFieldElementFromString("13611962404289024887"),
-			},
-			plonkGammas: []F{
-				NewFieldElementFromString("13237663823305715949"),
-				NewFieldElementFromString("15389314098328235145"),
-			},
-			plonkAlphas: []F{
-				NewFieldElementFromString("14505919539124304197"),
-				NewFieldElementFromString("1695455639263736117"),
-			},
-			plonkZeta: QuadraticExtension{
-				NewFieldElementFromString("14887793628029982930"),
-				NewFieldElementFromString("1136137158284059037"),
-			},
+			proofWithPIsFilename:            "./data/fibonacci/proof_with_public_inputs.json",
+			commonCircuitDataFilename:       "./data/fibonacci/common_circuit_data.json",
+			verifierOnlyCircuitDataFilename: "./data/fibonacci/verifier_only_circuit_data.json",
 		}
 		witness := TestPlonkCircuit{}
 		err := test.IsSolved(&circuit, &witness, TEST_CURVE.ScalarField())
@@ -76,25 +57,9 @@ func TestPlonkDummy(t *testing.T) {
 
 	testCase := func() {
 		circuit := TestPlonkCircuit{
-			proofWithPIsFilename:      "./data/dummy_2^14_gates/proof_with_public_inputs.json",
-			commonCircuitDataFilename: "./data/dummy_2^14_gates/common_circuit_data.json",
-
-			plonkBetas: []F{
-				NewFieldElementFromString("11216469004148781751"),
-				NewFieldElementFromString("6201977337075152249"),
-			},
-			plonkGammas: []F{
-				NewFieldElementFromString("8369751006669847974"),
-				NewFieldElementFromString("3610024170884289835"),
-			},
-			plonkAlphas: []F{
-				NewFieldElementFromString("970160439138448145"),
-				NewFieldElementFromString("2402201283787401921"),
-			},
-			plonkZeta: QuadraticExtension{
-				NewFieldElementFromString("17377750363769967882"),
-				NewFieldElementFromString("11921191651424768462"),
-			},
+			proofWithPIsFilename:            "./data/dummy_2^14_gates/proof_with_public_inputs.json",
+			commonCircuitDataFilename:       "./data/dummy_2^14_gates/common_circuit_data.json",
+			verifierOnlyCircuitDataFilename: "./data/dummy_2^14_gates/verifier_only_circuit_data.json",
 		}
 		witness := TestPlonkCircuit{}
 		err := test.IsSolved(&circuit, &witness, TEST_CURVE.ScalarField())

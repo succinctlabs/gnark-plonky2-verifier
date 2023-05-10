@@ -130,7 +130,7 @@ type CommonCircuitDataRaw struct {
 		DegreeBits         uint64   `json:"degree_bits"`
 		ReductionArityBits []uint64 `json:"reduction_arity_bits"`
 	} `json:"fri_params"`
-	DegreeBits    uint64 `json:"degree_bits"`
+	Gates         []string `json:"gates"`
 	SelectorsInfo struct {
 		SelectorIndices []uint64 `json:"selector_indices"`
 		Groups          []struct {
@@ -144,15 +144,28 @@ type CommonCircuitDataRaw struct {
 	NumPublicInputs      uint64   `json:"num_public_inputs"`
 	KIs                  []uint64 `json:"k_is"`
 	NumPartialProducts   uint64   `json:"num_partial_products"`
-	CircuitDigest        struct {
-		Elements []uint64 `json:"elements"`
-	} `json:"circuit_digest"`
+}
+
+type ProofChallengesRaw struct {
+	PlonkBetas    []uint64 `json:"plonk_betas"`
+	PlonkGammas   []uint64 `json:"plonk_gammas"`
+	PlonkAlphas   []uint64 `json:"plonk_alphas"`
+	PlonkZeta     []uint64 `json:"plonk_zeta"`
+	FriChallenges struct {
+		FriAlpha        []uint64   `json:"fri_alpha"`
+		FriBetas        [][]uint64 `json:"fri_betas"`
+		FriPowResponse  uint64     `json:"fri_pow_response"`
+		FriQueryIndices []uint64   `json:"fri_query_indices"`
+	} `json:"fri_challenges"`
 }
 
 type VerifierOnlyCircuitDataRaw struct {
 	ConstantsSigmasCap []struct {
 		Elements []uint64 `json:"elements"`
 	} `json:"constants_sigmas_cap"`
+	CircuitDigest struct {
+		Elements []uint64 `json:"elements"`
+	} `json:"circuit_digest"`
 }
 
 func DeserializeMerkleCap(merkleCapRaw []struct{ Elements []uint64 }) MerkleCap {
@@ -289,6 +302,34 @@ func DeserializeProofWithPublicInputs(path string) ProofWithPublicInputs {
 	return proofWithPis
 }
 
+func DeserializeProofChallenges(path string) ProofChallenges {
+	jsonFile, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+
+	defer jsonFile.Close()
+	rawBytes, _ := ioutil.ReadAll(jsonFile)
+
+	var raw ProofChallengesRaw
+	err = json.Unmarshal(rawBytes, &raw)
+	if err != nil {
+		panic(err)
+	}
+
+	var proofChallenges ProofChallenges
+	proofChallenges.PlonkBetas = utils.Uint64ArrayToFArray(raw.PlonkBetas)
+	proofChallenges.PlonkGammas = utils.Uint64ArrayToFArray(raw.PlonkGammas)
+	proofChallenges.PlonkAlphas = utils.Uint64ArrayToFArray(raw.PlonkAlphas)
+	proofChallenges.PlonkZeta = utils.Uint64ArrayToQuadraticExtension(raw.PlonkZeta)
+	proofChallenges.FriChallenges.FriAlpha = utils.Uint64ArrayToQuadraticExtension(raw.FriChallenges.FriAlpha)
+	proofChallenges.FriChallenges.FriBetas = utils.Uint64ArrayToQuadraticExtensionArray(raw.FriChallenges.FriBetas)
+	proofChallenges.FriChallenges.FriPowResponse = NewFieldElement(raw.FriChallenges.FriPowResponse)
+	proofChallenges.FriChallenges.FriQueryIndices = utils.Uint64ArrayToFArray(raw.FriChallenges.FriQueryIndices)
+
+	return proofChallenges
+}
+
 func ReductionArityBits(
 	arityBits uint64,
 	finalPolyBits uint64,
@@ -340,20 +381,33 @@ func DeserializeCommonCircuitData(path string) CommonCircuitData {
 	commonCircuitData.Config.FriConfig.NumQueryRounds = raw.Config.FriConfig.NumQueryRounds
 
 	commonCircuitData.FriParams.DegreeBits = raw.FriParams.DegreeBits
+	commonCircuitData.DegreeBits = raw.FriParams.DegreeBits
 	commonCircuitData.FriParams.Config.RateBits = raw.FriParams.Config.RateBits
 	commonCircuitData.FriParams.Config.CapHeight = raw.FriParams.Config.CapHeight
 	commonCircuitData.FriParams.Config.ProofOfWorkBits = raw.FriParams.Config.ProofOfWorkBits
 	commonCircuitData.FriParams.Config.NumQueryRounds = raw.FriParams.Config.NumQueryRounds
 	commonCircuitData.FriParams.ReductionArityBits = raw.FriParams.ReductionArityBits
 
-	commonCircuitData.DegreeBits = raw.DegreeBits
+	commonCircuitData.Gates = []gate{}
+	for _, gate := range raw.Gates {
+		commonCircuitData.Gates = append(commonCircuitData.Gates, GateInstanceFromId(gate))
+	}
+
+	commonCircuitData.SelectorsInfo.selectorIndices = raw.SelectorsInfo.SelectorIndices
+	commonCircuitData.SelectorsInfo.groups = []Range{}
+	for _, group := range raw.SelectorsInfo.Groups {
+		commonCircuitData.SelectorsInfo.groups = append(commonCircuitData.SelectorsInfo.groups, Range{
+			start: group.Start,
+			end:   group.End,
+		})
+	}
+
 	commonCircuitData.QuotientDegreeFactor = raw.QuotientDegreeFactor
 	commonCircuitData.NumGateConstraints = raw.NumGateConstraints
 	commonCircuitData.NumConstants = raw.NumConstants
 	commonCircuitData.NumPublicInputs = raw.NumPublicInputs
 	commonCircuitData.KIs = utils.Uint64ArrayToFArray(raw.KIs)
 	commonCircuitData.NumPartialProducts = raw.NumPartialProducts
-	copy(commonCircuitData.CircuitDigest[:], utils.Uint64ArrayToFArray(raw.CircuitDigest.Elements))
 
 	return commonCircuitData
 }
@@ -373,7 +427,9 @@ func DeserializeVerifierOnlyCircuitData(path string) VerifierOnlyCircuitData {
 		panic(err)
 	}
 
-	return VerifierOnlyCircuitData{
-		ConstantSigmasCap: DeserializeMerkleCap([]struct{ Elements []uint64 }(raw.ConstantsSigmasCap)),
-	}
+	var verifierOnlyCircuitData VerifierOnlyCircuitData
+	verifierOnlyCircuitData.ConstantSigmasCap = DeserializeMerkleCap([]struct{ Elements []uint64 }(raw.ConstantsSigmasCap))
+	copy(verifierOnlyCircuitData.CircuitDigest[:], utils.Uint64ArrayToFArray(raw.CircuitDigest.Elements))
+
+	return verifierOnlyCircuitData
 }

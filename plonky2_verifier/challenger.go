@@ -123,10 +123,10 @@ func (c *ChallengerChip) GetFriChallenges(commitPhaseMerkleCaps []MerkleCap, fin
 	friQueryIndices := c.GetNChallenges(numFriQueries)
 
 	return FriChallenges{
-		FriAlpha:         friAlpha,
-		FriBetas:         friBetas,
-		FriPowResponse:   friPowResponse,
-		FriQueryIndicies: friQueryIndices,
+		FriAlpha:        friAlpha,
+		FriBetas:        friBetas,
+		FriPowResponse:  friPowResponse,
+		FriQueryIndices: friQueryIndices,
 	}
 }
 

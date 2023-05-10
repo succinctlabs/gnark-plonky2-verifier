@@ -31,12 +31,12 @@ func (c *VerifierChip) GetPublicInputsHash(publicInputs []F) Hash {
 	return c.poseidonChip.HashNoPad(publicInputs)
 }
 
-func (c *VerifierChip) GetChallenges(proofWithPis ProofWithPublicInputs, publicInputsHash Hash, commonData CommonCircuitData) ProofChallenges {
+func (c *VerifierChip) GetChallenges(proofWithPis ProofWithPublicInputs, publicInputsHash Hash, commonData CommonCircuitData, verifierData VerifierOnlyCircuitData) ProofChallenges {
 	config := commonData.Config
 	numChallenges := config.NumChallenges
 	challenger := NewChallengerChip(c.api, c.fieldAPI, c.poseidonChip)
 
-	var circuitDigest = commonData.CircuitDigest
+	var circuitDigest = verifierData.CircuitDigest
 
 	challenger.ObserveHash(circuitDigest)
 	challenger.ObserveHash(publicInputsHash)
@@ -71,9 +71,9 @@ func (c *VerifierChip) Verify(proofWithPis ProofWithPublicInputs, verifierData V
 	// TODO: Verify shape of the proof?
 
 	publicInputsHash := c.GetPublicInputsHash(proofWithPis.PublicInputs)
-	proofChallenges := c.GetChallenges(proofWithPis, publicInputsHash, commonData)
+	proofChallenges := c.GetChallenges(proofWithPis, publicInputsHash, commonData, verifierData)
 
-	c.plonkChip.Verify(proofChallenges, proofWithPis.Proof.Openings)
+	c.plonkChip.Verify(proofChallenges, proofWithPis.Proof.Openings, publicInputsHash)
 
 	initialMerkleCaps := []MerkleCap{
 		verifierData.ConstantSigmasCap,
@@ -97,8 +97,8 @@ func (c *VerifierChip) Verify(proofWithPis ProofWithPublicInputs, verifierData V
 
 	proofChallenges.FriChallenges.FriPowResponse = c.fieldAPI.Add(proofChallenges.FriChallenges.FriPowResponse, ZERO_F).(F)
 
-	for i := 0; i < len(proofChallenges.FriChallenges.FriQueryIndicies); i++ {
-		proofChallenges.FriChallenges.FriQueryIndicies[i] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriQueryIndicies[i], ZERO_F).(F)
+	for i := 0; i < len(proofChallenges.FriChallenges.FriQueryIndices); i++ {
+		proofChallenges.FriChallenges.FriQueryIndices[i] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriQueryIndices[i], ZERO_F).(F)
 	}
 
 	c.friChip.VerifyFriProof(

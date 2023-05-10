@@ -41,7 +41,7 @@ func (c *TestVerifierChallengesCircuit) GetChallengesSanityCheck(
 	commonData CommonCircuitData,
 ) {
 	publicInputsHash := c.verifierChip.GetPublicInputsHash(proofWithPis.PublicInputs)
-	proofChallenges := c.verifierChip.GetChallenges(proofWithPis, publicInputsHash, commonData)
+	proofChallenges := c.verifierChip.GetChallenges(proofWithPis, publicInputsHash, commonData, verifierData)
 
 	c.hashAPI.AssertIsEqualHash(publicInputsHash, c.expectedPublicInputsHash)
 
@@ -81,12 +81,12 @@ func (c *TestVerifierChallengesCircuit) GetChallengesSanityCheck(
 	// expectedPowResponse := NewFieldElementFromString("92909863298412")
 	// c.field.AssertIsEqual(proofChallenges.FriChallenges.FriPowResponse, expectedPowResponse)
 
-	if len(proofChallenges.FriChallenges.FriQueryIndicies) != int(c.numFriQueries) {
+	if len(proofChallenges.FriChallenges.FriQueryIndices) != int(c.numFriQueries) {
 		c.t.Errorf("len(expectedFriQueryIndices) should equal num fri queries")
 	}
 
 	for i := 0; i < int(c.numFriQueries); i++ {
-		c.fieldAPI.AssertIsEqual(c.expectedFriQueryIndices[i], proofChallenges.FriChallenges.FriQueryIndicies[i])
+		c.fieldAPI.AssertIsEqual(c.expectedFriQueryIndices[i], proofChallenges.FriChallenges.FriQueryIndices[i])
 	}
 }
 
@@ -101,7 +101,7 @@ func (c *TestVerifierChallengesCircuit) Define(api frontend.API) error {
 	c.fieldAPI = NewFieldAPI(api)
 	c.qeAPI = NewQuadraticExtensionAPI(c.fieldAPI, commonCircuitData.DegreeBits)
 	c.hashAPI = NewHashAPI(c.fieldAPI)
-	poseidonChip := NewPoseidonChip(api, c.fieldAPI)
+	poseidonChip := NewPoseidonChip(api, c.fieldAPI, c.qeAPI)
 	c.verifierChip = &VerifierChip{api: api, fieldAPI: c.fieldAPI, qeAPI: c.qeAPI, poseidonChip: poseidonChip}
 
 	c.GetChallengesSanityCheck(proofWithPis, verfierOnlyCircuitData, commonCircuitData)
@@ -301,7 +301,7 @@ func (c *TestVerifierCircuit) Define(api frontend.API) error {
 	fieldAPI := NewFieldAPI(api)
 	qeAPI := NewQuadraticExtensionAPI(fieldAPI, commonCircuitData.DegreeBits)
 	hashAPI := NewHashAPI(fieldAPI)
-	poseidonChip := NewPoseidonChip(api, fieldAPI)
+	poseidonChip := NewPoseidonChip(api, fieldAPI, qeAPI)
 	plonkChip := NewPlonkChip(api, qeAPI, commonCircuitData)
 	friChip := NewFriChip(api, fieldAPI, qeAPI, hashAPI, poseidonChip, &commonCircuitData.FriParams)
 	verifierChip := VerifierChip{

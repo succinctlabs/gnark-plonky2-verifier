@@ -65,6 +65,7 @@ type ProofWithPublicInputs struct {
 
 type VerifierOnlyCircuitData struct {
 	ConstantSigmasCap MerkleCap
+	CircuitDigest     Hash
 }
 
 type FriConfig struct {
@@ -101,6 +102,8 @@ type CircuitConfig struct {
 type CommonCircuitData struct {
 	Config               CircuitConfig
 	FriParams            FriParams
+	Gates                []gate
+	SelectorsInfo        SelectorsInfo
 	DegreeBits           uint64
 	QuotientDegreeFactor uint64
 	NumGateConstraints   uint64
@@ -108,7 +111,6 @@ type CommonCircuitData struct {
 	NumPublicInputs      uint64
 	KIs                  []F
 	NumPartialProducts   uint64
-	CircuitDigest        Hash
 }
 
 type ProofChallenges struct {
@@ -120,8 +122,8 @@ type ProofChallenges struct {
 }
 
 type FriChallenges struct {
-	FriAlpha         QuadraticExtension
-	FriBetas         []QuadraticExtension
-	FriPowResponse   F
-	FriQueryIndicies []F
+	FriAlpha        QuadraticExtension
+	FriBetas        []QuadraticExtension
+	FriPowResponse  F
+	FriQueryIndices []F
 }

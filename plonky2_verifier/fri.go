@@ -546,15 +546,15 @@ func (f *FriChip) VerifyFriProof(
 	nLog := f.friParams.DegreeBits + f.friParams.Config.RateBits
 	n := uint64(math.Pow(2, float64(nLog)))
 
-	if len(friChallenges.FriQueryIndicies) != len(friProof.QueryRoundProofs) {
+	if len(friChallenges.FriQueryIndices) != len(friProof.QueryRoundProofs) {
 		panic(fmt.Sprintf(
 			"Number of query indices (%d) should equal number of query round proofs (%d)",
-			len(friChallenges.FriQueryIndicies),
+			len(friChallenges.FriQueryIndices),
 			len(friProof.QueryRoundProofs),
 		))
 	}
 
-	for idx, xIndex := range friChallenges.FriQueryIndicies {
+	for idx, xIndex := range friChallenges.FriQueryIndices {
 		roundProof := friProof.QueryRoundProofs[idx]
 
 		f.verifyQueryRound(

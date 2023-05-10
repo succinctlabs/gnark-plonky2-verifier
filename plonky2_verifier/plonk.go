@@ -116,8 +116,37 @@ func (p *PlonkChip) checkPartialProducts(
 	return partialProductChecks
 }
 
-func (p *PlonkChip) evalVanishingPoly(proofChallenges ProofChallenges, openings OpeningSet, zetaPowN QuadraticExtension) []QuadraticExtension {
-	// TODO: evaluate_gate_contraints logic should be implemented here.  See https://github.com/mir-protocol/plonky2/blob/main/plonky2/src/plonk/vanishing_poly.rs#L39
+func (p *PlonkChip) evaluateGateConstraints(vars EvaluationVars) []QuadraticExtension {
+	constraints := make([]QuadraticExtension, p.commonData.NumGateConstraints)
+	for i, _ := range constraints {
+		constraints[i] = p.qeAPI.ZERO_QE
+	}
+
+	for i, gate := range p.commonData.Gates {
+		selectorIndex := p.commonData.SelectorsInfo.selectorIndices[i]
+
+		gateConstraints := p.evalFiltered(
+			gate,
+			vars,
+			uint64(i),
+			selectorIndex,
+			p.commonData.SelectorsInfo.groups[selectorIndex],
+			p.commonData.SelectorsInfo.NumSelectors(),
+		)
+
+		for i, constraint := range gateConstraints {
+			if uint64(i) >= p.commonData.NumGateConstraints {
+				panic("num_constraints() gave too low of a number")
+			}
+			constraints[i] = p.qeAPI.AddExtension(constraints[i], constraint)
+		}
+	}
+
+	return constraints
+}
+
+func (p *PlonkChip) evalVanishingPoly(vars EvaluationVars, proofChallenges ProofChallenges, openings OpeningSet, zetaPowN QuadraticExtension) []QuadraticExtension {
+	constraintTerms := p.evaluateGateConstraints(vars)
 
 	// Calculate the k[i] * x
 	sIDs := make([]QuadraticExtension, p.commonData.Config.NumRoutedWires)
@@ -143,7 +172,6 @@ func (p *PlonkChip) evalVanishingPoly(proofChallenges ProofChallenges, openings 
 		for j := uint64(0); j < p.commonData.Config.NumRoutedWires; j++ {
 			// The numerator is `beta * s_id + wire_value + gamma`, and the denominator is
 			// `beta * s_sigma + wire_value + gamma`.
-
 			wireValuePlusGamma := p.qeAPI.AddExtension(
 				openings.Wires[j],
 				p.qeAPI.FieldToQE(proofChallenges.PlonkGammas[i]),
@@ -176,7 +204,7 @@ func (p *PlonkChip) evalVanishingPoly(proofChallenges ProofChallenges, openings 
 	}
 
 	vanishingTerms := append(vanishingZ1Terms, vanishingPartialProductsTerms...)
-	vanishingTerms = append(vanishingTerms, []QuadraticExtension{p.qeAPI.ZERO_QE, p.qeAPI.ZERO_QE, p.qeAPI.ZERO_QE, p.qeAPI.ZERO_QE}...)
+	vanishingTerms = append(vanishingTerms, constraintTerms...)
 
 	reducedValues := make([]QuadraticExtension, p.commonData.Config.NumChallenges)
 	for i := uint64(0); i < p.commonData.Config.NumChallenges; i++ {
@@ -199,11 +227,19 @@ func (p *PlonkChip) evalVanishingPoly(proofChallenges ProofChallenges, openings 
 	return reducedValues
 }
 
-func (p *PlonkChip) Verify(proofChallenges ProofChallenges, openings OpeningSet) {
+func (p *PlonkChip) Verify(proofChallenges ProofChallenges, openings OpeningSet, publicInputsHash Hash) {
 	// Calculate zeta^n
 	zetaPowN := p.expPowerOf2Extension(proofChallenges.PlonkZeta)
 
-	vanishingPolysZeta := p.evalVanishingPoly(proofChallenges, openings, zetaPowN)
+	localConstants := openings.Constants
+	localWires := openings.Wires
+	vars := EvaluationVars{
+		localConstants,
+		localWires,
+		publicInputsHash,
+	}
+
+	vanishingPolysZeta := p.evalVanishingPoly(vars, proofChallenges, openings, zetaPowN)
 
 	// Calculate Z(H)
 	zHZeta := p.qeAPI.SubExtension(zetaPowN, p.qeAPI.ONE_QE)

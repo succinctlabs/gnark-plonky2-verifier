@@ -1,8 +1,7 @@
-package plonky2_verifier
+package field
 
 import (
 	"fmt"
-	. "gnark-plonky2-verifier/field"
 	"math/bits"
 
 	"github.com/consensys/gnark/frontend"
