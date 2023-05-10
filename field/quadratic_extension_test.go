@@ -1,8 +1,6 @@
-package plonky2_verifier
+package field
 
 import (
-	"gnark-plonky2-verifier/field"
-	. "gnark-plonky2-verifier/field"
 	"testing"
 
 	"github.com/consensys/gnark/frontend"
@@ -21,9 +19,9 @@ type TestQuadraticExtensionMulCircuit struct {
 }
 
 func (c *TestQuadraticExtensionMulCircuit) Define(api frontend.API) error {
-	fieldAPI := field.NewFieldAPI(api)
+	fieldAPI := NewFieldAPI(api)
 	degreeBits := 3
-	c.qeAPI = NewQuadraticExtensionAPI(fieldAPI, uint64(degreeBits))
+	c.qeAPI = NewQuadraticExtensionAPI(api, fieldAPI, uint64(degreeBits))
 
 	actualRes := c.qeAPI.MulExtension(c.operand1, c.operand2)
 
@@ -55,9 +53,9 @@ type TestQuadraticExtensionDivCircuit struct {
 }
 
 func (c *TestQuadraticExtensionDivCircuit) Define(api frontend.API) error {
-	fieldAPI := field.NewFieldAPI(api)
+	fieldAPI := NewFieldAPI(api)
 	degreeBits := 3
-	c.qeAPI = NewQuadraticExtensionAPI(fieldAPI, uint64(degreeBits))
+	c.qeAPI = NewQuadraticExtensionAPI(api, fieldAPI, uint64(degreeBits))
 
 	actualRes := c.qeAPI.DivExtension(c.operand1, c.operand2)
 
