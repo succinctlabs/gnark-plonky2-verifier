@@ -115,11 +115,9 @@ func (c *ChallengerChip) GetFriChallenges(commitPhaseMerkleCaps []MerkleCap, fin
 	}
 
 	c.ObserveExtensionElements(finalPoly.Coeffs)
+	c.ObserveElement(powWitness)
 
-	hash := c.GetHash()
-	powInputs := append(hash[:], powWitness)
-
-	friPowResponse := c.poseidonChip.HashNoPad(powInputs)[0]
+	friPowResponse := c.GetChallenge()
 	friQueryIndices := c.GetNChallenges(numFriQueries)
 
 	return FriChallenges{
