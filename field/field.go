@@ -8,35 +8,36 @@ import (
 )
 
 type EmulatedField = emulated.Goldilocks
-type F = *emulated.Element[EmulatedField]
-type Hash = [4]F
-type EmulatedFieldAPI struct {
-	api      frontend.API
-	fieldAPI *emulated.Field[EmulatedField]
-}
+type FTarget = emulated.Element[EmulatedField]
+type Hash = [4]*FTarget
 
 var TEST_CURVE = ecc.BN254
 
-func NewFieldElement(x uint64) F {
-	constField := emulated.ValueOf[EmulatedField](x)
-	return &constField
-}
-
-func NewFieldElementFromString(x string) F {
-	constField := emulated.ValueOf[EmulatedField](x)
-	return &constField
-}
-
-func NewFieldAPI(api frontend.API) *EmulatedFieldAPI {
+func NewFieldAPI(api frontend.API) *emulated.Field[emulated.Goldilocks] {
 	fieldAPI, err := emulated.NewField[EmulatedField](api)
 	if err != nil {
 		panic(err)
 	}
-	return &EmulatedFieldAPI{api, fieldAPI}
+	return fieldAPI
 }
 
-var ONE_F = NewFieldElement(1)
-var ZERO_F = NewFieldElement(0)
+func NewFieldConst(x uint64) *FTarget {
+	val := emulated.ValueOf[EmulatedField](x)
+	return &val
+}
+
+func NewFieldConstFromString(x string) *FTarget {
+	val := emulated.ValueOf[EmulatedField](x)
+	return &val
+}
+
+func NewFieldTarget() *FTarget {
+	var field emulated.Element[emulated.Goldilocks]
+	return &field
+}
+
+var ONE_F = NewFieldConst(1)
+var ZERO_F = NewFieldConst(0)
 
 var GOLDILOCKS_MULTIPLICATIVE_GROUP_GENERATOR = goldilocks.NewElement(7)
 var GOLDILOCKS_TWO_ADICITY = uint64(32)
@@ -55,50 +56,23 @@ func GoldilocksPrimitiveRootOfUnity(nLog uint64) goldilocks.Element {
 	return res
 }
 
-func (e EmulatedFieldAPI) IsZero(x F) frontend.Variable {
-	reduced := e.fieldAPI.Reduce(x)
+func IsZero(api frontend.API, fieldAPI *emulated.Field[emulated.Goldilocks], x *FTarget) frontend.Variable {
+	reduced := fieldAPI.Reduce(x)
 	limbs := reduced.Limbs
 
-	isZero := e.api.IsZero(limbs[0])
+	isZero := api.IsZero(limbs[0])
 	for i := 1; i < len(limbs); i++ {
-		isZero = e.api.Mul(isZero, e.api.IsZero(limbs[i]))
+		isZero = api.Mul(isZero, api.IsZero(limbs[i]))
 	}
 
 	return isZero
+
 }
 
-func (e EmulatedFieldAPI) Add(a F, b F) F {
-	return e.fieldAPI.Add(a, b)
-}
-
-func (e EmulatedFieldAPI) Sub(a F, b F) F {
-	return e.fieldAPI.Sub(a, b)
-}
-
-func (e EmulatedFieldAPI) Mul(a F, b F) F {
-	return e.fieldAPI.Mul(a, b)
-}
-
-func (e EmulatedFieldAPI) AssertIsEqual(a F, b F) {
-	e.fieldAPI.AssertIsEqual(a, b)
-}
-
-func (e EmulatedFieldAPI) Inverse(x F) F {
-	return e.fieldAPI.Inverse(x)
-}
-
-func (e EmulatedFieldAPI) Select(selector frontend.Variable, a F, b F) F {
-	return e.fieldAPI.Select(selector, a, b)
-}
-
-func (e EmulatedFieldAPI) Lookup2(b0 frontend.Variable, b1 frontend.Variable, a F, b F, c F, d F) F {
-	return e.fieldAPI.Lookup2(b0, b1, a, b, c, d)
-}
-
-func (e EmulatedFieldAPI) Println(x F) {
-	reduced := e.fieldAPI.Reduce(x)
+func Println(api frontend.API, fieldAPI *emulated.Field[emulated.Goldilocks], x *FTarget) {
+	reduced := fieldAPI.Reduce(x)
 	limbs := reduced.Limbs
 	for i := 0; i < len(limbs); i++ {
-		e.api.Println(limbs[i])
+		api.Println(limbs[i])
 	}
 }

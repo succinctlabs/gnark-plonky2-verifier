@@ -3,6 +3,8 @@ package field
 import (
 	"testing"
 
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
 )
@@ -11,56 +13,46 @@ import (
 
 // Test for quadratic extension multiplication
 type TestQuadraticExtensionMulCircuit struct {
-	qeAPI *QuadraticExtensionAPI
-
-	operand1       QuadraticExtension
-	operand2       QuadraticExtension
-	expectedResult QuadraticExtension
+	Operand1, Operand2, ExpectedResult QETarget
 }
 
 func (c *TestQuadraticExtensionMulCircuit) Define(api frontend.API) error {
 	fieldAPI := NewFieldAPI(api)
 	degreeBits := 3
-	c.qeAPI = NewQuadraticExtensionAPI(api, fieldAPI, uint64(degreeBits))
+	qeAPI := NewQuadraticExtensionAPI(api, fieldAPI, uint64(degreeBits))
 
-	actualRes := c.qeAPI.MulExtension(c.operand1, c.operand2)
+	actualRes := qeAPI.MulExtension(&c.Operand1, &c.Operand2)
 
-	fieldAPI.AssertIsEqual(actualRes[0], c.expectedResult[0])
-	fieldAPI.AssertIsEqual(actualRes[1], c.expectedResult[1])
+	qeAPI.AssertIsEqual(actualRes, &c.ExpectedResult)
 
 	return nil
 }
+
 func TestQuadraticExtensionMul(t *testing.T) {
 	assert := test.NewAssert(t)
 
-	operand1 := QuadraticExtension{NewFieldElement(4994088319481652598), NewFieldElement(16489566008211790727)}
-	operand2 := QuadraticExtension{NewFieldElement(3797605683985595697), NewFieldElement(13424401189265534004)}
-	expectedResult := QuadraticExtension{NewFieldElement(15052319864161058789), NewFieldElement(16841416332519902625)}
+	var circuit TestQuadraticExtensionMulCircuit
 
-	circuit := TestQuadraticExtensionMulCircuit{operand1: operand1, operand2: operand2, expectedResult: expectedResult}
-	witness := TestQuadraticExtensionMulCircuit{operand1: operand1, operand2: operand2, expectedResult: expectedResult}
-	err := test.IsSolved(&circuit, &witness, TEST_CURVE.ScalarField())
-	assert.NoError(err)
+	witness := &TestQuadraticExtensionMulCircuit{
+		Operand1:       NewQuadraticExtensionConst(NewFieldConst(4994088319481652598), NewFieldConst(16489566008211790727)),
+		Operand2:       NewQuadraticExtensionConst(NewFieldConst(3797605683985595697), NewFieldConst(13424401189265534004)),
+		ExpectedResult: NewQuadraticExtensionConst(NewFieldConst(15052319864161058789), NewFieldConst(16841416332519902625)),
+	}
+	assert.ProverSucceeded(&circuit, witness, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16), test.NoSerialization())
 }
 
 // Test for quadratic extension division
 type TestQuadraticExtensionDivCircuit struct {
-	qeAPI *QuadraticExtensionAPI
-
-	operand1       QuadraticExtension
-	operand2       QuadraticExtension
-	expectedResult QuadraticExtension
+	Operand1, Operand2, ExpectedResult QETarget
 }
 
 func (c *TestQuadraticExtensionDivCircuit) Define(api frontend.API) error {
 	fieldAPI := NewFieldAPI(api)
 	degreeBits := 3
-	c.qeAPI = NewQuadraticExtensionAPI(api, fieldAPI, uint64(degreeBits))
+	qeAPI := NewQuadraticExtensionAPI(api, fieldAPI, uint64(degreeBits))
 
-	actualRes := c.qeAPI.DivExtension(c.operand1, c.operand2)
-
-	fieldAPI.AssertIsEqual(actualRes[0], c.expectedResult[0])
-	fieldAPI.AssertIsEqual(actualRes[1], c.expectedResult[1])
+	actualRes := qeAPI.DivExtension(&c.Operand1, &c.Operand2)
+	qeAPI.AssertIsEqual(actualRes, &c.ExpectedResult)
 
 	return nil
 }
@@ -68,12 +60,13 @@ func (c *TestQuadraticExtensionDivCircuit) Define(api frontend.API) error {
 func TestQuadraticExtensionDiv(t *testing.T) {
 	assert := test.NewAssert(t)
 
-	operand1 := QuadraticExtension{NewFieldElement(4994088319481652598), NewFieldElement(16489566008211790727)}
-	operand2 := QuadraticExtension{NewFieldElement(7166004739148609569), NewFieldElement(14655965871663555016)}
-	expectedResult := QuadraticExtension{NewFieldElement(15052319864161058789), NewFieldElement(16841416332519902625)}
+	var circuit TestQuadraticExtensionDivCircuit
 
-	circuit := TestQuadraticExtensionDivCircuit{operand1: operand1, operand2: operand2, expectedResult: expectedResult}
-	witness := TestQuadraticExtensionDivCircuit{operand1: operand1, operand2: operand2, expectedResult: expectedResult}
-	err := test.IsSolved(&circuit, &witness, TEST_CURVE.ScalarField())
-	assert.NoError(err)
+	witness := &TestQuadraticExtensionDivCircuit{
+		Operand1:       NewQuadraticExtensionConst(NewFieldConst(4994088319481652598), NewFieldConst(16489566008211790727)),
+		Operand2:       NewQuadraticExtensionConst(NewFieldConst(7166004739148609569), NewFieldConst(14655965871663555016)),
+		ExpectedResult: NewQuadraticExtensionConst(NewFieldConst(15052319864161058789), NewFieldConst(16841416332519902625)),
+	}
+
+	assert.ProverSucceeded(&circuit, witness, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16), test.NoSerialization())
 }
