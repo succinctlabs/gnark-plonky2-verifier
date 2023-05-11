@@ -13,7 +13,9 @@ type Hash = [4]*FTarget
 
 var TEST_CURVE = ecc.BN254
 
-func NewFieldAPI(api frontend.API) *emulated.Field[emulated.Goldilocks] {
+type FieldAPI = *emulated.Field[emulated.Goldilocks]
+
+func NewFieldAPI(api frontend.API) FieldAPI {
 	fieldAPI, err := emulated.NewField[EmulatedField](api)
 	if err != nil {
 		panic(err)

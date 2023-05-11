@@ -5,7 +5,6 @@ import (
 	"math/bits"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/gnark/std/math/emulated"
 )
 
 type QETarget struct {
@@ -23,7 +22,7 @@ func NewQuadraticExtensionTarget(Degree_zero_val *FTarget, Degree_one_val *FTarg
 
 type QuadraticExtensionAPI struct {
 	api      frontend.API
-	fieldAPI *emulated.Field[emulated.Goldilocks]
+	fieldAPI FieldAPI
 
 	W        *FTarget
 	DTH_ROOT *FTarget
@@ -32,7 +31,7 @@ type QuadraticExtensionAPI struct {
 	ZERO_QE *QETarget
 }
 
-func NewQuadraticExtensionAPI(api frontend.API, fieldAPI *emulated.Field[emulated.Goldilocks], degreeBits uint64) *QuadraticExtensionAPI {
+func NewQuadraticExtensionAPI(api frontend.API, fieldAPI FieldAPI, degreeBits uint64) *QuadraticExtensionAPI {
 	// TODO:  Should degreeBits be verified that it fits within the field and that degree is within uint64?
 	return &QuadraticExtensionAPI{
 		api:      api,

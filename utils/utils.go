@@ -25,30 +25,40 @@ func StrArrayToFrontendVariableArray(input []string) []frontend.Variable {
 	return output
 }
 
-func Uint64ArrayToFArray(input []uint64) []F {
-	var output []F
+func StrArrayToFieldArray(input []string) []FTarget {
+	var output []FTarget
 	for i := 0; i < len(input); i++ {
-		output = append(output, NewFieldElement(input[i]))
+		output = append(output, *NewFieldConstFromString(input[i]))
 	}
 	return output
 }
 
-func Uint64ArrayToQuadraticExtension(input []uint64) QuadraticExtension {
-	return [2]F{NewFieldElement(input[0]), NewFieldElement(input[1])}
-}
-
-func Uint64ArrayToQuadraticExtensionArray(input [][]uint64) []QuadraticExtension {
-	var output []QuadraticExtension
+func Uint64ArrayToFArray(input []uint64) []*FTarget {
+	var output []*FTarget
 	for i := 0; i < len(input); i++ {
-		output = append(output, [2]F{NewFieldElement(input[i][0]), NewFieldElement(input[i][1])})
+		output = append(output, NewFieldConst(input[i]))
 	}
 	return output
 }
 
+func Uint64ArrayToQuadraticExtension(input []uint64) *QETarget {
+	return NewQuadraticExtensionTarget(NewFieldConst(input[0]), NewFieldConst(input[1]))
+}
+
+func Uint64ArrayToQuadraticExtensionArray(input [][]uint64) []*QETarget {
+	var output []*QETarget
+	for i := 0; i < len(input); i++ {
+		output = append(output, NewQuadraticExtensionTarget(NewFieldConst(input[i][0]), NewFieldConst(input[i][1])))
+	}
+	return output
+}
+
+/*
 func Uint64ArrayToHashArray(input [][]uint64) []Hash {
 	var output []Hash
 	for i := 0; i < len(input); i++ {
-		output = append(output, [4]F{NewFieldElement(input[i][0]), NewFieldElement(input[i][1]), NewFieldElement(input[i][2]), NewFieldElement(input[i][3])})
+		output = append(output, [4]F{NewFieldConst(input[i][0]), NewFieldConst(input[i][1]), NewFieldConst(input[i][2]), NewFieldConst(input[i][3])})
 	}
 	return output
 }
+*/
