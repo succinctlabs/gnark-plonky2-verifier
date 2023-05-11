@@ -276,7 +276,7 @@ func (f *FriChip) friCombineInitial(
 		)
 	}
 
-	return f.qeAPI.MulExtension(sum, subgroupX_QE)
+	return sum
 }
 
 func (f *FriChip) finalPolyEval(finalPoly PolynomialCoeffs, point QuadraticExtension) QuadraticExtension {
