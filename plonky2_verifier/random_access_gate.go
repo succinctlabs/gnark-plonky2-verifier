@@ -99,7 +99,7 @@ func (g *RandomAccessGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []Q
 		// Assert that each bit wire value is indeed boolean.
 		for _, b := range bits {
 			bSquared := p.qeAPI.MulExtension(b, b)
-			constraints = append(constraints, p.qeAPI.SubExtension(b, bSquared))
+			constraints = append(constraints, p.qeAPI.SubExtension(bSquared, b))
 		}
 
 		// Assert that the binary decomposition was correct.

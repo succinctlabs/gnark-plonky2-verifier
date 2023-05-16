@@ -128,11 +128,11 @@ func (c *QuadraticExtensionAPI) ReduceWithPowers(terms []QuadraticExtension, sca
 	return sum
 }
 
-func (c *QuadraticExtensionAPI) Select(b0 frontend.Variable, qe0, qe1 QuadraticExtension) QuadraticExtension {
+func (c *QuadraticExtensionAPI) Select(b frontend.Variable, qe0, qe1 QuadraticExtension) QuadraticExtension {
 	var retQE QuadraticExtension
 
 	for i := 0; i < 2; i++ {
-		retQE[i] = c.fieldAPI.Select(b0, qe0[i], qe1[i]).(F)
+		retQE[i] = c.fieldAPI.Select(b, qe0[i], qe1[i]).(F)
 	}
 
 	return retQE
