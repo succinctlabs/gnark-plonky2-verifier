@@ -1,8 +1,8 @@
 package plonky2_verifier
 
 import (
-	"fmt"
 	. "gnark-plonky2-verifier/field"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -47,7 +47,49 @@ func GateInstanceFromId(gateId string) gate {
 		return NewPoseidonGate()
 	}
 
-	panic(fmt.Sprintf("Unknown gate ID %s", gateId))
+	if strings.HasPrefix(gateId, "BaseSumGate") {
+		// Has the format "BaseSumGate { num_limbs: 32 } + Base: 2"
+
+		regEx := "BaseSumGate { num_limbs: (?P<numLimbs>[0-9]+) } \\+ Base: (?P<base>[0-9]+)"
+		r, err := regexp.Compile(regEx)
+		if err != nil {
+			panic("Invalid BaseSumGate regular expression")
+		}
+
+		matches := getRegExMatches(r, gateId)
+		numLimbsStr, hasNumLimbs := matches["numLimbs"]
+		baseStr, hasBase := matches["base"]
+		if !hasNumLimbs || !hasBase {
+			panic("Invalid BaseSumGate ID")
+		}
+
+		numLimbs, err := strconv.Atoi(numLimbsStr)
+		if err != nil {
+			panic("Invalid BaseSumGate ID: " + err.Error())
+		}
+
+		base, err := strconv.Atoi(baseStr)
+		if err != nil {
+			panic("Invalid BaseSumGate ID: " + err.Error())
+		}
+
+		return NewBaseSumGate(uint64(numLimbs), uint64(base))
+	}
+
+	return nil
+	//panic(fmt.Sprintf("Unknown gate ID %s", gateId))
+}
+
+func getRegExMatches(r *regexp.Regexp, gateId string) map[string]string {
+	matches := r.FindStringSubmatch(gateId)
+	result := make(map[string]string)
+	for i, name := range r.SubexpNames() {
+		if i != 0 && name != "" {
+			result[name] = matches[i]
+		}
+	}
+
+	return result
 }
 
 func (p *PlonkChip) computeFilter(
