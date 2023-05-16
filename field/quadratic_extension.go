@@ -150,7 +150,7 @@ func (c *QuadraticExtensionAPI) Lookup2(b0 frontend.Variable, b1 frontend.Variab
 
 func (c *QuadraticExtensionAPI) AssertIsEqual(a, b QuadraticExtension) {
 	for i := 0; i < 2; i++ {
-		c.fieldAPI.AssertIsEqual(a[0], b[0])
+		c.fieldAPI.AssertIsEqual(a[i], b[i])
 	}
 }
 
