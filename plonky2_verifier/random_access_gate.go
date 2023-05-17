@@ -111,8 +111,16 @@ func (g *RandomAccessGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []Q
 			for i := 0; i < len(listItems); i += 2 {
 				x := listItems[i]
 				y := listItems[i+1]
-				bField := p.qeAPI.IsZero(b)
-				listItemsTmp = append(listItemsTmp, p.qeAPI.Select(bField, x, y))
+
+				// This is computing `if b { x } else { y }`
+				// i.e. `bx - (by-y)`.
+				mul1 := p.qeAPI.MulExtension(b, x)
+				sub1 := p.qeAPI.SubExtension(mul1, x)
+
+				mul2 := p.qeAPI.MulExtension(b, y)
+				sub2 := p.qeAPI.SubExtension(mul2, sub1)
+
+				listItemsTmp = append(listItemsTmp, sub2)
 			}
 			listItems = listItemsTmp
 		}

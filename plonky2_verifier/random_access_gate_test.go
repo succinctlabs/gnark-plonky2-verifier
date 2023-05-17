@@ -2,7 +2,6 @@ package plonky2_verifier
 
 import (
 	"errors"
-	"fmt"
 	. "gnark-plonky2-verifier/field"
 	"testing"
 
@@ -30,11 +29,7 @@ func (circuit *TestRandomAccessGateCircuit) Define(api frontend.API) error {
 	}
 
 	for i := 0; i < len(constraints); i++ {
-		fmt.Printf("constraint[%d]: %v\n", i, constraints[i])
-	}
-
-	for i := 0; i < len(constraints); i++ {
-		qeAPI.AssertIsEqual(constraints[i], constantGateExpectedConstraints[i])
+		qeAPI.AssertIsEqual(constraints[i], randomAccessGateExpectedConstraints[i])
 	}
 
 	return nil
