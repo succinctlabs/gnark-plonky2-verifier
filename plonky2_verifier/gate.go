@@ -76,6 +76,41 @@ func GateInstanceFromId(gateId string) gate {
 		return NewBaseSumGate(uint64(numLimbs), uint64(base))
 	}
 
+	if strings.HasPrefix(gateId, "RandomAccessGate") {
+		// Has the format "RandomAccessGate { bits: 2, num_copies: 13, num_extra_constants: 2, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>"
+
+		regEx := "RandomAccessGate { bits: (?P<bits>[0-9]+), num_copies: (?P<numCopies>[0-9]+), num_extra_constants: (?P<numExtraConstants>[0-9]+), _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=(?P<base>[0-9]+)>"
+		r, err := regexp.Compile(regEx)
+		if err != nil {
+			panic("Invalid RandomAccessGate regular expression")
+		}
+
+		matches := getRegExMatches(r, gateId)
+		bitsStr, hasBits := matches["bits"]
+		numCopiesStr, hasNumCopies := matches["numCopies"]
+		numExtraConstantsStr, hasNumExtraConstants := matches["numExtraConstants"]
+		if !hasBits || !hasNumCopies || !hasNumExtraConstants {
+			panic("Invalid RandomAccessGate ID")
+		}
+
+		bits, err := strconv.Atoi(bitsStr)
+		if err != nil {
+			panic("Invalid RandomAccessGate ID: " + err.Error())
+		}
+
+		numCopies, err := strconv.Atoi(numCopiesStr)
+		if err != nil {
+			panic("Invalid RandomAccessGate ID: " + err.Error())
+		}
+
+		numExtraConstants, err := strconv.Atoi(numExtraConstantsStr)
+		if err != nil {
+			panic("Invalid RandomAccessGate ID: " + err.Error())
+		}
+
+		return NewRandomAccessGate(uint64(bits), uint64(numCopies), uint64(numExtraConstants))
+	}
+
 	return nil
 	//panic(fmt.Sprintf("Unknown gate ID %s", gateId))
 }
