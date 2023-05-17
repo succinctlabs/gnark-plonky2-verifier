@@ -10,6 +10,7 @@ import (
 type EmulatedField = emulated.Goldilocks
 type F = emulated.Element[EmulatedField]
 type QuadraticExtension = [2]F
+type QEAlgebra = [2]QuadraticExtension
 type Hash = [4]F
 
 var TEST_CURVE = ecc.BN254

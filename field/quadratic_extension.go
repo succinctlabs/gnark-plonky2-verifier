@@ -154,10 +154,74 @@ func (c *QuadraticExtensionAPI) AssertIsEqual(a, b QuadraticExtension) {
 	}
 }
 
+func (c *QuadraticExtensionAPI) InnerProductExtension(constant F, startingAcc QuadraticExtension, pairs [][2]QuadraticExtension) QuadraticExtension {
+	acc := startingAcc
+
+	for i := 0; i < len(pairs); i++ {
+		a := pairs[i][0]
+		b := pairs[i][1]
+		mul := c.ScalarMulExtension(a, constant)
+		mul = c.MulExtension(mul, b)
+		acc = c.AddExtension(acc, mul)
+	}
+
+	return acc
+}
+
 func (c *QuadraticExtensionAPI) Println(a QuadraticExtension) {
 	fmt.Print("Degree 0 coefficient")
 	c.fieldAPI.Println(a[0])
 
 	fmt.Print("Degree 1 coefficient")
 	c.fieldAPI.Println(a[1])
+}
+
+func (c *QuadraticExtensionAPI) MulExtensionAlgebra(a, b QEAlgebra) QEAlgebra {
+	var inner [2][][2]QuadraticExtension
+	var inner_w [2][][2]QuadraticExtension
+	for i := 0; i < 2; i++ {
+		for j := 0; j < 2-i; j++ {
+			idx := (i + j) % 2
+			inner[idx] = append(inner[idx], [2]QuadraticExtension{a[i], b[j]})
+		}
+		for j := 2 - i; j < 2; j++ {
+			idx := (i + j) % 2
+			inner_w[idx] = append(inner_w[idx], [2]QuadraticExtension{a[i], b[j]})
+		}
+	}
+
+	var product QEAlgebra
+	for i := 0; i < 2; i++ {
+		acc := c.InnerProductExtension(NewFieldElement(7), c.ZERO_QE, inner_w[i])
+		product[i] = c.InnerProductExtension(ONE_F, acc, inner[i])
+	}
+
+	return product
+}
+
+func (c *QuadraticExtensionAPI) ScalarMulExtensionAlgebra(a QuadraticExtension, b QEAlgebra) QEAlgebra {
+	var product QEAlgebra
+	for i := 0; i < 2; i++ {
+		product[i] = c.MulExtension(a, b[i])
+	}
+
+	return product
+}
+
+func (c *QuadraticExtensionAPI) AddExtensionAlgebra(a, b QEAlgebra) QEAlgebra {
+	var sum QEAlgebra
+	for i := 0; i < 2; i++ {
+		sum[i] = c.AddExtension(a[i], b[i])
+	}
+
+	return sum
+}
+
+func (c *QuadraticExtensionAPI) SubExtensionAlgebra(a, b QEAlgebra) QEAlgebra {
+	var diff QEAlgebra
+	for i := 0; i < 2; i++ {
+		diff[i] = c.SubExtension(a[i], b[i])
+	}
+
+	return diff
 }
