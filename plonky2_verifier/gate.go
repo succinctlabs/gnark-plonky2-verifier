@@ -57,20 +57,10 @@ func GateInstanceFromId(gateId string) gate {
 		}
 
 		matches := getRegExMatches(r, gateId)
-		numLimbsStr, hasNumLimbs := matches["numLimbs"]
-		baseStr, hasBase := matches["base"]
+		numLimbs, hasNumLimbs := matches["numLimbs"]
+		base, hasBase := matches["base"]
 		if !hasNumLimbs || !hasBase {
 			panic("Invalid BaseSumGate ID")
-		}
-
-		numLimbs, err := strconv.Atoi(numLimbsStr)
-		if err != nil {
-			panic("Invalid BaseSumGate ID: " + err.Error())
-		}
-
-		base, err := strconv.Atoi(baseStr)
-		if err != nil {
-			panic("Invalid BaseSumGate ID: " + err.Error())
 		}
 
 		return NewBaseSumGate(uint64(numLimbs), uint64(base))
@@ -86,41 +76,48 @@ func GateInstanceFromId(gateId string) gate {
 		}
 
 		matches := getRegExMatches(r, gateId)
-		bitsStr, hasBits := matches["bits"]
-		numCopiesStr, hasNumCopies := matches["numCopies"]
-		numExtraConstantsStr, hasNumExtraConstants := matches["numExtraConstants"]
+		bits, hasBits := matches["bits"]
+		numCopies, hasNumCopies := matches["numCopies"]
+		numExtraConstants, hasNumExtraConstants := matches["numExtraConstants"]
 		if !hasBits || !hasNumCopies || !hasNumExtraConstants {
 			panic("Invalid RandomAccessGate ID")
 		}
 
-		bits, err := strconv.Atoi(bitsStr)
-		if err != nil {
-			panic("Invalid RandomAccessGate ID: " + err.Error())
-		}
-
-		numCopies, err := strconv.Atoi(numCopiesStr)
-		if err != nil {
-			panic("Invalid RandomAccessGate ID: " + err.Error())
-		}
-
-		numExtraConstants, err := strconv.Atoi(numExtraConstantsStr)
-		if err != nil {
-			panic("Invalid RandomAccessGate ID: " + err.Error())
-		}
-
 		return NewRandomAccessGate(uint64(bits), uint64(numCopies), uint64(numExtraConstants))
+	}
+
+	if strings.HasPrefix(gateId, "ArithmeticExtension") {
+		// Has the format "ArithmeticExtensionGate { num_ops: 10 }"
+
+		regEx := "ArithmeticExtensionGate { num_ops: (?P<numOps>[0-9]+) }"
+		r, err := regexp.Compile(regEx)
+		if err != nil {
+			panic("Invalid ArithmeticExtensionGate regular expression")
+		}
+
+		matches := getRegExMatches(r, gateId)
+		numOps, hasNumOps := matches["numOps"]
+		if !hasNumOps {
+			panic("Invalid ArithmeticExtensionGate ID")
+		}
+
+		return NewArithmeticExtensionGate(uint64(numOps))
 	}
 
 	return nil
 	//panic(fmt.Sprintf("Unknown gate ID %s", gateId))
 }
 
-func getRegExMatches(r *regexp.Regexp, gateId string) map[string]string {
+func getRegExMatches(r *regexp.Regexp, gateId string) map[string]int {
 	matches := r.FindStringSubmatch(gateId)
-	result := make(map[string]string)
+	result := make(map[string]int)
 	for i, name := range r.SubexpNames() {
 		if i != 0 && name != "" {
-			result[name] = matches[i]
+			value, err := strconv.Atoi(matches[i])
+			if err != nil {
+				panic("Invalid field value for \"name\": " + err.Error())
+			}
+			result[name] = value
 		}
 	}
 

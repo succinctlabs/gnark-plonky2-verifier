@@ -12,7 +12,7 @@ type ArithmeticExtensionGate struct {
 	numOps uint64
 }
 
-func NewArithmeticExtensionGatee(numOps uint64) *ArithmeticExtensionGate {
+func NewArithmeticExtensionGate(numOps uint64) *ArithmeticExtensionGate {
 	return &ArithmeticExtensionGate{
 		numOps: numOps,
 	}
