@@ -1,7 +1,12 @@
 package plonky2_verifier
 
 import (
+	"errors"
 	. "gnark-plonky2-verifier/field"
+	"testing"
+
+	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/test"
 )
 
 var localConstants = []QuadraticExtension{
@@ -246,4 +251,61 @@ var randomAccessGateExpectedConstraints = []QuadraticExtension{
 	{NewFieldElement(15485954821265539981), NewFieldElement(1201918074719834630)},
 	{NewFieldElement(11416240451899794915), NewFieldElement(3127372561985201979)},
 	{NewFieldElement(1915429544941884288), NewFieldElement(16698510309904634494)},
+}
+
+type TestGateCircuit struct {
+	testGate            gate
+	expectedConstraints []QuadraticExtension
+}
+
+func (circuit *TestGateCircuit) Define(api frontend.API) error {
+	commonCircuitData := DeserializeCommonCircuitData("./data/step/common_circuit_data.json")
+	numSelectors := len(commonCircuitData.SelectorsInfo.groups)
+
+	fieldAPI := NewFieldAPI(api)
+	qeAPI := NewQuadraticExtensionAPI(fieldAPI, commonCircuitData.DegreeBits)
+	plonkChip := NewPlonkChip(api, qeAPI, commonCircuitData)
+
+	vars := EvaluationVars{localConstants: localConstants[numSelectors:], localWires: localWires, publicInputsHash: publicInputsHash}
+
+	constraints := circuit.testGate.EvalUnfiltered(plonkChip, vars)
+
+	if len(constraints) != len(circuit.expectedConstraints) {
+		return errors.New("gate constraints length mismatch")
+	}
+	for i := 0; i < len(constraints); i++ {
+		qeAPI.AssertIsEqual(constraints[i], circuit.expectedConstraints[i])
+	}
+
+	return nil
+}
+
+func TestGates(t *testing.T) {
+	assert := test.NewAssert(t)
+
+	testCase := func(testGate gate, expectedConstraints []QuadraticExtension) {
+		circuit := &TestGateCircuit{testGate: testGate, expectedConstraints: expectedConstraints}
+		witness := &TestGateCircuit{testGate: testGate, expectedConstraints: expectedConstraints}
+		err := test.IsSolved(circuit, witness, TEST_CURVE.ScalarField())
+		assert.NoError(err)
+	}
+
+	type gateTest struct {
+		testGate            gate
+		expectedConstraints []QuadraticExtension
+	}
+
+	gateTests := []gateTest{
+		{&ArithmeticGate{numOps: 20}, arithmeticGateExpectedConstraints},
+		{&BaseSumGate{numLimbs: 32, base: 2}, baseSumGateExpectedConstraints},
+		{&ConstantGate{numConsts: 2}, constantGateExpectedConstraints},
+		{&RandomAccessGate{bits: 4, numCopies: 4, numExtraConstants: 2}, randomAccessGateExpectedConstraints},
+	}
+
+	for _, test := range gateTests {
+		testCase(
+			test.testGate,
+			test.expectedConstraints,
+		)
+	}
 }
