@@ -20,5 +20,5 @@ func (e *EvaluationVars) GetLocalExtAlgebra(wireRange Range) QEAlgebra {
 		panic("Only degree 2 supported")
 	}
 
-	return QEAlgebra{e.localWires[wireRange.start], e.localWires[wireRange.end]}
+	return QEAlgebra{e.localWires[wireRange.start], e.localWires[wireRange.end-1]}
 }

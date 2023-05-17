@@ -43,7 +43,6 @@ func (g *ArithmeticExtensionGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVa
 	const1 := vars.localConstants[1]
 
 	constraints := []QuadraticExtension{}
-
 	for i := uint64(0); i < g.numOps; i++ {
 		multiplicand0 := vars.GetLocalExtAlgebra(g.wiresIthMultiplicand0(i))
 		multiplicand1 := vars.GetLocalExtAlgebra(g.wiresIthMultiplicand1(i))
