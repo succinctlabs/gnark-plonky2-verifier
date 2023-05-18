@@ -4,10 +4,10 @@ import (
 	. "gnark-plonky2-verifier/field"
 )
 
-type MerkleCap = []Hash
+type MerkleCap = []Hash // Length = 2^CircuitConfig.FriConfig.CapHeight
 
 type MerkleProof struct {
-	Siblings []Hash
+	Siblings []Hash // Length = CircuitConfig.FriConfig.DegreeBits + CircuitConfig.FriConfig.RateBits - CircuitConfig.FriConfig.CapHeight
 }
 
 type EvalProof struct {
@@ -34,20 +34,20 @@ type PolynomialCoeffs struct {
 }
 
 type FriProof struct {
-	CommitPhaseMerkleCaps []MerkleCap
-	QueryRoundProofs      []FriQueryRound
+	CommitPhaseMerkleCaps []MerkleCap     // Length = Len(CommonCircuitData.FriParams.ReductionArityBits)
+	QueryRoundProofs      []FriQueryRound // Length = CommonCircuitData.FriConfig.FriParams.NumQueryRounds
 	FinalPoly             PolynomialCoeffs
 	PowWitness            F
 }
 
 type OpeningSet struct {
-	Constants       []QuadraticExtension
-	PlonkSigmas     []QuadraticExtension
-	Wires           []QuadraticExtension
-	PlonkZs         []QuadraticExtension
-	PlonkZsNext     []QuadraticExtension
-	PartialProducts []QuadraticExtension
-	QuotientPolys   []QuadraticExtension
+	Constants       []QuadraticExtension // Length = CommonCircuitData.Constants
+	PlonkSigmas     []QuadraticExtension // Length = CommonCircuitData.NumRoutedWires
+	Wires           []QuadraticExtension // Length = CommonCircuitData.NumWires
+	PlonkZs         []QuadraticExtension // Length = CommonCircuitData.NumChallenges
+	PlonkZsNext     []QuadraticExtension // Length = CommonCircuitData.NumChallenges
+	PartialProducts []QuadraticExtension // Length = CommonCircuitData.NumChallenges * CommonCircuitData.NumPartialProducts
+	QuotientPolys   []QuadraticExtension // Length = CommonCircuitData.NumChallenges * CommonCircuitData.QuotientDegreeFactor
 }
 
 type Proof struct {
@@ -60,7 +60,7 @@ type Proof struct {
 
 type ProofWithPublicInputs struct {
 	Proof        Proof
-	PublicInputs []F
+	PublicInputs []F // Length = CommonCircuitData.NumPublicInputs
 }
 
 type VerifierOnlyCircuitData struct {
