@@ -35,6 +35,7 @@ func NewFieldAPI(api frontend.API) frontend.API {
 
 var ONE_F = NewFieldElement(1)
 var ZERO_F = NewFieldElement(0)
+var NEG_ONE_F = NewFieldElement(EmulatedField{}.Modulus().Uint64() - 1)
 
 var GOLDILOCKS_MULTIPLICATIVE_GROUP_GENERATOR = goldilocks.NewElement(7)
 var GOLDILOCKS_TWO_ADICITY = uint64(32)
@@ -48,6 +49,23 @@ func GoldilocksPrimitiveRootOfUnity(nLog uint64) goldilocks.Element {
 	res := goldilocks.NewElement(GOLDILOCKS_POWER_OF_TWO_GENERATOR.Uint64())
 	for i := 0; i < int(GOLDILOCKS_TWO_ADICITY-nLog); i++ {
 		res.Square(&res)
+	}
+
+	return res
+}
+
+func TwoAdicSubgroup(nLog uint64) []goldilocks.Element {
+	if nLog > GOLDILOCKS_TWO_ADICITY {
+		panic("nLog is greater than GOLDILOCKS_TWO_ADICITY")
+	}
+
+	var res []goldilocks.Element
+	rootOfUnity := GoldilocksPrimitiveRootOfUnity(nLog)
+	res = append(res, goldilocks.NewElement(1))
+
+	for i := 0; i < (1 << nLog); i++ {
+		lastElement := res[len(res)-1]
+		res = append(res, *lastElement.Mul(&lastElement, &rootOfUnity))
 	}
 
 	return res

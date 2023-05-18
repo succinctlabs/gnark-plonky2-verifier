@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/bits"
 
+	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/frontend"
 )
 
@@ -236,4 +237,43 @@ func (c *QuadraticExtensionAPI) SubExtensionAlgebra(a, b QEAlgebra) QEAlgebra {
 	}
 
 	return diff
+}
+
+func (c *QuadraticExtensionAPI) PartialInterpolateExtAlgebra(
+	domain []goldilocks.Element,
+	values []QEAlgebra,
+	barycentricWeights []goldilocks.Element,
+	point QEAlgebra,
+	initialEval QEAlgebra,
+	initialPartialProd QEAlgebra,
+) (QEAlgebra, QEAlgebra) {
+	n := len(values)
+	if n == 0 {
+		panic("Cannot interpolate with no values")
+	}
+	if n != len(domain) {
+		panic("Domain and values must have the same length")
+	}
+	if n != len(barycentricWeights) {
+		panic("Domain and barycentric weights must have the same length")
+	}
+
+	newEval := initialEval
+	newPartialProd := initialPartialProd
+	for i := 0; i < n; i++ {
+		val := values[i]
+		x := domain[i]
+		xField := NewFieldElement(x.Uint64())
+		xQE := QuadraticExtension{xField, ZERO_F}
+		xQEAlgebra := QEAlgebra{xQE, c.ZERO_QE}
+		weight := QuadraticExtension{NewFieldElement(barycentricWeights[i].Uint64()), ZERO_F}
+		term := c.SubExtensionAlgebra(point, xQEAlgebra)
+		weightedVal := c.ScalarMulExtensionAlgebra(weight, val)
+		newEval = c.MulExtensionAlgebra(newEval, term)
+		tmp := c.MulExtensionAlgebra(weightedVal, newPartialProd)
+		newEval = c.AddExtensionAlgebra(newEval, tmp)
+		newPartialProd = c.MulExtensionAlgebra(newPartialProd, term)
+	}
+
+	return newEval, newPartialProd
 }

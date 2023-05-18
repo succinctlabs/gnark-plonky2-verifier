@@ -3,15 +3,17 @@ package plonky2_verifier
 import (
 	"fmt"
 	. "gnark-plonky2-verifier/field"
+
+	"github.com/consensys/gnark-crypto/field/goldilocks"
 )
 
 type CosetInterpolationGate struct {
 	subgroupBits       uint64
 	degree             uint64
-	barycentricWeights []uint64
+	barycentricWeights []goldilocks.Element
 }
 
-func NewCosetInterpolationGate(subgroupBits uint64, degree uint64, barycentricWeights []uint64) *CosetInterpolationGate {
+func NewCosetInterpolationGate(subgroupBits uint64, degree uint64, barycentricWeights []goldilocks.Element) *CosetInterpolationGate {
 	return &CosetInterpolationGate{
 		subgroupBits:       subgroupBits,
 		degree:             degree,
@@ -75,10 +77,6 @@ func (g *CosetInterpolationGate) startIntermediates() uint64 {
 	return g.startEvaluationValue() + D
 }
 
-func (g *CosetInterpolationGate) numRoutedWires() uint64 {
-	return g.startIntermediates()
-}
-
 func (g *CosetInterpolationGate) numIntermediates() uint64 {
 	return (g.numPoints() - 2) / (g.degree - 1)
 }
@@ -101,11 +99,6 @@ func (g *CosetInterpolationGate) wiresIntermediateProd(i uint64) Range {
 	return Range{start, start + D}
 }
 
-// End of wire indices, exclusive.
-func (g *CosetInterpolationGate) end() uint64 {
-	return g.startIntermediates() + D*(2*g.numIntermediates()+1)
-}
-
 // Wire indices of the shifted point to evaluate the interpolant at.
 func (g *CosetInterpolationGate) wiresShiftedEvaluationPoint() Range {
 	start := g.startIntermediates() + D*2*g.numIntermediates()
@@ -114,5 +107,69 @@ func (g *CosetInterpolationGate) wiresShiftedEvaluationPoint() Range {
 
 func (g *CosetInterpolationGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []QuadraticExtension {
 	constraints := []QuadraticExtension{}
+
+	shift := vars.localWires[g.wireShift()]
+	evaluationPoint := vars.GetLocalExtAlgebra(g.wiresEvaluationPoint())
+	shiftedEvaluationPoint := vars.GetLocalExtAlgebra(g.wiresShiftedEvaluationPoint())
+
+	negShift := p.qeAPI.ScalarMulExtension(shift, NEG_ONE_F)
+
+	tmp := p.qeAPI.ScalarMulExtensionAlgebra(negShift, shiftedEvaluationPoint)
+	tmp = p.qeAPI.AddExtensionAlgebra(tmp, evaluationPoint)
+
+	for i := 0; i < D; i++ {
+		constraints = append(constraints, tmp[i])
+	}
+
+	domain := TwoAdicSubgroup(g.subgroupBits)
+	values := []QEAlgebra{}
+	for i := uint64(0); i < g.numPoints(); i++ {
+		values = append(values, vars.GetLocalExtAlgebra(g.wiresValue(i)))
+	}
+	weights := g.barycentricWeights
+
+	initialEval := p.qeAPI.ZERO_QE_ALGEBRA
+	initialProd := QEAlgebra{p.qeAPI.ONE_QE, p.qeAPI.ZERO_QE}
+	computedEval, computedProd := p.qeAPI.PartialInterpolateExtAlgebra(
+		domain[:g.degree],
+		values[:g.degree],
+		weights[:g.degree],
+		shiftedEvaluationPoint,
+		initialEval,
+		initialProd,
+	)
+
+	for i := uint64(0); i < g.numIntermediates(); i++ {
+		intermediateEval := vars.GetLocalExtAlgebra(g.wiresIntermediateEval(i))
+		intermediateProd := vars.GetLocalExtAlgebra(g.wiresIntermediateProd(i))
+
+		evalDiff := p.qeAPI.SubExtensionAlgebra(intermediateEval, computedEval)
+		for j := 0; j < D; j++ {
+			constraints = append(constraints, evalDiff[j])
+		}
+
+		prodDiff := p.qeAPI.SubExtensionAlgebra(intermediateProd, computedProd)
+		for j := 0; j < D; j++ {
+			constraints = append(constraints, prodDiff[j])
+		}
+
+		startIndex := 1 + (g.degree-1)*(i+1)
+		endIndex := startIndex + g.degree - 1
+		computedEval, computedProd = p.qeAPI.PartialInterpolateExtAlgebra(
+			domain[startIndex:endIndex],
+			values[startIndex:endIndex],
+			weights[startIndex:endIndex],
+			shiftedEvaluationPoint,
+			intermediateEval,
+			intermediateProd,
+		)
+	}
+
+	evaluationValue := vars.GetLocalExtAlgebra(g.wiresEvaluationValue())
+	evalDiff := p.qeAPI.SubExtensionAlgebra(evaluationValue, computedEval)
+	for j := 0; j < D; j++ {
+		constraints = append(constraints, evalDiff[j])
+	}
+
 	return constraints
 }
