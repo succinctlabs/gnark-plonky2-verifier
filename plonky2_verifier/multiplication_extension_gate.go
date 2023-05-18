@@ -44,7 +44,9 @@ func (g *MultiplicationExtensionGate) EvalUnfiltered(p *PlonkChip, vars Evaluati
 		computed_output := p.qeAPI.ScalarMulExtensionAlgebra(const0, mul)
 
 		diff := p.qeAPI.SubExtensionAlgebra(output, computed_output)
-		constraints = append(constraints, diff[0], diff[1])
+		for j := 0; j < D; j++ {
+			constraints = append(constraints, diff[j])
+		}
 	}
 
 	return constraints

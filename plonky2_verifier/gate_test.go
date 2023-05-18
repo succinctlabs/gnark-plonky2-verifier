@@ -769,6 +769,7 @@ func TestGates(t *testing.T) {
 		{&PoseidonGate{}, poseidonGateExpectedConstraints},
 		{&ArithmeticExtensionGate{numOps: 10}, arithmeticExtensionGateExpectedConstraints},
 		{&MultiplicationExtensionGate{numOps: 13}, mulExtensionGateExpectedConstraints},
+		{&ReducingExtensionGate{numCoeffs: 33}, reducingExtensionGateExpectedConstraints},
 	}
 
 	for _, test := range gateTests {

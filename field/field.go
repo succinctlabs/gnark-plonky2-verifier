@@ -7,13 +7,13 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 )
 
+const D = 2
+
 type EmulatedField = emulated.Goldilocks
 type F = emulated.Element[EmulatedField]
 type QuadraticExtension = [2]F
-type QEAlgebra = [2]QuadraticExtension
+type QEAlgebra = [D]QuadraticExtension
 type Hash = [4]F
-
-const D = 2
 
 var TEST_CURVE = ecc.BN254
 
