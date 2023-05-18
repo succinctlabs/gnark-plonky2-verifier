@@ -13,6 +13,8 @@ type QuadraticExtension = [2]F
 type QEAlgebra = [2]QuadraticExtension
 type Hash = [4]F
 
+const D = 2
+
 var TEST_CURVE = ecc.BN254
 
 func NewFieldElement(x uint64) F {

@@ -5,9 +5,6 @@ import (
 	. "gnark-plonky2-verifier/field"
 )
 
-// Ideally, this should be serialized in the plonky2 repo
-const d = 2
-
 type ArithmeticExtensionGate struct {
 	numOps uint64
 }
@@ -23,19 +20,19 @@ func (g *ArithmeticExtensionGate) Id() string {
 }
 
 func (g *ArithmeticExtensionGate) wiresIthMultiplicand0(i uint64) Range {
-	return Range{4 * d * i, 4*d*i + d}
+	return Range{4 * D * i, 4*D*i + D}
 }
 
 func (g *ArithmeticExtensionGate) wiresIthMultiplicand1(i uint64) Range {
-	return Range{4*d*i + d, 4*d*i + 2*d}
+	return Range{4*D*i + D, 4*D*i + 2*D}
 }
 
 func (g *ArithmeticExtensionGate) wiresIthAddend(i uint64) Range {
-	return Range{4*d*i + 2*d, 4*d*i + 3*d}
+	return Range{4*D*i + 2*D, 4*D*i + 3*D}
 }
 
 func (g *ArithmeticExtensionGate) wiresIthOutput(i uint64) Range {
-	return Range{4*d*i + 3*d, 4*d*i + 4*d}
+	return Range{4*D*i + 3*D, 4*D*i + 4*D}
 }
 
 func (g *ArithmeticExtensionGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []QuadraticExtension {
