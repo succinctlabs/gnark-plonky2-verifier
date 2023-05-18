@@ -158,6 +158,24 @@ func GateInstanceFromId(gateId string) gate {
 		return NewReducingGate(uint64(numCoeffs))
 	}
 
+	if strings.HasPrefix(gateId, "ExponentiationGate") {
+		// Has the format "ExponentiationGate { num_power_bits: 67, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>"
+
+		regEx := "ExponentiationGate { num_power_bits: (?P<numPowerBits>[0-9]+), _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=(?P<base>[0-9]+)>"
+		r, err := regexp.Compile(regEx)
+		if err != nil {
+			panic("Invalid ExponentiationGate regular expression")
+		}
+
+		matches := getRegExMatches(r, gateId)
+		numPowerBits, hasNumPowerBits := matches["numPowerBits"]
+		if !hasNumPowerBits {
+			panic("Invalid ExponentiationGate ID")
+		}
+
+		return NewExponentiationGate(uint64(numPowerBits))
+	}
+
 	return nil
 	//panic(fmt.Sprintf("Unknown gate ID %s", gateId))
 }
