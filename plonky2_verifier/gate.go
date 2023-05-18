@@ -104,6 +104,24 @@ func GateInstanceFromId(gateId string) gate {
 		return NewArithmeticExtensionGate(uint64(numOps))
 	}
 
+	if strings.HasPrefix(gateId, "MultiplicationExtension") {
+		// Has the format "ArithmeticExtensionGate { num_ops: 10 }"
+
+		regEx := "MultiplicationExtension { num_ops: (?P<numOps>[0-9]+) }"
+		r, err := regexp.Compile(regEx)
+		if err != nil {
+			panic("Invalid MultiplicationExtension regular expression")
+		}
+
+		matches := getRegExMatches(r, gateId)
+		numOps, hasNumOps := matches["numOps"]
+		if !hasNumOps {
+			panic("Invalid MultiplicationExtension ID")
+		}
+
+		return NewMultiplicationExtensionGate(uint64(numOps))
+	}
+
 	return nil
 	//panic(fmt.Sprintf("Unknown gate ID %s", gateId))
 }

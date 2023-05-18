@@ -177,21 +177,21 @@ func (c *QuadraticExtensionAPI) Println(a QuadraticExtension) {
 }
 
 func (c *QuadraticExtensionAPI) MulExtensionAlgebra(a, b QEAlgebra) QEAlgebra {
-	var inner [2][][2]QuadraticExtension
-	var inner_w [2][][2]QuadraticExtension
-	for i := 0; i < 2; i++ {
-		for j := 0; j < 2-i; j++ {
-			idx := (i + j) % 2
+	var inner [D][][2]QuadraticExtension
+	var inner_w [D][][2]QuadraticExtension
+	for i := 0; i < D; i++ {
+		for j := 0; j < D-i; j++ {
+			idx := (i + j) % D
 			inner[idx] = append(inner[idx], [2]QuadraticExtension{a[i], b[j]})
 		}
-		for j := 2 - i; j < 2; j++ {
-			idx := (i + j) % 2
+		for j := D - i; j < D; j++ {
+			idx := (i + j) % D
 			inner_w[idx] = append(inner_w[idx], [2]QuadraticExtension{a[i], b[j]})
 		}
 	}
 
 	var product QEAlgebra
-	for i := 0; i < 2; i++ {
+	for i := 0; i < D; i++ {
 		acc := c.InnerProductExtension(NewFieldElement(7), c.ZERO_QE, inner_w[i])
 		product[i] = c.InnerProductExtension(ONE_F, acc, inner[i])
 	}
@@ -201,7 +201,7 @@ func (c *QuadraticExtensionAPI) MulExtensionAlgebra(a, b QEAlgebra) QEAlgebra {
 
 func (c *QuadraticExtensionAPI) ScalarMulExtensionAlgebra(a QuadraticExtension, b QEAlgebra) QEAlgebra {
 	var product QEAlgebra
-	for i := 0; i < 2; i++ {
+	for i := 0; i < D; i++ {
 		product[i] = c.MulExtension(a, b[i])
 	}
 
@@ -210,7 +210,7 @@ func (c *QuadraticExtensionAPI) ScalarMulExtensionAlgebra(a QuadraticExtension, 
 
 func (c *QuadraticExtensionAPI) AddExtensionAlgebra(a, b QEAlgebra) QEAlgebra {
 	var sum QEAlgebra
-	for i := 0; i < 2; i++ {
+	for i := 0; i < D; i++ {
 		sum[i] = c.AddExtension(a[i], b[i])
 	}
 
@@ -219,7 +219,7 @@ func (c *QuadraticExtensionAPI) AddExtensionAlgebra(a, b QEAlgebra) QEAlgebra {
 
 func (c *QuadraticExtensionAPI) SubExtensionAlgebra(a, b QEAlgebra) QEAlgebra {
 	var diff QEAlgebra
-	for i := 0; i < 2; i++ {
+	for i := 0; i < D; i++ {
 		diff[i] = c.SubExtension(a[i], b[i])
 	}
 
