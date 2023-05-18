@@ -140,6 +140,24 @@ func GateInstanceFromId(gateId string) gate {
 		return NewReducingExtensionGate(uint64(numCoeffs))
 	}
 
+	if strings.HasPrefix(gateId, "ReducingGate") {
+		// Has the format "ReducingGate { num_coeffs: 33 }"
+
+		regEx := "ReducingGate { num_coeffs: (?P<numCoeffs>[0-9]+) }"
+		r, err := regexp.Compile(regEx)
+		if err != nil {
+			panic("Invalid ReducingGate regular expression")
+		}
+
+		matches := getRegExMatches(r, gateId)
+		numCoeffs, hasNumCoeffs := matches["numCoeffs"]
+		if !hasNumCoeffs {
+			panic("Invalid ReducingGate ID")
+		}
+
+		return NewReducingGate(uint64(numCoeffs))
+	}
+
 	return nil
 	//panic(fmt.Sprintf("Unknown gate ID %s", gateId))
 }

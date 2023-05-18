@@ -15,10 +15,20 @@ type QuadraticExtensionAPI struct {
 
 	ONE_QE  QuadraticExtension
 	ZERO_QE QuadraticExtension
+
+	ZERO_QE_ALGEBRA QEAlgebra
 }
 
 func NewQuadraticExtensionAPI(fieldAPI frontend.API, degreeBits uint64) *QuadraticExtensionAPI {
 	// TODO:  Should degreeBits be verified that it fits within the field and that degree is within uint64?
+
+	var ZERO_QE = QuadraticExtension{ZERO_F, ZERO_F}
+
+	var ZERO_QE_ALGEBRA QEAlgebra
+
+	for i := 0; i < D; i++ {
+		ZERO_QE_ALGEBRA[i] = ZERO_QE
+	}
 
 	return &QuadraticExtensionAPI{
 		fieldAPI: fieldAPI,
@@ -27,7 +37,9 @@ func NewQuadraticExtensionAPI(fieldAPI frontend.API, degreeBits uint64) *Quadrat
 		DTH_ROOT: NewFieldElement(18446744069414584320),
 
 		ONE_QE:  QuadraticExtension{ONE_F, ZERO_F},
-		ZERO_QE: QuadraticExtension{ZERO_F, ZERO_F},
+		ZERO_QE: ZERO_QE,
+
+		ZERO_QE_ALGEBRA: ZERO_QE_ALGEBRA,
 	}
 }
 
