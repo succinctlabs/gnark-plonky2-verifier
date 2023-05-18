@@ -16,9 +16,14 @@ func (e *EvaluationVars) RemovePrefix(numSelectors uint64) {
 
 func (e *EvaluationVars) GetLocalExtAlgebra(wireRange Range) QEAlgebra {
 	// For now, only support degree 2
-	if wireRange.end-wireRange.start != 2 {
-		panic("Only degree 2 supported")
+	if wireRange.end-wireRange.start != D {
+		panic("Range must be of size D")
 	}
 
-	return QEAlgebra{e.localWires[wireRange.start], e.localWires[wireRange.end-1]}
+	var ret QEAlgebra
+	for i := wireRange.start; i < wireRange.end; i++ {
+		ret[i-wireRange.start] = e.localWires[i]
+	}
+
+	return ret
 }
