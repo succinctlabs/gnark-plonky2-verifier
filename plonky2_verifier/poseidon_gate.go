@@ -3,7 +3,15 @@ package plonky2_verifier
 import (
 	. "gnark-plonky2-verifier/field"
 	"gnark-plonky2-verifier/poseidon"
+	"regexp"
 )
+
+var poseidonGateRegex = regexp.MustCompile("PoseidonGate.*")
+
+func deserializePoseidonGate(parameters map[string]string) gate {
+	// Has the format "PoseidonGate(PhantomData<plonky2_field::goldilocks_field::GoldilocksField>)<WIDTH=12>"
+	return NewPoseidonGate()
+}
 
 type PoseidonGate struct {
 }

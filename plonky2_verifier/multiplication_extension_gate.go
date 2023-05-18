@@ -3,7 +3,26 @@ package plonky2_verifier
 import (
 	"fmt"
 	. "gnark-plonky2-verifier/field"
+	"regexp"
+	"strconv"
 )
+
+var mulExtensionGateRegex = regexp.MustCompile("MulExtensionGate { num_ops: (?P<numOps>[0-9]+) }")
+
+func deserializeMulExtensionGate(parameters map[string]string) gate {
+	// Has the format "MulExtensionGate { num_ops: 13 }"
+	numOps, hasNumOps := parameters["numOps"]
+	if !hasNumOps {
+		panic("Missing field num_ops in MulExtensionGate")
+	}
+
+	numOpsInt, err := strconv.Atoi(numOps)
+	if err != nil {
+		panic("Invalid num_ops field in MulExtensionGate")
+	}
+
+	return NewMultiplicationExtensionGate(uint64(numOpsInt))
+}
 
 type MultiplicationExtensionGate struct {
 	numOps uint64
