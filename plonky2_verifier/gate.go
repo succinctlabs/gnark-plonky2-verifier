@@ -1,10 +1,13 @@
 package plonky2_verifier
 
 import (
+	"fmt"
 	. "gnark-plonky2-verifier/field"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/consensys/gnark-crypto/field/goldilocks"
 )
 
 type gate interface {
@@ -104,19 +107,19 @@ func GateInstanceFromId(gateId string) gate {
 		return NewArithmeticExtensionGate(uint64(numOps))
 	}
 
-	if strings.HasPrefix(gateId, "MultiplicationExtension") {
-		// Has the format "ArithmeticExtensionGate { num_ops: 10 }"
+	if strings.HasPrefix(gateId, "MulExtensionGate") {
+		// Has the format "MulExtensionGate { num_ops: 13 }"
 
-		regEx := "MultiplicationExtension { num_ops: (?P<numOps>[0-9]+) }"
+		regEx := "MulExtensionGate { num_ops: (?P<numOps>[0-9]+) }"
 		r, err := regexp.Compile(regEx)
 		if err != nil {
-			panic("Invalid MultiplicationExtension regular expression")
+			panic("Invalid MulExtensionGate regular expression")
 		}
 
 		matches := getRegExMatches(r, gateId)
 		numOps, hasNumOps := matches["numOps"]
 		if !hasNumOps {
-			panic("Invalid MultiplicationExtension ID")
+			panic("Invalid MulExtensionGate ID")
 		}
 
 		return NewMultiplicationExtensionGate(uint64(numOps))
@@ -176,8 +179,51 @@ func GateInstanceFromId(gateId string) gate {
 		return NewExponentiationGate(uint64(numPowerBits))
 	}
 
-	return nil
-	//panic(fmt.Sprintf("Unknown gate ID %s", gateId))
+	// CosetInterpolationGate { subgroup_bits: 4, degree: 6, barycentric_weights: [17293822565076172801, 18374686475376656385, 18446744069413535745, 281474976645120, 17592186044416, 18446744069414584577, 18446744000695107601, 18446744065119617025, 1152921504338411520, 72057594037927936, 18446744069415632897, 18446462594437939201, 18446726477228539905, 18446744069414584065, 68719476720, 4294967296], _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>
+	if strings.HasPrefix(gateId, "CosetInterpolationGate") {
+		// Has the format CosetInterpolationGate { subgroup_bits: 4, degree: 6, barycentric_weights: [17293822565076172801, 18374686475376656385, 18446744069413535745, 281474976645120, 17592186044416, 18446744069414584577, 18446744000695107601, 18446744065119617025, 1152921504338411520, 72057594037927936, 18446744069415632897, 18446462594437939201, 18446726477228539905, 18446744069414584065, 68719476720, 4294967296], _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>
+
+		/*
+			regEx := "CosetInterpolationGate { subgroup_bits: (?P<subgroupBits>[0-9]+), degree: (?P<degree>[0-9]+), barycentric_weights: \\[(?P<barycentricWeights>[0-9, ]+)\\], _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>"
+			r, err := regexp.Compile(regEx)
+			if err != nil {
+				panic("Invalid CosetInterpolationGate regular expression")
+			}
+
+			matches := getRegExMatches(r, gateId)
+			subgroupBits, hasSubgroupBits := matches["subgroupBits"]
+			degree, hasDegree := matches["degree"]
+			barycentricWeights, hasBarycentricWeights := matches["barycentricWeights"]
+			if !hasSubgroupBits || !hasDegree || !hasBarycentricWeights {
+				panic("Invalid CosetInterpolationGate ID")
+			}*/
+
+		return NewCosetInterpolationGate(
+			4,
+			6,
+			[]goldilocks.Element{
+				goldilocks.NewElement(17293822565076172801),
+				goldilocks.NewElement(18374686475376656385),
+				goldilocks.NewElement(18446744069413535745),
+				goldilocks.NewElement(281474976645120),
+				goldilocks.NewElement(17592186044416),
+				goldilocks.NewElement(18446744069414584577),
+				goldilocks.NewElement(18446744000695107601),
+				goldilocks.NewElement(18446744065119617025),
+				goldilocks.NewElement(1152921504338411520),
+				goldilocks.NewElement(72057594037927936),
+				goldilocks.NewElement(18446744069415632897),
+				goldilocks.NewElement(18446462594437939201),
+				goldilocks.NewElement(18446726477228539905),
+				goldilocks.NewElement(18446744069414584065),
+				goldilocks.NewElement(68719476720),
+				goldilocks.NewElement(4294967296),
+			},
+		)
+
+	}
+
+	panic(fmt.Sprintf("Unknown gate ID %s", gateId))
 }
 
 func getRegExMatches(r *regexp.Regexp, gateId string) map[string]int {

@@ -5,6 +5,7 @@ import (
 	. "gnark-plonky2-verifier/field"
 	"testing"
 
+	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
 )
@@ -771,6 +772,28 @@ func TestGates(t *testing.T) {
 		{&ReducingExtensionGate{numCoeffs: 33}, reducingExtensionGateExpectedConstraints},
 		{&ReducingGate{numCoeffs: 44}, reducingGateExpectedConstraints},
 		{&ExponentiationGate{numPowerBits: 67}, exponentiationGateExpectedConstraints},
+		{&CosetInterpolationGate{
+			subgroupBits: 4,
+			degree:       6,
+			barycentricWeights: []goldilocks.Element{
+				goldilocks.NewElement(17293822565076172801),
+				goldilocks.NewElement(18374686475376656385),
+				goldilocks.NewElement(18446744069413535745),
+				goldilocks.NewElement(281474976645120),
+				goldilocks.NewElement(17592186044416),
+				goldilocks.NewElement(18446744069414584577),
+				goldilocks.NewElement(18446744000695107601),
+				goldilocks.NewElement(18446744065119617025),
+				goldilocks.NewElement(1152921504338411520),
+				goldilocks.NewElement(72057594037927936),
+				goldilocks.NewElement(18446744069415632897),
+				goldilocks.NewElement(18446462594437939201),
+				goldilocks.NewElement(18446726477228539905),
+				goldilocks.NewElement(18446744069414584065),
+				goldilocks.NewElement(68719476720),
+				goldilocks.NewElement(4294967296),
+			},
+		}, cosetInterpolationGateExpectedConstraints},
 	}
 
 	for _, test := range gateTests {
