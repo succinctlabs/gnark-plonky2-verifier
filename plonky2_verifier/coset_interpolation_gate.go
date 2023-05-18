@@ -3,9 +3,48 @@ package plonky2_verifier
 import (
 	"fmt"
 	. "gnark-plonky2-verifier/field"
+	"regexp"
+	"strconv"
+	"strings"
 
 	"github.com/consensys/gnark-crypto/field/goldilocks"
 )
+
+var cosetInterpolationGateRegex = regexp.MustCompile("CosetInterpolationGate { subgroup_bits: (?P<subgroupBits>[0-9]+), degree: (?P<degree>[0-9]+), barycentric_weights: \\[(?P<barycentricWeights>[0-9, ]+)\\], _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>")
+
+func deserializeCosetInterpolationGate(parameters map[string]string) gate {
+	// Has the format CosetInterpolationGate { subgroup_bits: 4, degree: 6, barycentric_weights: [17293822565076172801, 18374686475376656385, 18446744069413535745, 281474976645120, 17592186044416, 18446744069414584577, 18446744000695107601, 18446744065119617025, 1152921504338411520, 72057594037927936, 18446744069415632897, 18446462594437939201, 18446726477228539905, 18446744069414584065, 68719476720, 4294967296], _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>
+	subgroupBits, hasSubgroupBits := parameters["subgroupBits"]
+	degree, hasDegree := parameters["degree"]
+	barycentricWeights, hasBarycentricWeights := parameters["barycentricWeights"]
+
+	if !hasSubgroupBits || !hasDegree || !hasBarycentricWeights {
+		panic("missing subgroupBits, degree or barycentricWeights in CosetInterpolationGate")
+	}
+
+	subgroupBitsInt, err := strconv.ParseUint(subgroupBits, 10, 64)
+	if err != nil {
+		panic("invalid subgroupBits in CosetInterpolationGate")
+	}
+
+	degreeInt, err := strconv.ParseUint(degree, 10, 64)
+	if err != nil {
+		panic("invalid degree in CosetInterpolationGate")
+	}
+
+	barycentricWeightsStr := strings.Split(barycentricWeights, ",")
+	barycentricWeightsInt := make([]goldilocks.Element, len(barycentricWeightsStr))
+	for i, barycentricWeightStr := range barycentricWeightsStr {
+		barycentricWeightStr = strings.TrimSpace(barycentricWeightStr)
+		barycentricWeightInt, err := strconv.ParseUint(barycentricWeightStr, 10, 64)
+		if err != nil {
+			panic("invalid barycentricWeights in CosetInterpolationGate")
+		}
+		barycentricWeightsInt[i].SetUint64(barycentricWeightInt)
+	}
+
+	return NewCosetInterpolationGate(subgroupBitsInt, degreeInt, barycentricWeightsInt)
+}
 
 type CosetInterpolationGate struct {
 	subgroupBits       uint64
