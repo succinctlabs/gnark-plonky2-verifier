@@ -415,7 +415,6 @@ var poseidonGateExpectedConstraints = []QuadraticExtension{
 	{NewFieldElement(3134481789780853760), NewFieldElement(10023938129020275945)},
 }
 
-// ReducingExtensionGate { num_coeffs: 33 }
 var reducingExtensionGateExpectedConstraints = []QuadraticExtension{
 	{NewFieldElement(12512260201049243975), NewFieldElement(5104620179714279781)},
 	{NewFieldElement(13013016297591764071), NewFieldElement(3905565448987160512)},
@@ -770,6 +769,7 @@ func TestGates(t *testing.T) {
 		{&ArithmeticExtensionGate{numOps: 10}, arithmeticExtensionGateExpectedConstraints},
 		{&MultiplicationExtensionGate{numOps: 13}, mulExtensionGateExpectedConstraints},
 		{&ReducingExtensionGate{numCoeffs: 33}, reducingExtensionGateExpectedConstraints},
+		{&ReducingGate{numCoeffs: 44}, reducingGateExpectedConstraints},
 	}
 
 	for _, test := range gateTests {
