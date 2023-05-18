@@ -770,6 +770,7 @@ func TestGates(t *testing.T) {
 		{&MultiplicationExtensionGate{numOps: 13}, mulExtensionGateExpectedConstraints},
 		{&ReducingExtensionGate{numCoeffs: 33}, reducingExtensionGateExpectedConstraints},
 		{&ReducingGate{numCoeffs: 44}, reducingGateExpectedConstraints},
+		{&ExponentiationGate{numPowerBits: 67}, exponentiationGateExpectedConstraints},
 	}
 
 	for _, test := range gateTests {
