@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/field"
 	. "gnark-plonky2-verifier/plonky2_verifier"
 	"gnark-plonky2-verifier/poseidon"
 	"os"
@@ -28,8 +28,8 @@ func (circuit *BenchmarkPlonky2VerifierCircuit) Define(api frontend.API) error {
 	commonCircuitData := DeserializeCommonCircuitData(circuitDirname + "common_circuit_data.json")
 	verifierOnlyCircuitData := DeserializeVerifierOnlyCircuitData(circuitDirname + "verifier_only_circuit_data.json")
 
-	fieldAPI := NewFieldAPI(api)
-	qeAPI := NewQuadraticExtensionAPI(fieldAPI, commonCircuitData.DegreeBits)
+	fieldAPI := field.NewFieldAPI(api)
+	qeAPI := field.NewQuadraticExtensionAPI(fieldAPI, commonCircuitData.DegreeBits)
 	hashAPI := NewHashAPI(fieldAPI)
 	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
 	friChip := NewFriChip(api, fieldAPI, qeAPI, hashAPI, poseidonChip, &commonCircuitData.FriParams)
