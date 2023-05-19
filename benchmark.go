@@ -30,7 +30,7 @@ func (circuit *BenchmarkPlonky2VerifierCircuit) Define(api frontend.API) error {
 
 	fieldAPI := field.NewFieldAPI(api)
 	qeAPI := field.NewQuadraticExtensionAPI(fieldAPI, commonCircuitData.DegreeBits)
-	hashAPI := NewHashAPI(fieldAPI)
+	hashAPI := poseidon.NewHashAPI(fieldAPI)
 	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
 	friChip := NewFriChip(api, fieldAPI, qeAPI, hashAPI, poseidonChip, &commonCircuitData.FriParams)
 	plonkChip := NewPlonkChip(api, qeAPI, commonCircuitData)

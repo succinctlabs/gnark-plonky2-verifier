@@ -1,7 +1,7 @@
 package plonky2_verifier
 
 import (
-	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/field"
 	"gnark-plonky2-verifier/poseidon"
 	"testing"
 
@@ -20,9 +20,9 @@ func (circuit *TestPlonkCircuit) Define(api frontend.API) error {
 	commonCircuitData := DeserializeCommonCircuitData(circuit.commonCircuitDataFilename)
 	verifierOnlyCircuitData := DeserializeVerifierOnlyCircuitData(circuit.verifierOnlyCircuitDataFilename)
 
-	fieldAPI := NewFieldAPI(api)
-	qeAPI := NewQuadraticExtensionAPI(fieldAPI, commonCircuitData.DegreeBits)
-	hashAPI := NewHashAPI(fieldAPI)
+	fieldAPI := field.NewFieldAPI(api)
+	qeAPI := field.NewQuadraticExtensionAPI(fieldAPI, commonCircuitData.DegreeBits)
+	hashAPI := poseidon.NewHashAPI(fieldAPI)
 	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
 	friChip := NewFriChip(api, fieldAPI, qeAPI, hashAPI, poseidonChip, &commonCircuitData.FriParams)
 	plonkChip := NewPlonkChip(api, qeAPI, commonCircuitData)
@@ -45,7 +45,7 @@ func TestPlonkFibonacci(t *testing.T) {
 			verifierOnlyCircuitDataFilename: "./data/fibonacci/verifier_only_circuit_data.json",
 		}
 		witness := TestPlonkCircuit{}
-		err := test.IsSolved(&circuit, &witness, TEST_CURVE.ScalarField())
+		err := test.IsSolved(&circuit, &witness, field.TEST_CURVE.ScalarField())
 		assert.NoError(err)
 	}
 
@@ -62,7 +62,7 @@ func TestPlonkDummy(t *testing.T) {
 			verifierOnlyCircuitDataFilename: "./data/dummy_2^14_gates/verifier_only_circuit_data.json",
 		}
 		witness := TestPlonkCircuit{}
-		err := test.IsSolved(&circuit, &witness, TEST_CURVE.ScalarField())
+		err := test.IsSolved(&circuit, &witness, field.TEST_CURVE.ScalarField())
 		assert.NoError(err)
 	}
 

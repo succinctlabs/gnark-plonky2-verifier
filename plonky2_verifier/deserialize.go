@@ -3,6 +3,7 @@ package plonky2_verifier
 import (
 	"encoding/json"
 	"gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/poseidon"
 	"gnark-plonky2-verifier/utils"
 	"io"
 	"os"
@@ -170,7 +171,7 @@ type VerifierOnlyCircuitDataRaw struct {
 
 func DeserializeMerkleCap(merkleCapRaw []struct{ Elements []uint64 }) MerkleCap {
 	n := len(merkleCapRaw)
-	merkleCap := make([]field.Hash, n)
+	merkleCap := make([]poseidon.Hash, n)
 	for i := 0; i < n; i++ {
 		copy(merkleCap[i][:], utils.Uint64ArrayToFArray(merkleCapRaw[i].Elements))
 	}
@@ -180,7 +181,7 @@ func DeserializeMerkleCap(merkleCapRaw []struct{ Elements []uint64 }) MerkleCap 
 func DeserializeMerkleProof(merkleProofRaw struct{ Siblings []interface{} }) MerkleProof {
 	n := len(merkleProofRaw.Siblings)
 	var mp MerkleProof
-	mp.Siblings = make([]field.Hash, n)
+	mp.Siblings = make([]poseidon.Hash, n)
 	for i := 0; i < n; i++ {
 		element := merkleProofRaw.Siblings[i].(struct{ Elements []uint64 })
 		copy(mp.Siblings[i][:], utils.Uint64ArrayToFArray(element.Elements))
@@ -230,7 +231,7 @@ func DeserializeFriProof(openingProofRaw struct {
 
 	openingProof.CommitPhaseMerkleCaps = make([]MerkleCap, len(openingProofRaw.CommitPhaseMerkleCaps))
 	for i := 0; i < len(openingProofRaw.CommitPhaseMerkleCaps); i++ {
-		openingProof.CommitPhaseMerkleCaps[i] = utils.Uint64ArrayToHashArray(openingProofRaw.CommitPhaseMerkleCaps[i].hashes)
+		openingProof.CommitPhaseMerkleCaps[i] = poseidon.Uint64ArrayToHashArray(openingProofRaw.CommitPhaseMerkleCaps[i].hashes)
 	}
 
 	numQueryRoundProofs := len(openingProofRaw.QueryRoundProofs)
@@ -241,14 +242,14 @@ func DeserializeFriProof(openingProofRaw struct {
 		openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs = make([]EvalProof, numEvalProofs)
 		for j := 0; j < numEvalProofs; j++ {
 			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].Elements = utils.Uint64ArrayToFArray(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].leafElements)
-			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Siblings = utils.Uint64ArrayToHashArray(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].merkleProof.hash)
+			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Siblings = poseidon.Uint64ArrayToHashArray(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].merkleProof.hash)
 		}
 
 		numSteps := len(openingProofRaw.QueryRoundProofs[i].Steps)
 		openingProof.QueryRoundProofs[i].Steps = make([]FriQueryStep, numSteps)
 		for j := 0; j < numSteps; j++ {
 			openingProof.QueryRoundProofs[i].Steps[j].Evals = utils.Uint64ArrayToQuadraticExtensionArray(openingProofRaw.QueryRoundProofs[i].Steps[j].Evals)
-			openingProof.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings = utils.Uint64ArrayToHashArray(openingProofRaw.QueryRoundProofs[i].Steps[j].MerkleProof.hash)
+			openingProof.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings = poseidon.Uint64ArrayToHashArray(openingProofRaw.QueryRoundProofs[i].Steps[j].MerkleProof.hash)
 		}
 	}
 

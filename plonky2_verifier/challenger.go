@@ -50,11 +50,11 @@ func (c *ChallengerChip) ObserveElements(elements []field.F) {
 	}
 }
 
-func (c *ChallengerChip) ObserveHash(hash field.Hash) {
+func (c *ChallengerChip) ObserveHash(hash poseidon.Hash) {
 	c.ObserveElements(hash[:])
 }
 
-func (c *ChallengerChip) ObserveCap(cap []field.Hash) {
+func (c *ChallengerChip) ObserveCap(cap []poseidon.Hash) {
 	for i := 0; i < len(cap); i++ {
 		c.ObserveHash(cap[i])
 	}
@@ -100,7 +100,7 @@ func (c *ChallengerChip) GetExtensionChallenge() field.QuadraticExtension {
 	return field.QuadraticExtension{values[0], values[1]}
 }
 
-func (c *ChallengerChip) GetHash() field.Hash {
+func (c *ChallengerChip) GetHash() poseidon.Hash {
 	return [4]field.F{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
 }
 
@@ -137,6 +137,7 @@ func (c *ChallengerChip) duplexing() {
 		fmt.Println(len(c.inputBuffer))
 		panic("something went wrong")
 	}
+
 	for i := 0; i < len(c.inputBuffer); i++ {
 		c.spongeState[i] = c.inputBuffer[i]
 	}

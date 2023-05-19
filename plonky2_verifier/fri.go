@@ -16,7 +16,7 @@ type FriChip struct {
 	api      frontend.API                 `gnark:"-"`
 	fieldAPI frontend.API                 `gnark:"-"`
 	qeAPI    *field.QuadraticExtensionAPI `gnark:"-"`
-	hashAPI  *HashAPI                     `gnark:"-"`
+	hashAPI  *poseidon.HashAPI            `gnark:"-"`
 
 	poseidonChip *poseidon.PoseidonChip
 
@@ -27,7 +27,7 @@ func NewFriChip(
 	api frontend.API,
 	fieldAPI frontend.API,
 	qeAPI *field.QuadraticExtensionAPI,
-	hashAPI *HashAPI,
+	hashAPI *poseidon.HashAPI,
 	poseidonChip *poseidon.PoseidonChip,
 	friParams *FriParams,
 ) *FriChip {
@@ -61,8 +61,8 @@ func (f *FriChip) fromOpeningsAndAlpha(openings *FriOpenings, alpha field.Quadra
 	return reducedOpenings
 }
 
-func (f *FriChip) hashOrNoop(data []field.F) field.Hash {
-	var elements field.Hash
+func (f *FriChip) hashOrNoop(data []field.F) poseidon.Hash {
+	var elements poseidon.Hash
 	if len(data) <= 4 {
 		// Pad the data to have a size of 4
 		for i, inputElement := range data {
@@ -101,7 +101,7 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []field.F, leafInd
 
 		leftHash := f.poseidonChip.Poseidon(leftSiblingState)
 
-		var leftHashCompress field.Hash
+		var leftHashCompress poseidon.Hash
 		leftHashCompress[0] = leftHash[0]
 		leftHashCompress[1] = leftHash[1]
 		leftHashCompress[2] = leftHash[2]
@@ -114,7 +114,7 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []field.F, leafInd
 
 		rightHash := f.poseidonChip.Poseidon(rightSiblingState)
 
-		var rightHashCompress field.Hash
+		var rightHashCompress poseidon.Hash
 		rightHashCompress[0] = rightHash[0]
 		rightHashCompress[1] = rightHash[1]
 		rightHashCompress[2] = rightHash[2]
@@ -134,7 +134,7 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []field.F, leafInd
 	}
 
 	const NUM_LEAF_LOOKUPS = 4
-	var leafLookups [NUM_LEAF_LOOKUPS]field.Hash
+	var leafLookups [NUM_LEAF_LOOKUPS]poseidon.Hash
 	// First create the "leaf" lookup2 circuits
 	// The will use the least significant bits of the capIndexBits array
 	for i := 0; i < NUM_LEAF_LOOKUPS; i++ {

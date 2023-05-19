@@ -3,6 +3,7 @@ package plonky2_verifier
 import (
 	"errors"
 	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/poseidon"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/field/goldilocks"
@@ -158,7 +159,7 @@ var localWires = []QuadraticExtension{
 	{NewFieldElement(5102771513133979026), NewFieldElement(12570336536575987923)},
 }
 
-var publicInputsHash = Hash{ZERO_F, ZERO_F, ZERO_F, ZERO_F}
+var publicInputsHash = poseidon.Hash{ZERO_F, ZERO_F, ZERO_F, ZERO_F}
 
 var publicInputGateExpectedConstraints = []QuadraticExtension{
 	{NewFieldElement(10289971018233574142), NewFieldElement(4567684908222573778)},

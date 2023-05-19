@@ -1,11 +1,14 @@
 package plonky2_verifier
 
-import "gnark-plonky2-verifier/field"
+import (
+	"gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/poseidon"
+)
 
-type MerkleCap = []field.Hash
+type MerkleCap = []poseidon.Hash
 
 type MerkleProof struct {
-	Siblings []field.Hash
+	Siblings []poseidon.Hash
 }
 
 type EvalProof struct {
@@ -63,7 +66,7 @@ type ProofWithPublicInputs struct {
 
 type VerifierOnlyCircuitData struct {
 	ConstantSigmasCap MerkleCap
-	CircuitDigest     field.Hash
+	CircuitDigest     poseidon.Hash
 }
 
 type FriConfig struct {

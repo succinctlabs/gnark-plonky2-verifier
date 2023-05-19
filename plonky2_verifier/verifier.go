@@ -27,11 +27,11 @@ func NewVerifierChip(api frontend.API, fieldAPI frontend.API, qeAPI *field.Quadr
 	}
 }
 
-func (c *VerifierChip) GetPublicInputsHash(publicInputs []field.F) field.Hash {
+func (c *VerifierChip) GetPublicInputsHash(publicInputs []field.F) poseidon.Hash {
 	return c.poseidonChip.HashNoPad(publicInputs)
 }
 
-func (c *VerifierChip) GetChallenges(proofWithPis ProofWithPublicInputs, publicInputsHash field.Hash, commonData CommonCircuitData, verifierData VerifierOnlyCircuitData) ProofChallenges {
+func (c *VerifierChip) GetChallenges(proofWithPis ProofWithPublicInputs, publicInputsHash poseidon.Hash, commonData CommonCircuitData, verifierData VerifierOnlyCircuitData) ProofChallenges {
 	config := commonData.Config
 	numChallenges := config.NumChallenges
 	challenger := NewChallengerChip(c.api, c.fieldAPI, c.poseidonChip)

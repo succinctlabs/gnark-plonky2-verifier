@@ -2,6 +2,7 @@ package plonky2_verifier
 
 import (
 	"gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/poseidon"
 
 	"github.com/consensys/gnark/frontend"
 )
@@ -227,7 +228,7 @@ func (p *PlonkChip) evalVanishingPoly(vars EvaluationVars, proofChallenges Proof
 	return reducedValues
 }
 
-func (p *PlonkChip) Verify(proofChallenges ProofChallenges, openings OpeningSet, publicInputsHash field.Hash) {
+func (p *PlonkChip) Verify(proofChallenges ProofChallenges, openings OpeningSet, publicInputsHash poseidon.Hash) {
 	// Calculate zeta^n
 	zetaPowN := p.expPowerOf2Extension(proofChallenges.PlonkZeta)
 

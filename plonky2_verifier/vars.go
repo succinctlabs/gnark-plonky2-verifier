@@ -1,11 +1,14 @@
 package plonky2_verifier
 
-import "gnark-plonky2-verifier/field"
+import (
+	"gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/poseidon"
+)
 
 type EvaluationVars struct {
 	localConstants   []field.QuadraticExtension
 	localWires       []field.QuadraticExtension
-	publicInputsHash field.Hash
+	publicInputsHash poseidon.Hash
 }
 
 func (e *EvaluationVars) RemovePrefix(numSelectors uint64) {

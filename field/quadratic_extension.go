@@ -8,6 +8,11 @@ import (
 	"github.com/consensys/gnark/frontend"
 )
 
+const D = 2
+
+type QuadraticExtension = [2]F
+type QEAlgebra = [D]QuadraticExtension
+
 type QuadraticExtensionAPI struct {
 	fieldAPI frontend.API
 
