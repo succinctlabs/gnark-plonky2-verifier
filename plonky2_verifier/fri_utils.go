@@ -2,11 +2,10 @@ package plonky2_verifier
 
 import (
 	"gnark-plonky2-verifier/field"
-	. "gnark-plonky2-verifier/field"
 )
 
 type FriOpeningBatch struct {
-	Values []QuadraticExtension
+	Values []field.QuadraticExtension
 }
 
 type FriOpenings struct {
@@ -36,7 +35,7 @@ type FriOracleInfo struct {
 }
 
 type FriBatchInfo struct {
-	Point       QuadraticExtension
+	Point       field.QuadraticExtension
 	Polynomials []FriPolynomialInfo
 }
 
@@ -149,7 +148,7 @@ func (c *CommonCircuitData) friAllPolys() []FriPolynomialInfo {
 	return returnArr
 }
 
-func (c *CommonCircuitData) GetFriInstance(qeAPI *QuadraticExtensionAPI, zeta QuadraticExtension, degreeBits uint64) FriInstanceInfo {
+func (c *CommonCircuitData) GetFriInstance(qeAPI *field.QuadraticExtensionAPI, zeta field.QuadraticExtension, degreeBits uint64) FriInstanceInfo {
 	zetaBatch := FriBatchInfo{
 		Point:       zeta,
 		Polynomials: c.friAllPolys(),

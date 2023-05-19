@@ -2,7 +2,7 @@ package plonky2_verifier
 
 import (
 	"fmt"
-	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/field"
 
 	"github.com/consensys/gnark-crypto/field/goldilocks"
 )
@@ -49,32 +49,32 @@ func (g *CosetInterpolationGate) wiresValue(i uint64) Range {
 	if i >= g.numPoints() {
 		panic("Invalid point index")
 	}
-	start := g.startValues() + i*D
-	return Range{start, start + D}
+	start := g.startValues() + i*field.D
+	return Range{start, start + field.D}
 }
 
 func (g *CosetInterpolationGate) startEvaluationPoint() uint64 {
-	return g.startValues() + g.numPoints()*D
+	return g.startValues() + g.numPoints()*field.D
 }
 
 // Wire indices of the point to evaluate the interpolant at.
 func (g *CosetInterpolationGate) wiresEvaluationPoint() Range {
 	start := g.startEvaluationPoint()
-	return Range{start, start + D}
+	return Range{start, start + field.D}
 }
 
 func (g *CosetInterpolationGate) startEvaluationValue() uint64 {
-	return g.startEvaluationPoint() + D
+	return g.startEvaluationPoint() + field.D
 }
 
 // Wire indices of the interpolated value.
 func (g *CosetInterpolationGate) wiresEvaluationValue() Range {
 	start := g.startEvaluationValue()
-	return Range{start, start + D}
+	return Range{start, start + field.D}
 }
 
 func (g *CosetInterpolationGate) startIntermediates() uint64 {
-	return g.startEvaluationValue() + D
+	return g.startEvaluationValue() + field.D
 }
 
 func (g *CosetInterpolationGate) numIntermediates() uint64 {
@@ -86,8 +86,8 @@ func (g *CosetInterpolationGate) wiresIntermediateEval(i uint64) Range {
 	if i >= g.numIntermediates() {
 		panic("Invalid intermediate index")
 	}
-	start := g.startIntermediates() + D*i
-	return Range{start, start + D}
+	start := g.startIntermediates() + field.D*i
+	return Range{start, start + field.D}
 }
 
 // The wires corresponding to the i'th intermediate product.
@@ -95,41 +95,41 @@ func (g *CosetInterpolationGate) wiresIntermediateProd(i uint64) Range {
 	if i >= g.numIntermediates() {
 		panic("Invalid intermediate index")
 	}
-	start := g.startIntermediates() + D*(g.numIntermediates()+i)
-	return Range{start, start + D}
+	start := g.startIntermediates() + field.D*(g.numIntermediates()+i)
+	return Range{start, start + field.D}
 }
 
 // Wire indices of the shifted point to evaluate the interpolant at.
 func (g *CosetInterpolationGate) wiresShiftedEvaluationPoint() Range {
-	start := g.startIntermediates() + D*2*g.numIntermediates()
-	return Range{start, start + D}
+	start := g.startIntermediates() + field.D*2*g.numIntermediates()
+	return Range{start, start + field.D}
 }
 
-func (g *CosetInterpolationGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []QuadraticExtension {
-	constraints := []QuadraticExtension{}
+func (g *CosetInterpolationGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []field.QuadraticExtension {
+	constraints := []field.QuadraticExtension{}
 
 	shift := vars.localWires[g.wireShift()]
 	evaluationPoint := vars.GetLocalExtAlgebra(g.wiresEvaluationPoint())
 	shiftedEvaluationPoint := vars.GetLocalExtAlgebra(g.wiresShiftedEvaluationPoint())
 
-	negShift := p.qeAPI.ScalarMulExtension(shift, NEG_ONE_F)
+	negShift := p.qeAPI.ScalarMulExtension(shift, field.NEG_ONE_F)
 
 	tmp := p.qeAPI.ScalarMulExtensionAlgebra(negShift, shiftedEvaluationPoint)
 	tmp = p.qeAPI.AddExtensionAlgebra(tmp, evaluationPoint)
 
-	for i := 0; i < D; i++ {
+	for i := 0; i < field.D; i++ {
 		constraints = append(constraints, tmp[i])
 	}
 
-	domain := TwoAdicSubgroup(g.subgroupBits)
-	values := []QEAlgebra{}
+	domain := field.TwoAdicSubgroup(g.subgroupBits)
+	values := []field.QEAlgebra{}
 	for i := uint64(0); i < g.numPoints(); i++ {
 		values = append(values, vars.GetLocalExtAlgebra(g.wiresValue(i)))
 	}
 	weights := g.barycentricWeights
 
 	initialEval := p.qeAPI.ZERO_QE_ALGEBRA
-	initialProd := QEAlgebra{p.qeAPI.ONE_QE, p.qeAPI.ZERO_QE}
+	initialProd := field.QEAlgebra{p.qeAPI.ONE_QE, p.qeAPI.ZERO_QE}
 	computedEval, computedProd := p.qeAPI.PartialInterpolateExtAlgebra(
 		domain[:g.degree],
 		values[:g.degree],
@@ -144,12 +144,12 @@ func (g *CosetInterpolationGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVar
 		intermediateProd := vars.GetLocalExtAlgebra(g.wiresIntermediateProd(i))
 
 		evalDiff := p.qeAPI.SubExtensionAlgebra(intermediateEval, computedEval)
-		for j := 0; j < D; j++ {
+		for j := 0; j < field.D; j++ {
 			constraints = append(constraints, evalDiff[j])
 		}
 
 		prodDiff := p.qeAPI.SubExtensionAlgebra(intermediateProd, computedProd)
-		for j := 0; j < D; j++ {
+		for j := 0; j < field.D; j++ {
 			constraints = append(constraints, prodDiff[j])
 		}
 
@@ -167,7 +167,7 @@ func (g *CosetInterpolationGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVar
 
 	evaluationValue := vars.GetLocalExtAlgebra(g.wiresEvaluationValue())
 	evalDiff := p.qeAPI.SubExtensionAlgebra(evaluationValue, computedEval)
-	for j := 0; j < D; j++ {
+	for j := 0; j < field.D; j++ {
 		constraints = append(constraints, evalDiff[j])
 	}
 

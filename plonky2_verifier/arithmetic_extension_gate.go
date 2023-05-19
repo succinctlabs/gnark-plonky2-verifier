@@ -2,7 +2,7 @@ package plonky2_verifier
 
 import (
 	"fmt"
-	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/field"
 )
 
 type ArithmeticExtensionGate struct {
@@ -20,26 +20,26 @@ func (g *ArithmeticExtensionGate) Id() string {
 }
 
 func (g *ArithmeticExtensionGate) wiresIthMultiplicand0(i uint64) Range {
-	return Range{4 * D * i, 4*D*i + D}
+	return Range{4 * field.D * i, 4*field.D*i + field.D}
 }
 
 func (g *ArithmeticExtensionGate) wiresIthMultiplicand1(i uint64) Range {
-	return Range{4*D*i + D, 4*D*i + 2*D}
+	return Range{4*field.D*i + field.D, 4*field.D*i + 2*field.D}
 }
 
 func (g *ArithmeticExtensionGate) wiresIthAddend(i uint64) Range {
-	return Range{4*D*i + 2*D, 4*D*i + 3*D}
+	return Range{4*field.D*i + 2*field.D, 4*field.D*i + 3*field.D}
 }
 
 func (g *ArithmeticExtensionGate) wiresIthOutput(i uint64) Range {
-	return Range{4*D*i + 3*D, 4*D*i + 4*D}
+	return Range{4*field.D*i + 3*field.D, 4*field.D*i + 4*field.D}
 }
 
-func (g *ArithmeticExtensionGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []QuadraticExtension {
+func (g *ArithmeticExtensionGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []field.QuadraticExtension {
 	const0 := vars.localConstants[0]
 	const1 := vars.localConstants[1]
 
-	constraints := []QuadraticExtension{}
+	constraints := []field.QuadraticExtension{}
 	for i := uint64(0); i < g.numOps; i++ {
 		multiplicand0 := vars.GetLocalExtAlgebra(g.wiresIthMultiplicand0(i))
 		multiplicand1 := vars.GetLocalExtAlgebra(g.wiresIthMultiplicand1(i))
@@ -52,7 +52,7 @@ func (g *ArithmeticExtensionGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVa
 		computed_output = p.qeAPI.AddExtensionAlgebra(computed_output, scaled_mul)
 
 		diff := p.qeAPI.SubExtensionAlgebra(output, computed_output)
-		for j := 0; j < D; j++ {
+		for j := 0; j < field.D; j++ {
 			constraints = append(constraints, diff[j])
 		}
 	}

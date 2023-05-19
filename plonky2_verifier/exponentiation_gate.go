@@ -2,7 +2,7 @@ package plonky2_verifier
 
 import (
 	"fmt"
-	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/field"
 )
 
 type ExponentiationGate struct {
@@ -42,25 +42,25 @@ func (g *ExponentiationGate) wireIntermediateValue(i uint64) uint64 {
 	return 2 + g.numPowerBits + i
 }
 
-func (g *ExponentiationGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []QuadraticExtension {
+func (g *ExponentiationGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []field.QuadraticExtension {
 	base := vars.localWires[g.wireBase()]
 
-	var powerBits []QuadraticExtension
+	var powerBits []field.QuadraticExtension
 	for i := uint64(0); i < g.numPowerBits; i++ {
 		powerBits = append(powerBits, vars.localWires[g.wirePowerBit(i)])
 	}
 
-	var intermediateValues []QuadraticExtension
+	var intermediateValues []field.QuadraticExtension
 	for i := uint64(0); i < g.numPowerBits; i++ {
 		intermediateValues = append(intermediateValues, vars.localWires[g.wireIntermediateValue(i)])
 	}
 
 	output := vars.localWires[g.wireOutput()]
 
-	var constraints []QuadraticExtension
+	var constraints []field.QuadraticExtension
 
 	for i := uint64(0); i < g.numPowerBits; i++ {
-		var prevIntermediateValue QuadraticExtension
+		var prevIntermediateValue field.QuadraticExtension
 		if i == 0 {
 			prevIntermediateValue = p.qeAPI.ONE_QE
 		} else {

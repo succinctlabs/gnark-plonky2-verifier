@@ -2,7 +2,6 @@ package plonky2_verifier
 
 import (
 	"gnark-plonky2-verifier/field"
-	. "gnark-plonky2-verifier/field"
 	. "gnark-plonky2-verifier/poseidon"
 	"gnark-plonky2-verifier/utils"
 	"testing"
@@ -22,38 +21,38 @@ type TestChallengerCircuit struct {
 func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	fieldAPI := field.NewFieldAPI(api)
 	degreeBits := 3
-	qeAPI := NewQuadraticExtensionAPI(fieldAPI, uint64(degreeBits))
+	qeAPI := field.NewQuadraticExtensionAPI(fieldAPI, uint64(degreeBits))
 	poseidonChip := NewPoseidonChip(api, fieldAPI, qeAPI)
 	challengerChip := NewChallengerChip(api, fieldAPI, poseidonChip)
 
-	var circuitDigest [4]F
+	var circuitDigest [4]field.F
 	for i := 0; i < len(circuitDigest); i++ {
-		circuitDigest[i] = fieldAPI.FromBinary(api.ToBinary(circuit.CircuitDigest[i], 64)).(F)
+		circuitDigest[i] = fieldAPI.FromBinary(api.ToBinary(circuit.CircuitDigest[i], 64)).(field.F)
 	}
 
-	var publicInputs [3]F
+	var publicInputs [3]field.F
 	for i := 0; i < len(publicInputs); i++ {
-		publicInputs[i] = fieldAPI.FromBinary(api.ToBinary(circuit.PublicInputs[i], 64)).(F)
+		publicInputs[i] = fieldAPI.FromBinary(api.ToBinary(circuit.PublicInputs[i], 64)).(field.F)
 	}
 
-	var wiresCap [16][4]F
+	var wiresCap [16][4]field.F
 	for i := 0; i < len(wiresCap); i++ {
 		for j := 0; j < len(wiresCap[0]); j++ {
-			wiresCap[i][j] = fieldAPI.FromBinary(api.ToBinary(circuit.WiresCap[i][j], 64)).(F)
+			wiresCap[i][j] = fieldAPI.FromBinary(api.ToBinary(circuit.WiresCap[i][j], 64)).(field.F)
 		}
 	}
 
-	var plonkZsPartialProductsCap [16][4]F
+	var plonkZsPartialProductsCap [16][4]field.F
 	for i := 0; i < len(plonkZsPartialProductsCap); i++ {
 		for j := 0; j < len(plonkZsPartialProductsCap[0]); j++ {
-			plonkZsPartialProductsCap[i][j] = fieldAPI.FromBinary(api.ToBinary(circuit.PlonkZsPartialProductsCap[i][j], 64)).(F)
+			plonkZsPartialProductsCap[i][j] = fieldAPI.FromBinary(api.ToBinary(circuit.PlonkZsPartialProductsCap[i][j], 64)).(field.F)
 		}
 	}
 
-	var quotientPolysCap [16][4]F
+	var quotientPolysCap [16][4]field.F
 	for i := 0; i < len(quotientPolysCap); i++ {
 		for j := 0; j < len(quotientPolysCap[0]); j++ {
-			quotientPolysCap[i][j] = fieldAPI.FromBinary(api.ToBinary(circuit.QuotientPolysCap[i][j], 64)).(F)
+			quotientPolysCap[i][j] = fieldAPI.FromBinary(api.ToBinary(circuit.QuotientPolysCap[i][j], 64)).(field.F)
 		}
 	}
 
@@ -66,25 +65,25 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	plonkBetas := challengerChip.GetNChallenges(numChallenges)
 	plonkGammas := challengerChip.GetNChallenges(numChallenges)
 
-	expectedPublicInputHash := [4]F{
-		NewFieldElementFromString("8416658900775745054"),
-		NewFieldElementFromString("12574228347150446423"),
-		NewFieldElementFromString("9629056739760131473"),
-		NewFieldElementFromString("3119289788404190010"),
+	expectedPublicInputHash := [4]field.F{
+		field.NewFieldElementFromString("8416658900775745054"),
+		field.NewFieldElementFromString("12574228347150446423"),
+		field.NewFieldElementFromString("9629056739760131473"),
+		field.NewFieldElementFromString("3119289788404190010"),
 	}
 
 	for i := 0; i < 4; i++ {
 		fieldAPI.AssertIsEqual(publicInputHash[i], expectedPublicInputHash[i])
 	}
 
-	expectedPlonkBetas := [2]F{
-		NewFieldElementFromString("4678728155650926271"),
-		NewFieldElementFromString("13611962404289024887"),
+	expectedPlonkBetas := [2]field.F{
+		field.NewFieldElementFromString("4678728155650926271"),
+		field.NewFieldElementFromString("13611962404289024887"),
 	}
 
 	expectedPlonkGammas := [2]frontend.Variable{
-		NewFieldElementFromString("13237663823305715949"),
-		NewFieldElementFromString("15389314098328235145"),
+		field.NewFieldElementFromString("13237663823305715949"),
+		field.NewFieldElementFromString("15389314098328235145"),
 	}
 
 	for i := 0; i < 2; i++ {
@@ -95,9 +94,9 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	challengerChip.ObserveCap(plonkZsPartialProductsCap[:])
 	plonkAlphas := challengerChip.GetNChallenges(numChallenges)
 
-	expectedPlonkAlphas := [2]F{
-		NewFieldElementFromString("14505919539124304197"),
-		NewFieldElementFromString("1695455639263736117"),
+	expectedPlonkAlphas := [2]field.F{
+		field.NewFieldElementFromString("14505919539124304197"),
+		field.NewFieldElementFromString("1695455639263736117"),
 	}
 
 	for i := 0; i < 2; i++ {
@@ -107,9 +106,9 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	challengerChip.ObserveCap(quotientPolysCap[:])
 	plonkZeta := challengerChip.GetExtensionChallenge()
 
-	expectedPlonkZeta := QuadraticExtension{
-		NewFieldElementFromString("14887793628029982930"),
-		NewFieldElementFromString("1136137158284059037"),
+	expectedPlonkZeta := field.QuadraticExtension{
+		field.NewFieldElementFromString("14887793628029982930"),
+		field.NewFieldElementFromString("1136137158284059037"),
 	}
 
 	for i := 0; i < 2; i++ {
@@ -143,7 +142,7 @@ func TestChallengerWitness(t *testing.T) {
 			PlonkZsPartialProductsCap: plonkZsPartialProductsCap,
 			QuotientPolysCap:          quotientPolysCap,
 		}
-		err := test.IsSolved(&circuit, &witness, TEST_CURVE.ScalarField())
+		err := test.IsSolved(&circuit, &witness, field.TEST_CURVE.ScalarField())
 		assert.NoError(err)
 	}
 

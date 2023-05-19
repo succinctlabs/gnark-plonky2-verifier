@@ -2,7 +2,7 @@ package plonky2_verifier
 
 import (
 	"fmt"
-	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/field"
 	"gnark-plonky2-verifier/poseidon"
 
 	"github.com/consensys/gnark/frontend"
@@ -12,23 +12,23 @@ type ChallengerChip struct {
 	api          frontend.API `gnark:"-"`
 	field        frontend.API `gnark:"-"`
 	poseidonChip *poseidon.PoseidonChip
-	spongeState  [poseidon.SPONGE_WIDTH]F
-	inputBuffer  []F
-	outputBuffer []F
+	spongeState  [poseidon.SPONGE_WIDTH]field.F
+	inputBuffer  []field.F
+	outputBuffer []field.F
 }
 
-func NewChallengerChip(api frontend.API, field frontend.API, poseidonChip *poseidon.PoseidonChip) *ChallengerChip {
-	var spongeState [poseidon.SPONGE_WIDTH]F
-	var inputBuffer []F
-	var outputBuffer []F
+func NewChallengerChip(api frontend.API, fieldAPI frontend.API, poseidonChip *poseidon.PoseidonChip) *ChallengerChip {
+	var spongeState [poseidon.SPONGE_WIDTH]field.F
+	var inputBuffer []field.F
+	var outputBuffer []field.F
 
 	for i := 0; i < poseidon.SPONGE_WIDTH; i++ {
-		spongeState[i] = ZERO_F
+		spongeState[i] = field.ZERO_F
 	}
 
 	return &ChallengerChip{
 		api:          api,
-		field:        field,
+		field:        fieldAPI,
 		poseidonChip: poseidonChip,
 		spongeState:  spongeState,
 		inputBuffer:  inputBuffer,
@@ -36,7 +36,7 @@ func NewChallengerChip(api frontend.API, field frontend.API, poseidonChip *posei
 	}
 }
 
-func (c *ChallengerChip) ObserveElement(element F) {
+func (c *ChallengerChip) ObserveElement(element field.F) {
 	c.outputBuffer = clearBuffer(c.outputBuffer)
 	c.inputBuffer = append(c.inputBuffer, element)
 	if len(c.inputBuffer) == poseidon.SPONGE_RATE {
@@ -44,27 +44,27 @@ func (c *ChallengerChip) ObserveElement(element F) {
 	}
 }
 
-func (c *ChallengerChip) ObserveElements(elements []F) {
+func (c *ChallengerChip) ObserveElements(elements []field.F) {
 	for i := 0; i < len(elements); i++ {
 		c.ObserveElement(elements[i])
 	}
 }
 
-func (c *ChallengerChip) ObserveHash(hash Hash) {
+func (c *ChallengerChip) ObserveHash(hash field.Hash) {
 	c.ObserveElements(hash[:])
 }
 
-func (c *ChallengerChip) ObserveCap(cap []Hash) {
+func (c *ChallengerChip) ObserveCap(cap []field.Hash) {
 	for i := 0; i < len(cap); i++ {
 		c.ObserveHash(cap[i])
 	}
 }
 
-func (c *ChallengerChip) ObserveExtensionElement(element QuadraticExtension) {
+func (c *ChallengerChip) ObserveExtensionElement(element field.QuadraticExtension) {
 	c.ObserveElements(element[:])
 }
 
-func (c *ChallengerChip) ObserveExtensionElements(elements []QuadraticExtension) {
+func (c *ChallengerChip) ObserveExtensionElements(elements []field.QuadraticExtension) {
 	for i := 0; i < len(elements); i++ {
 		c.ObserveExtensionElement(elements[i])
 	}
@@ -76,7 +76,7 @@ func (c *ChallengerChip) ObserveOpenings(openings FriOpenings) {
 	}
 }
 
-func (c *ChallengerChip) GetChallenge() F {
+func (c *ChallengerChip) GetChallenge() field.F {
 	if len(c.inputBuffer) != 0 || len(c.outputBuffer) == 0 {
 		c.duplexing()
 	}
@@ -87,28 +87,28 @@ func (c *ChallengerChip) GetChallenge() F {
 	return challenge
 }
 
-func (c *ChallengerChip) GetNChallenges(n uint64) []F {
-	challenges := make([]F, n)
+func (c *ChallengerChip) GetNChallenges(n uint64) []field.F {
+	challenges := make([]field.F, n)
 	for i := uint64(0); i < n; i++ {
 		challenges[i] = c.GetChallenge()
 	}
 	return challenges
 }
 
-func (c *ChallengerChip) GetExtensionChallenge() QuadraticExtension {
+func (c *ChallengerChip) GetExtensionChallenge() field.QuadraticExtension {
 	values := c.GetNChallenges(2)
-	return QuadraticExtension{values[0], values[1]}
+	return field.QuadraticExtension{values[0], values[1]}
 }
 
-func (c *ChallengerChip) GetHash() Hash {
-	return [4]F{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
+func (c *ChallengerChip) GetHash() field.Hash {
+	return [4]field.F{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
 }
 
-func (c *ChallengerChip) GetFriChallenges(commitPhaseMerkleCaps []MerkleCap, finalPoly PolynomialCoeffs, powWitness F, degreeBits uint64, config FriConfig) FriChallenges {
+func (c *ChallengerChip) GetFriChallenges(commitPhaseMerkleCaps []MerkleCap, finalPoly PolynomialCoeffs, powWitness field.F, degreeBits uint64, config FriConfig) FriChallenges {
 	numFriQueries := config.NumQueryRounds
 	friAlpha := c.GetExtensionChallenge()
 
-	var friBetas []QuadraticExtension
+	var friBetas []field.QuadraticExtension
 	for i := 0; i < len(commitPhaseMerkleCaps); i++ {
 		c.ObserveCap(commitPhaseMerkleCaps[i])
 		friBetas = append(friBetas, c.GetExtensionChallenge())
@@ -128,8 +128,8 @@ func (c *ChallengerChip) GetFriChallenges(commitPhaseMerkleCaps []MerkleCap, fin
 	}
 }
 
-func clearBuffer(buffer []F) []F {
-	return make([]F, 0)
+func clearBuffer(buffer []field.F) []field.F {
+	return make([]field.F, 0)
 }
 
 func (c *ChallengerChip) duplexing() {

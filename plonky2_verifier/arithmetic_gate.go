@@ -2,7 +2,7 @@ package plonky2_verifier
 
 import (
 	"fmt"
-	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/field"
 )
 
 type ArithmeticGate struct {
@@ -35,11 +35,11 @@ func (g *ArithmeticGate) WireIthOutput(i uint64) uint64 {
 	return 4*i + 3
 }
 
-func (g *ArithmeticGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []QuadraticExtension {
+func (g *ArithmeticGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []field.QuadraticExtension {
 	const0 := vars.localConstants[0]
 	const1 := vars.localConstants[1]
 
-	constraints := []QuadraticExtension{}
+	constraints := []field.QuadraticExtension{}
 	for i := uint64(0); i < g.numOps; i++ {
 		multiplicand0 := vars.localWires[g.WireIthMultiplicand0(i)]
 		multiplicand1 := vars.localWires[g.WireIthMultiplicand1(i)]

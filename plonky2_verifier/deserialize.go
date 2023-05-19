@@ -2,9 +2,9 @@ package plonky2_verifier
 
 import (
 	"encoding/json"
-	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/field"
 	"gnark-plonky2-verifier/utils"
-	"io/ioutil"
+	"io"
 	"os"
 )
 
@@ -170,7 +170,7 @@ type VerifierOnlyCircuitDataRaw struct {
 
 func DeserializeMerkleCap(merkleCapRaw []struct{ Elements []uint64 }) MerkleCap {
 	n := len(merkleCapRaw)
-	merkleCap := make([]Hash, n)
+	merkleCap := make([]field.Hash, n)
 	for i := 0; i < n; i++ {
 		copy(merkleCap[i][:], utils.Uint64ArrayToFArray(merkleCapRaw[i].Elements))
 	}
@@ -180,7 +180,7 @@ func DeserializeMerkleCap(merkleCapRaw []struct{ Elements []uint64 }) MerkleCap 
 func DeserializeMerkleProof(merkleProofRaw struct{ Siblings []interface{} }) MerkleProof {
 	n := len(merkleProofRaw.Siblings)
 	var mp MerkleProof
-	mp.Siblings = make([]Hash, n)
+	mp.Siblings = make([]field.Hash, n)
 	for i := 0; i < n; i++ {
 		element := merkleProofRaw.Siblings[i].(struct{ Elements []uint64 })
 		copy(mp.Siblings[i][:], utils.Uint64ArrayToFArray(element.Elements))
@@ -225,7 +225,7 @@ func DeserializeFriProof(openingProofRaw struct {
 	PowWitness uint64
 }) FriProof {
 	var openingProof FriProof
-	openingProof.PowWitness = NewFieldElement(openingProofRaw.PowWitness)
+	openingProof.PowWitness = field.NewFieldElement(openingProofRaw.PowWitness)
 	openingProof.FinalPoly.Coeffs = utils.Uint64ArrayToQuadraticExtensionArray(openingProofRaw.FinalPoly.Coeffs)
 
 	openingProof.CommitPhaseMerkleCaps = make([]MerkleCap, len(openingProofRaw.CommitPhaseMerkleCaps))
@@ -262,7 +262,7 @@ func DeserializeProofWithPublicInputs(path string) ProofWithPublicInputs {
 	}
 
 	defer jsonFile.Close()
-	rawBytes, _ := ioutil.ReadAll(jsonFile)
+	rawBytes, _ := io.ReadAll(jsonFile)
 
 	var raw ProofWithPublicInputsRaw
 	err = json.Unmarshal(rawBytes, &raw)
@@ -309,7 +309,7 @@ func DeserializeProofChallenges(path string) ProofChallenges {
 	}
 
 	defer jsonFile.Close()
-	rawBytes, _ := ioutil.ReadAll(jsonFile)
+	rawBytes, _ := io.ReadAll(jsonFile)
 
 	var raw ProofChallengesRaw
 	err = json.Unmarshal(rawBytes, &raw)
@@ -324,7 +324,7 @@ func DeserializeProofChallenges(path string) ProofChallenges {
 	proofChallenges.PlonkZeta = utils.Uint64ArrayToQuadraticExtension(raw.PlonkZeta)
 	proofChallenges.FriChallenges.FriAlpha = utils.Uint64ArrayToQuadraticExtension(raw.FriChallenges.FriAlpha)
 	proofChallenges.FriChallenges.FriBetas = utils.Uint64ArrayToQuadraticExtensionArray(raw.FriChallenges.FriBetas)
-	proofChallenges.FriChallenges.FriPowResponse = NewFieldElement(raw.FriChallenges.FriPowResponse)
+	proofChallenges.FriChallenges.FriPowResponse = field.NewFieldElement(raw.FriChallenges.FriPowResponse)
 	proofChallenges.FriChallenges.FriQueryIndices = utils.Uint64ArrayToFArray(raw.FriChallenges.FriQueryIndices)
 
 	return proofChallenges
@@ -357,7 +357,7 @@ func DeserializeCommonCircuitData(path string) CommonCircuitData {
 	}
 
 	defer jsonFile.Close()
-	rawBytes, _ := ioutil.ReadAll(jsonFile)
+	rawBytes, _ := io.ReadAll(jsonFile)
 
 	var raw CommonCircuitDataRaw
 	err = json.Unmarshal(rawBytes, &raw)
@@ -419,7 +419,7 @@ func DeserializeVerifierOnlyCircuitData(path string) VerifierOnlyCircuitData {
 	}
 
 	defer jsonFile.Close()
-	rawBytes, _ := ioutil.ReadAll(jsonFile)
+	rawBytes, _ := io.ReadAll(jsonFile)
 
 	var raw VerifierOnlyCircuitDataRaw
 	err = json.Unmarshal(rawBytes, &raw)

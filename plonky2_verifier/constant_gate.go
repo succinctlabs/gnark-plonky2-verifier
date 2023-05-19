@@ -2,7 +2,7 @@ package plonky2_verifier
 
 import (
 	"fmt"
-	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/field"
 )
 
 type ConstantGate struct {
@@ -33,8 +33,8 @@ func (g *ConstantGate) WireOutput(i uint64) uint64 {
 	return i
 }
 
-func (g *ConstantGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []QuadraticExtension {
-	constraints := []QuadraticExtension{}
+func (g *ConstantGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []field.QuadraticExtension {
+	constraints := []field.QuadraticExtension{}
 
 	for i := uint64(0); i < g.numConsts; i++ {
 		constraints = append(constraints, p.qeAPI.SubExtension(vars.localConstants[g.ConstInput(i)], vars.localWires[g.WireOutput(i)]))
