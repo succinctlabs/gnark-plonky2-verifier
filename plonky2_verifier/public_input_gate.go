@@ -2,7 +2,15 @@ package plonky2_verifier
 
 import (
 	. "gnark-plonky2-verifier/field"
+	"regexp"
 )
+
+var publicInputGateRegex = regexp.MustCompile("PublicInputGate")
+
+func deserializePublicInputGate(parameters map[string]string) gate {
+	// Has the format "PublicInputGate"
+	return NewPublicInputGate()
+}
 
 type PublicInputGate struct {
 }

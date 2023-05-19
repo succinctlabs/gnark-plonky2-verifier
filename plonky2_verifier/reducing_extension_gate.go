@@ -3,7 +3,26 @@ package plonky2_verifier
 import (
 	"fmt"
 	. "gnark-plonky2-verifier/field"
+	"regexp"
+	"strconv"
 )
+
+var reducingExtensionGateRegex = regexp.MustCompile("ReducingExtensionGate { num_coeffs: (?P<numCoeffs>[0-9]+) }")
+
+func deserializeReducingExtensionGate(parameters map[string]string) gate {
+	// Has the format "ReducingGate { num_coeffs: 33 }"
+	numCoeffs, hasNumCoeffs := parameters["numCoeffs"]
+	if !hasNumCoeffs {
+		panic("Missing field num_coeffs in ReducingExtensionGate")
+	}
+
+	numCoeffsInt, err := strconv.Atoi(numCoeffs)
+	if err != nil {
+		panic("Invalid num_coeffs field in ReducingExtensionGate")
+	}
+
+	return NewReducingExtensionGate(uint64(numCoeffsInt))
+}
 
 type ReducingExtensionGate struct {
 	numCoeffs uint64

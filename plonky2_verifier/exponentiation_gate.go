@@ -3,7 +3,26 @@ package plonky2_verifier
 import (
 	"fmt"
 	"gnark-plonky2-verifier/field"
+	"regexp"
+	"strconv"
 )
+
+var exponentiationGateRegex = regexp.MustCompile("ExponentiationGate { num_power_bits: (?P<numPowerBits>[0-9]+), _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=(?P<base>[0-9]+)>")
+
+func deserializeExponentiationGate(parameters map[string]string) gate {
+	// Has the format "ExponentiationGate { num_power_bits: 67, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>"
+	numPowerBits, hasNumPowerBits := parameters["numPowerBits"]
+	if !hasNumPowerBits {
+		panic("Missing field num_power_bits in ExponentiationGate")
+	}
+
+	numPowerBitsInt, err := strconv.Atoi(numPowerBits)
+	if err != nil {
+		panic("Invalid num_power_bits field in ExponentiationGate")
+	}
+
+	return NewExponentiationGate(uint64(numPowerBitsInt))
+}
 
 type ExponentiationGate struct {
 	numPowerBits uint64

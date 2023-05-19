@@ -3,7 +3,26 @@ package plonky2_verifier
 import (
 	"fmt"
 	"gnark-plonky2-verifier/field"
+	"regexp"
+	"strconv"
 )
+
+var constantGateRegex = regexp.MustCompile("ConstantGate { num_consts: (?P<numConsts>[0-9]+) }")
+
+func deserializeConstantGate(parameters map[string]string) gate {
+	// Has the format "ConstantGate { num_consts: 2 }"
+	numConsts, hasNumConsts := parameters["numConsts"]
+	if !hasNumConsts {
+		panic("Missing field num_consts in ConstantGate")
+	}
+
+	numConstsInt, err := strconv.Atoi(numConsts)
+	if err != nil {
+		panic("Invalid num_consts field in ConstantGate")
+	}
+
+	return NewConstantGate(uint64(numConstsInt))
+}
 
 type ConstantGate struct {
 	numConsts uint64

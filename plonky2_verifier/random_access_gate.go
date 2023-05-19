@@ -3,7 +3,39 @@ package plonky2_verifier
 import (
 	"fmt"
 	. "gnark-plonky2-verifier/field"
+	"regexp"
+	"strconv"
 )
+
+var randomAccessGateRegex = regexp.MustCompile("RandomAccessGate { bits: (?P<bits>[0-9]+), num_copies: (?P<numCopies>[0-9]+), num_extra_constants: (?P<numExtraConstants>[0-9]+), _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=(?P<base>[0-9]+)>")
+
+func deserializeRandomAccessGate(parameters map[string]string) gate {
+	// Has the format "RandomAccessGate { bits: 2, num_copies: 13, num_extra_constants: 2, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>"
+	bits, hasBits := parameters["bits"]
+	numCopies, hasNumCopies := parameters["numCopies"]
+	numExtraConstants, hasNumExtraConstants := parameters["numExtraConstants"]
+
+	if !hasBits || !hasNumCopies || !hasNumExtraConstants {
+		panic("missing bits, numCopies, numExtraConstants or base in RandomAccessGate")
+	}
+
+	bitsInt, err := strconv.ParseUint(bits, 10, 64)
+	if err != nil {
+		panic("invalid bits in RandomAccessGate")
+	}
+
+	numCopiesInt, err := strconv.ParseUint(numCopies, 10, 64)
+	if err != nil {
+		panic("invalid numCopies in RandomAccessGate")
+	}
+
+	numExtraConstantsInt, err := strconv.ParseUint(numExtraConstants, 10, 64)
+	if err != nil {
+		panic("invalid numExtraConstants in RandomAccessGate")
+	}
+
+	return NewRandomAccessGate(bitsInt, numCopiesInt, numExtraConstantsInt)
+}
 
 type RandomAccessGate struct {
 	bits              uint64
