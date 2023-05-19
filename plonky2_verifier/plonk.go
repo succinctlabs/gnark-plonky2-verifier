@@ -118,7 +118,7 @@ func (p *PlonkChip) checkPartialProducts(
 
 func (p *PlonkChip) evaluateGateConstraints(vars EvaluationVars) []QuadraticExtension {
 	constraints := make([]QuadraticExtension, p.commonData.NumGateConstraints)
-	for i, _ := range constraints {
+	for i := range constraints {
 		constraints[i] = p.qeAPI.ZERO_QE
 	}
 
