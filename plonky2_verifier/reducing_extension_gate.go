@@ -2,7 +2,7 @@ package plonky2_verifier
 
 import (
 	"fmt"
-	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/field"
 	"regexp"
 	"strconv"
 )
@@ -28,7 +28,7 @@ type ReducingExtensionGate struct {
 	numCoeffs uint64
 }
 
-const START_COEFFS_REDUCING_EXTENSION_GATE = 3 * D
+const START_COEFFS_REDUCING_EXTENSION_GATE = 3 * field.D
 
 func NewReducingExtensionGate(numCoeffs uint64) *ReducingExtensionGate {
 	return &ReducingExtensionGate{
@@ -41,23 +41,23 @@ func (g *ReducingExtensionGate) Id() string {
 }
 
 func (g *ReducingExtensionGate) wiresOutput() Range {
-	return Range{0, D}
+	return Range{0, field.D}
 }
 
 func (g *ReducingExtensionGate) wiresAlpha() Range {
-	return Range{D, 2 * D}
+	return Range{field.D, 2 * field.D}
 }
 
 func (g *ReducingExtensionGate) wiresOldAcc() Range {
-	return Range{2 * D, 3 * D}
+	return Range{2 * field.D, 3 * field.D}
 }
 
 func (g *ReducingExtensionGate) wiresCoeff(i uint64) Range {
-	return Range{START_COEFFS_REDUCING_EXTENSION_GATE + D*i, START_COEFFS_REDUCING_EXTENSION_GATE + D*(i+1)}
+	return Range{START_COEFFS_REDUCING_EXTENSION_GATE + field.D*i, START_COEFFS_REDUCING_EXTENSION_GATE + field.D*(i+1)}
 }
 
 func (g *ReducingExtensionGate) startAccs() uint64 {
-	return START_COEFFS_REDUCING_EXTENSION_GATE + g.numCoeffs*D
+	return START_COEFFS_REDUCING_EXTENSION_GATE + g.numCoeffs*field.D
 }
 
 func (g *ReducingExtensionGate) wiresAccs(i uint64) Range {
@@ -69,31 +69,31 @@ func (g *ReducingExtensionGate) wiresAccs(i uint64) Range {
 		return g.wiresOutput()
 	}
 
-	return Range{g.startAccs() + D*i, g.startAccs() + D*(i+1)}
+	return Range{g.startAccs() + field.D*i, g.startAccs() + field.D*(i+1)}
 }
 
-func (g *ReducingExtensionGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []QuadraticExtension {
+func (g *ReducingExtensionGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []field.QuadraticExtension {
 	alpha := vars.GetLocalExtAlgebra(g.wiresAlpha())
 	oldAcc := vars.GetLocalExtAlgebra(g.wiresOldAcc())
 
-	coeffs := []QEAlgebra{}
+	coeffs := []field.QEAlgebra{}
 	for i := uint64(0); i < g.numCoeffs; i++ {
 		coeffs = append(coeffs, vars.GetLocalExtAlgebra(g.wiresCoeff(i)))
 	}
 
-	accs := []QEAlgebra{}
+	accs := []field.QEAlgebra{}
 	for i := uint64(0); i < g.numCoeffs; i++ {
 		accs = append(accs, vars.GetLocalExtAlgebra(g.wiresAccs(i)))
 	}
 
-	constraints := []QuadraticExtension{}
+	constraints := []field.QuadraticExtension{}
 	acc := oldAcc
 	for i := uint64(0); i < g.numCoeffs; i++ {
 		coeff := coeffs[i]
 		tmp := p.qeAPI.MulExtensionAlgebra(acc, alpha)
 		tmp = p.qeAPI.AddExtensionAlgebra(tmp, coeff)
 		tmp = p.qeAPI.SubExtensionAlgebra(tmp, accs[i])
-		for j := uint64(0); j < D; j++ {
+		for j := uint64(0); j < field.D; j++ {
 			constraints = append(constraints, tmp[j])
 		}
 		acc = accs[i]

@@ -2,7 +2,7 @@ package plonky2_verifier
 
 import (
 	"fmt"
-	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/field"
 	"regexp"
 	"strconv"
 )
@@ -112,18 +112,18 @@ func (g *RandomAccessGate) WireBit(i uint64, copy uint64) uint64 {
 	return g.NumRoutedWires() + copy*g.bits + i
 }
 
-func (g *RandomAccessGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []QuadraticExtension {
-	two := QuadraticExtension{NewFieldElement(2), NewFieldElement(0)}
-	constraints := []QuadraticExtension{}
+func (g *RandomAccessGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []field.QuadraticExtension {
+	two := field.QuadraticExtension{field.NewFieldElement(2), field.NewFieldElement(0)}
+	constraints := []field.QuadraticExtension{}
 
 	for copy := uint64(0); copy < g.numCopies; copy++ {
 		accessIndex := vars.localWires[g.WireAccessIndex(copy)]
-		listItems := []QuadraticExtension{}
+		listItems := []field.QuadraticExtension{}
 		for i := uint64(0); i < g.vecSize(); i++ {
 			listItems = append(listItems, vars.localWires[g.WireListItem(i, copy)])
 		}
 		claimedElement := vars.localWires[g.WireClaimedElement(copy)]
-		bits := []QuadraticExtension{}
+		bits := []field.QuadraticExtension{}
 		for i := uint64(0); i < g.bits; i++ {
 			bits = append(bits, vars.localWires[g.WireBit(i, copy)])
 		}
@@ -139,7 +139,7 @@ func (g *RandomAccessGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []Q
 		constraints = append(constraints, p.qeAPI.SubExtension(reconstructedIndex, accessIndex))
 
 		for _, b := range bits {
-			listItemsTmp := []QuadraticExtension{}
+			listItemsTmp := []field.QuadraticExtension{}
 			for i := 0; i < len(listItems); i += 2 {
 				x := listItems[i]
 				y := listItems[i+1]

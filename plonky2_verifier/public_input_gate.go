@@ -1,7 +1,7 @@
 package plonky2_verifier
 
 import (
-	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/field"
 	"regexp"
 )
 
@@ -27,8 +27,8 @@ func (g *PublicInputGate) WiresPublicInputsHash() []uint64 {
 	return []uint64{0, 1, 2, 3}
 }
 
-func (g *PublicInputGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []QuadraticExtension {
-	constraints := []QuadraticExtension{}
+func (g *PublicInputGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []field.QuadraticExtension {
+	constraints := []field.QuadraticExtension{}
 
 	wires := g.WiresPublicInputsHash()
 	hash_parts := vars.publicInputsHash

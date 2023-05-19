@@ -2,13 +2,13 @@ package plonky2_verifier
 
 import (
 	"fmt"
-	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/field"
 	"regexp"
 )
 
 type gate interface {
 	Id() string
-	EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []QuadraticExtension
+	EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []field.QuadraticExtension
 }
 
 var gateRegexHandlers = map[*regexp.Regexp]func(parameters map[string]string) gate{
@@ -49,20 +49,20 @@ func GateInstanceFromId(gateId string) gate {
 func (p *PlonkChip) computeFilter(
 	row uint64,
 	groupRange Range,
-	s QuadraticExtension,
+	s field.QuadraticExtension,
 	manySelector bool,
-) QuadraticExtension {
+) field.QuadraticExtension {
 	product := p.qeAPI.ONE_QE
 	for i := groupRange.start; i < groupRange.end; i++ {
 		if i == uint64(row) {
 			continue
 		}
 
-		product = p.qeAPI.MulExtension(product, p.qeAPI.SubExtension(p.qeAPI.FieldToQE(NewFieldElement(i)), s))
+		product = p.qeAPI.MulExtension(product, p.qeAPI.SubExtension(p.qeAPI.FieldToQE(field.NewFieldElement(i)), s))
 	}
 
 	if manySelector {
-		product = p.qeAPI.MulExtension(product, p.qeAPI.SubExtension(p.qeAPI.FieldToQE(NewFieldElement(UNUSED_SELECTOR)), s))
+		product = p.qeAPI.MulExtension(product, p.qeAPI.SubExtension(p.qeAPI.FieldToQE(field.NewFieldElement(UNUSED_SELECTOR)), s))
 	}
 
 	return product
@@ -75,7 +75,7 @@ func (p *PlonkChip) evalFiltered(
 	selectorIndex uint64,
 	groupRange Range,
 	numSelectors uint64,
-) []QuadraticExtension {
+) []field.QuadraticExtension {
 	filter := p.computeFilter(row, groupRange, vars.localConstants[selectorIndex], numSelectors > 1)
 
 	vars.RemovePrefix(numSelectors)

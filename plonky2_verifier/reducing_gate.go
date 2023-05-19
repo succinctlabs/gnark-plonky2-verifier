@@ -2,7 +2,7 @@ package plonky2_verifier
 
 import (
 	"fmt"
-	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/field"
 	"regexp"
 	"strconv"
 )
@@ -28,7 +28,7 @@ type ReducingGate struct {
 	numCoeffs uint64
 }
 
-const START_COEFFS_REDUCING_GATE = 3 * D
+const START_COEFFS_REDUCING_GATE = 3 * field.D
 
 func NewReducingGate(numCoeffs uint64) *ReducingGate {
 	return &ReducingGate{
@@ -41,15 +41,15 @@ func (g *ReducingGate) Id() string {
 }
 
 func (g *ReducingGate) wiresOutput() Range {
-	return Range{0, D}
+	return Range{0, field.D}
 }
 
 func (g *ReducingGate) wiresAlpha() Range {
-	return Range{D, 2 * D}
+	return Range{field.D, 2 * field.D}
 }
 
 func (g *ReducingGate) wiresOldAcc() Range {
-	return Range{2 * D, 3 * D}
+	return Range{2 * field.D, 3 * field.D}
 }
 
 func (g *ReducingGate) wiresCoeff() Range {
@@ -69,36 +69,36 @@ func (g *ReducingGate) wiresAccs(i uint64) Range {
 		return g.wiresOutput()
 	}
 
-	return Range{g.startAccs() + D*i, g.startAccs() + D*(i+1)}
+	return Range{g.startAccs() + field.D*i, g.startAccs() + field.D*(i+1)}
 }
 
-func (g *ReducingGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []QuadraticExtension {
+func (g *ReducingGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []field.QuadraticExtension {
 	alpha := vars.GetLocalExtAlgebra(g.wiresAlpha())
 	oldAcc := vars.GetLocalExtAlgebra(g.wiresOldAcc())
 
-	coeffs := []QuadraticExtension{}
+	coeffs := []field.QuadraticExtension{}
 	coeffsRange := g.wiresCoeff()
 	for i := coeffsRange.start; i < coeffsRange.end; i++ {
 		coeffs = append(coeffs, vars.localWires[i])
 	}
 
-	accs := []QEAlgebra{}
+	accs := []field.QEAlgebra{}
 	for i := uint64(0); i < g.numCoeffs; i++ {
 		accs = append(accs, vars.GetLocalExtAlgebra(g.wiresAccs(i)))
 	}
 
-	constraints := []QuadraticExtension{}
+	constraints := []field.QuadraticExtension{}
 	acc := oldAcc
 	for i := uint64(0); i < g.numCoeffs; i++ {
-		var coeff QEAlgebra
-		for j := 0; j < D; j++ {
+		var coeff field.QEAlgebra
+		for j := 0; j < field.D; j++ {
 			coeff[j] = p.qeAPI.ZERO_QE
 		}
 		coeff[0] = coeffs[i]
 		tmp := p.qeAPI.MulExtensionAlgebra(acc, alpha)
 		tmp = p.qeAPI.AddExtensionAlgebra(tmp, coeff)
 		tmp = p.qeAPI.SubExtensionAlgebra(tmp, accs[i])
-		for j := 0; j < D; j++ {
+		for j := 0; j < field.D; j++ {
 			constraints = append(constraints, tmp[j])
 		}
 		acc = accs[i]

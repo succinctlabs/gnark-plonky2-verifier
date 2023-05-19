@@ -1,7 +1,7 @@
 package plonky2_verifier
 
 import (
-	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/field"
 	"regexp"
 )
 
@@ -23,6 +23,6 @@ func (g *NoopGate) Id() string {
 	return "NoopGate"
 }
 
-func (g *NoopGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []QuadraticExtension {
-	return []QuadraticExtension{}
+func (g *NoopGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []field.QuadraticExtension {
+	return []field.QuadraticExtension{}
 }

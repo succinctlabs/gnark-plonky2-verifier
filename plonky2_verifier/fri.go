@@ -3,7 +3,6 @@ package plonky2_verifier
 import (
 	"fmt"
 	"gnark-plonky2-verifier/field"
-	. "gnark-plonky2-verifier/field"
 	"gnark-plonky2-verifier/poseidon"
 	"math"
 	"math/big"
@@ -14,21 +13,20 @@ import (
 )
 
 type FriChip struct {
-	api      frontend.API           `gnark:"-"`
-	fieldAPI frontend.API           `gnark:"-"`
-	qeAPI    *QuadraticExtensionAPI `gnark:"-"`
-	hashAPI  *HashAPI               `gnark:"-"`
+	api      frontend.API                 `gnark:"-"`
+	fieldAPI frontend.API                 `gnark:"-"`
+	qeAPI    *field.QuadraticExtensionAPI `gnark:"-"`
+	hashAPI  *HashAPI                     `gnark:"-"`
 
 	poseidonChip *poseidon.PoseidonChip
 
-	friParams               *FriParams               `gnark:"-"`
-	verifierOnlyCircuitData *VerifierOnlyCircuitData `gnark:"-"`
+	friParams *FriParams `gnark:"-"`
 }
 
 func NewFriChip(
 	api frontend.API,
 	fieldAPI frontend.API,
-	qeAPI *QuadraticExtensionAPI,
+	qeAPI *field.QuadraticExtensionAPI,
 	hashAPI *HashAPI,
 	poseidonChip *poseidon.PoseidonChip,
 	friParams *FriParams,
@@ -43,7 +41,7 @@ func NewFriChip(
 	}
 }
 
-func (f *FriChip) assertLeadingZeros(powWitness F, friConfig FriConfig) {
+func (f *FriChip) assertLeadingZeros(powWitness field.F, friConfig FriConfig) {
 	// Asserts that powWitness'es big-endian bit representation has at least `leading_zeros` leading zeros.
 	// Note that this is assuming that the Goldilocks field is being used.  Specfically that the
 	// field is 64 bits long
@@ -51,11 +49,11 @@ func (f *FriChip) assertLeadingZeros(powWitness F, friConfig FriConfig) {
 	f.fieldAPI.AssertIsLessOrEqual(powWitness, field.NewFieldElement(maxPowWitness))
 }
 
-func (f *FriChip) fromOpeningsAndAlpha(openings *FriOpenings, alpha QuadraticExtension) []QuadraticExtension {
+func (f *FriChip) fromOpeningsAndAlpha(openings *FriOpenings, alpha field.QuadraticExtension) []field.QuadraticExtension {
 	// One reduced opening for all openings evaluated at point Zeta.
 	// Another one for all openings evaluated at point Zeta * Omega (which is only PlonkZsNext polynomial)
 
-	reducedOpenings := make([]QuadraticExtension, 0, 2)
+	reducedOpenings := make([]field.QuadraticExtension, 0, 2)
 	for _, batch := range openings.Batches {
 		reducedOpenings = append(reducedOpenings, f.qeAPI.ReduceWithPowers(batch.Values, alpha))
 	}
@@ -63,8 +61,8 @@ func (f *FriChip) fromOpeningsAndAlpha(openings *FriOpenings, alpha QuadraticExt
 	return reducedOpenings
 }
 
-func (f *FriChip) hashOrNoop(data []F) Hash {
-	var elements Hash
+func (f *FriChip) hashOrNoop(data []field.F) field.Hash {
+	var elements field.Hash
 	if len(data) <= 4 {
 		// Pad the data to have a size of 4
 		for i, inputElement := range data {
@@ -90,9 +88,9 @@ func (f *FriChip) hashOrNoop(data []F) Hash {
 	}
 }
 
-func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits []frontend.Variable, capIndexBits []frontend.Variable, merkleCap MerkleCap, proof *MerkleProof) {
+func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []field.F, leafIndexBits []frontend.Variable, capIndexBits []frontend.Variable, merkleCap MerkleCap, proof *MerkleProof) {
 	currentDigest := f.hashOrNoop(leafData)
-	fourZeros := [4]F{field.ZERO_F, field.ZERO_F, field.ZERO_F, field.ZERO_F}
+	fourZeros := [4]field.F{field.ZERO_F, field.ZERO_F, field.ZERO_F, field.ZERO_F}
 	for i, sibling := range proof.Siblings {
 		bit := leafIndexBits[i]
 
@@ -103,7 +101,7 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits
 
 		leftHash := f.poseidonChip.Poseidon(leftSiblingState)
 
-		var leftHashCompress Hash
+		var leftHashCompress field.Hash
 		leftHashCompress[0] = leftHash[0]
 		leftHashCompress[1] = leftHash[1]
 		leftHashCompress[2] = leftHash[2]
@@ -116,7 +114,7 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits
 
 		rightHash := f.poseidonChip.Poseidon(rightSiblingState)
 
-		var rightHashCompress Hash
+		var rightHashCompress field.Hash
 		rightHashCompress[0] = rightHash[0]
 		rightHashCompress[1] = rightHash[1]
 		rightHashCompress[2] = rightHash[2]
@@ -136,7 +134,7 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []F, leafIndexBits
 	}
 
 	const NUM_LEAF_LOOKUPS = 4
-	var leafLookups [NUM_LEAF_LOOKUPS]Hash
+	var leafLookups [NUM_LEAF_LOOKUPS]field.Hash
 	// First create the "leaf" lookup2 circuits
 	// The will use the least significant bits of the capIndexBits array
 	for i := 0; i < NUM_LEAF_LOOKUPS; i++ {
@@ -190,8 +188,8 @@ func (f *FriChip) assertNoncanonicalIndicesOK() {
 func (f *FriChip) expFromBitsConstBase(
 	base goldilocks.Element,
 	exponentBits []frontend.Variable,
-) F {
-	product := ONE_F
+) field.F {
+	product := field.ONE_F
 	for i, bit := range exponentBits {
 		pow := int64(1 << i)
 		// If the bit is on, we multiply product by base^pow.
@@ -201,7 +199,7 @@ func (f *FriChip) expFromBitsConstBase(
 		basePow := goldilocks.NewElement(0)
 		basePow.Exp(base, big.NewInt(pow))
 
-		basePowElement := NewFieldElement(basePow.Uint64() - 1)
+		basePowElement := field.NewFieldElement(basePow.Uint64() - 1)
 
 		product = f.fieldAPI.Add(
 			f.fieldAPI.Mul(
@@ -210,7 +208,7 @@ func (f *FriChip) expFromBitsConstBase(
 				bit,
 			),
 			product,
-		).(F)
+		).(field.F)
 	}
 
 	return product
@@ -219,7 +217,7 @@ func (f *FriChip) expFromBitsConstBase(
 func (f *FriChip) calculateSubgroupX(
 	xIndexBits []frontend.Variable,
 	nLog uint64,
-) F {
+) field.F {
 	// Compute x from its index
 	// `subgroup_x` is `subgroup[x_index]`, i.e., the actual field element in the domain.
 	// TODO - Make these as global values
@@ -234,16 +232,16 @@ func (f *FriChip) calculateSubgroupX(
 
 	product := f.expFromBitsConstBase(base, xIndexBitsRev)
 
-	return f.fieldAPI.Mul(g, product).(F)
+	return f.fieldAPI.Mul(g, product).(field.F)
 }
 
 func (f *FriChip) friCombineInitial(
 	instance FriInstanceInfo,
 	proof FriInitialTreeProof,
-	friAlpha QuadraticExtension,
-	subgroupX_QE QuadraticExtension,
-	precomputedReducedEval []QuadraticExtension,
-) QuadraticExtension {
+	friAlpha field.QuadraticExtension,
+	subgroupX_QE field.QuadraticExtension,
+	precomputedReducedEval []field.QuadraticExtension,
+) field.QuadraticExtension {
 	sum := f.qeAPI.ZERO_QE
 
 	if len(instance.Batches) != len(precomputedReducedEval) {
@@ -255,11 +253,11 @@ func (f *FriChip) friCombineInitial(
 		reducedOpenings := precomputedReducedEval[i]
 
 		point := batch.Point
-		evals := make([]QuadraticExtension, 0)
+		evals := make([]field.QuadraticExtension, 0)
 		for _, polynomial := range batch.Polynomials {
 			evals = append(
 				evals,
-				QuadraticExtension{proof.EvalsProofs[polynomial.OracleIndex].Elements[polynomial.PolynomialInfo], field.ZERO_F},
+				field.QuadraticExtension{proof.EvalsProofs[polynomial.OracleIndex].Elements[polynomial.PolynomialInfo], field.ZERO_F},
 			)
 		}
 
@@ -279,7 +277,7 @@ func (f *FriChip) friCombineInitial(
 	return sum
 }
 
-func (f *FriChip) finalPolyEval(finalPoly PolynomialCoeffs, point QuadraticExtension) QuadraticExtension {
+func (f *FriChip) finalPolyEval(finalPoly PolynomialCoeffs, point field.QuadraticExtension) field.QuadraticExtension {
 	ret := f.qeAPI.ZERO_QE
 	for i := len(finalPoly.Coeffs) - 1; i >= 0; i-- {
 		ret = f.qeAPI.AddExtension(
@@ -293,7 +291,7 @@ func (f *FriChip) finalPolyEval(finalPoly PolynomialCoeffs, point QuadraticExten
 	return ret
 }
 
-func (f *FriChip) interpolate(x QuadraticExtension, xPoints []QuadraticExtension, yPoints []QuadraticExtension, barycentricWeights []QuadraticExtension) QuadraticExtension {
+func (f *FriChip) interpolate(x field.QuadraticExtension, xPoints []field.QuadraticExtension, yPoints []field.QuadraticExtension, barycentricWeights []field.QuadraticExtension) field.QuadraticExtension {
 	if len(xPoints) != len(yPoints) || len(xPoints) != len(barycentricWeights) {
 		panic("length of xPoints, yPoints, and barycentricWeights are inconsistent")
 	}
@@ -342,12 +340,12 @@ func (f *FriChip) interpolate(x QuadraticExtension, xPoints []QuadraticExtension
 }
 
 func (f *FriChip) computeEvaluation(
-	x F,
+	x field.F,
 	xIndexWithinCosetBits []frontend.Variable,
 	arityBits uint64,
-	evals []QuadraticExtension,
-	beta QuadraticExtension,
-) QuadraticExtension {
+	evals []field.QuadraticExtension,
+	beta field.QuadraticExtension,
+) field.QuadraticExtension {
 	arity := 1 << arityBits
 	if (len(evals)) != arity {
 		panic("len(evals) ! arity")
@@ -364,7 +362,7 @@ func (f *FriChip) computeEvaluation(
 	// element's new index is the bit reverse of it's original index.
 	// TODO:  Optimization - Since the size of the evals array should be constant (e.g. 2^arityBits),
 	//        we can just hard code the permutation.
-	permutedEvals := make([]QuadraticExtension, len(evals))
+	permutedEvals := make([]field.QuadraticExtension, len(evals))
 	for i := uint8(0); i < uint8(len(evals)); i++ {
 		newIndex := bits.Reverse8(i) >> arityBits
 		permutedEvals[newIndex] = evals[i]
@@ -377,13 +375,13 @@ func (f *FriChip) computeEvaluation(
 		revXIndexWithinCosetBits[len(xIndexWithinCosetBits)-1-i] = xIndexWithinCosetBits[i]
 	}
 	start := f.expFromBitsConstBase(gInv, revXIndexWithinCosetBits)
-	cosetStart := f.fieldAPI.Mul(start, x).(F)
+	cosetStart := f.fieldAPI.Mul(start, x).(field.F)
 
-	xPoints := make([]QuadraticExtension, len(evals))
+	xPoints := make([]field.QuadraticExtension, len(evals))
 	yPoints := permutedEvals
 
 	// TODO: Make g_F a constant
-	g_F := f.qeAPI.FieldToQE(NewFieldElement(g.Uint64()))
+	g_F := f.qeAPI.FieldToQE(field.NewFieldElement(g.Uint64()))
 	xPoints[0] = f.qeAPI.FieldToQE(cosetStart)
 	for i := 1; i < len(evals); i++ {
 		xPoints[i] = f.qeAPI.MulExtension(xPoints[i-1], g_F)
@@ -391,7 +389,7 @@ func (f *FriChip) computeEvaluation(
 
 	// TODO:  This is n^2.  Is there a way to do this better?
 	// Compute the barycentric weights
-	barycentricWeights := make([]QuadraticExtension, len(xPoints))
+	barycentricWeights := make([]field.QuadraticExtension, len(xPoints))
 	for i := 0; i < len(xPoints); i++ {
 		barycentricWeights[i] = f.qeAPI.ONE_QE
 		for j := 0; j < len(xPoints); j++ {
@@ -413,10 +411,10 @@ func (f *FriChip) computeEvaluation(
 func (f *FriChip) verifyQueryRound(
 	instance FriInstanceInfo,
 	challenges *FriChallenges,
-	precomputedReducedEval []QuadraticExtension,
+	precomputedReducedEval []field.QuadraticExtension,
 	initialMerkleCaps []MerkleCap,
 	proof *FriProof,
-	xIndex F,
+	xIndex field.F,
 	n uint64,
 	nLog uint64,
 	roundProof *FriQueryRound,
@@ -432,7 +430,7 @@ func (f *FriChip) verifyQueryRound(
 		nLog,
 	)
 
-	subgroupX_QE := QuadraticExtension{subgroupX, field.ZERO_F}
+	subgroupX_QE := field.QuadraticExtension{subgroupX, field.ZERO_F}
 
 	oldEval := f.friCombineInitial(
 		instance,
@@ -457,7 +455,7 @@ func (f *FriChip) verifyQueryRound(
 		}
 
 		const NUM_LEAF_LOOKUPS = 4
-		var leafLookups [NUM_LEAF_LOOKUPS]QuadraticExtension
+		var leafLookups [NUM_LEAF_LOOKUPS]field.QuadraticExtension
 		// First create the "leaf" lookup2 circuits
 		// The will use the least significant bits of the xIndexWithCosetBits array
 		for i := 0; i < NUM_LEAF_LOOKUPS; i++ {
@@ -492,7 +490,7 @@ func (f *FriChip) verifyQueryRound(
 		)
 
 		// Convert evals (array of QE) to fields by taking their 0th degree coefficients
-		fieldEvals := make([]F, 0, 2*len(evals))
+		fieldEvals := make([]field.F, 0, 2*len(evals))
 		for j := 0; j < len(evals); j++ {
 			fieldEvals = append(fieldEvals, evals[j][0])
 			fieldEvals = append(fieldEvals, evals[j][1])
@@ -507,7 +505,7 @@ func (f *FriChip) verifyQueryRound(
 
 		// Update the point x to x^arity.
 		for j := uint64(0); j < arityBits; j++ {
-			subgroupX = f.fieldAPI.Mul(subgroupX, subgroupX).(F)
+			subgroupX = f.fieldAPI.Mul(subgroupX, subgroupX).(field.F)
 		}
 
 		xIndexBits = cosetIndexBits

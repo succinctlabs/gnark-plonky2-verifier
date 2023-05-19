@@ -2,7 +2,7 @@ package plonky2_verifier
 
 import (
 	"fmt"
-	. "gnark-plonky2-verifier/field"
+	"gnark-plonky2-verifier/field"
 	"regexp"
 	"strconv"
 )
@@ -39,21 +39,21 @@ func (g *MultiplicationExtensionGate) Id() string {
 }
 
 func (g *MultiplicationExtensionGate) wiresIthMultiplicand0(i uint64) Range {
-	return Range{3 * D * i, 3*D*i + D}
+	return Range{3 * field.D * i, 3*field.D*i + field.D}
 }
 
 func (g *MultiplicationExtensionGate) wiresIthMultiplicand1(i uint64) Range {
-	return Range{3*D*i + D, 3*D*i + 2*D}
+	return Range{3*field.D*i + field.D, 3*field.D*i + 2*field.D}
 }
 
 func (g *MultiplicationExtensionGate) wiresIthOutput(i uint64) Range {
-	return Range{3*D*i + 2*D, 3*D*i + 3*D}
+	return Range{3*field.D*i + 2*field.D, 3*field.D*i + 3*field.D}
 }
 
-func (g *MultiplicationExtensionGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []QuadraticExtension {
+func (g *MultiplicationExtensionGate) EvalUnfiltered(p *PlonkChip, vars EvaluationVars) []field.QuadraticExtension {
 	const0 := vars.localConstants[0]
 
-	constraints := []QuadraticExtension{}
+	constraints := []field.QuadraticExtension{}
 	for i := uint64(0); i < g.numOps; i++ {
 		multiplicand0 := vars.GetLocalExtAlgebra(g.wiresIthMultiplicand0(i))
 		multiplicand1 := vars.GetLocalExtAlgebra(g.wiresIthMultiplicand1(i))
@@ -63,7 +63,7 @@ func (g *MultiplicationExtensionGate) EvalUnfiltered(p *PlonkChip, vars Evaluati
 		computed_output := p.qeAPI.ScalarMulExtensionAlgebra(const0, mul)
 
 		diff := p.qeAPI.SubExtensionAlgebra(output, computed_output)
-		for j := 0; j < D; j++ {
+		for j := 0; j < field.D; j++ {
 			constraints = append(constraints, diff[j])
 		}
 	}
