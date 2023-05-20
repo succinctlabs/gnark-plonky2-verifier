@@ -1,9 +1,8 @@
 package poseidon
 
 import (
-	"gnark-plonky2-verifier/field"
-
 	"github.com/consensys/gnark/frontend"
+	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 )
 
 const HALF_N_FULL_ROUNDS = 4

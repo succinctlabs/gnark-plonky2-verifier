@@ -1,9 +1,8 @@
 package poseidon
 
 import (
-	"gnark-plonky2-verifier/field"
-
 	"github.com/consensys/gnark/frontend"
+	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 )
 
 type Hash = [4]field.F

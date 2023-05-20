@@ -1,14 +1,14 @@
 package poseidon
 
 import (
-	"gnark-plonky2-verifier/field"
-	"gnark-plonky2-verifier/utils"
 	"testing"
 
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/consensys/gnark/test"
+	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/utils"
 )
 
 type TestPoseidonCircuit struct {

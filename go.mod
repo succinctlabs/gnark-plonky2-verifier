@@ -1,4 +1,4 @@
-module gnark-plonky2-verifier
+module github.com/succinctlabs/gnark-plonky2-verifier
 
 go 1.19
 

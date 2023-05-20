@@ -3,11 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"gnark-plonky2-verifier/field"
-	. "gnark-plonky2-verifier/plonky2_verifier"
-	"gnark-plonky2-verifier/poseidon"
 	"os"
 	"time"
+
+	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
+	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
+	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/utils"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
@@ -16,25 +17,19 @@ import (
 )
 
 type BenchmarkPlonky2VerifierCircuit struct {
-	proofWithPis ProofWithPublicInputs
+	proofWithPis common.ProofWithPublicInputs
 
-	verifierChip       *VerifierChip
+	verifierChip       *verifier.VerifierChip
 	plonky2CircuitName string
 }
 
 func (circuit *BenchmarkPlonky2VerifierCircuit) Define(api frontend.API) error {
-	circuitDirname := "./plonky2_verifier/data/" + circuit.plonky2CircuitName + "/"
-	proofWithPis := DeserializeProofWithPublicInputs(circuitDirname + "proof_with_public_inputs.json")
-	commonCircuitData := DeserializeCommonCircuitData(circuitDirname + "common_circuit_data.json")
-	verifierOnlyCircuitData := DeserializeVerifierOnlyCircuitData(circuitDirname + "verifier_only_circuit_data.json")
+	circuitDirname := "./verifier/data/" + circuit.plonky2CircuitName + "/"
+	proofWithPis := utils.DeserializeProofWithPublicInputs(circuitDirname + "proof_with_public_inputs.json")
+	commonCircuitData := utils.DeserializeCommonCircuitData(circuitDirname + "common_circuit_data.json")
+	verifierOnlyCircuitData := utils.DeserializeVerifierOnlyCircuitData(circuitDirname + "verifier_only_circuit_data.json")
 
-	fieldAPI := field.NewFieldAPI(api)
-	qeAPI := field.NewQuadraticExtensionAPI(fieldAPI, commonCircuitData.DegreeBits)
-	hashAPI := poseidon.NewHashAPI(fieldAPI)
-	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
-	friChip := NewFriChip(api, fieldAPI, qeAPI, hashAPI, poseidonChip, &commonCircuitData.FriParams)
-	plonkChip := NewPlonkChip(api, qeAPI, commonCircuitData)
-	circuit.verifierChip = NewVerifierChip(api, fieldAPI, qeAPI, poseidonChip, plonkChip, friChip)
+	circuit.verifierChip = verifier.NewVerifierChip(api, commonCircuitData)
 
 	circuit.verifierChip.Verify(proofWithPis, verifierOnlyCircuitData, commonCircuitData)
 
@@ -45,7 +40,7 @@ func compileCircuit(plonky2Circuit string) frontend.CompiledConstraintSystem {
 	circuit := BenchmarkPlonky2VerifierCircuit{
 		plonky2CircuitName: plonky2Circuit,
 	}
-	proofWithPis := DeserializeProofWithPublicInputs("./plonky2_verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
+	proofWithPis := utils.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
 	circuit.proofWithPis = proofWithPis
 
 	r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &circuit)
@@ -58,7 +53,7 @@ func compileCircuit(plonky2Circuit string) frontend.CompiledConstraintSystem {
 }
 
 func createProof(r1cs frontend.CompiledConstraintSystem, plonky2Circuit string) groth16.Proof {
-	proofWithPis := DeserializeProofWithPublicInputs("./plonky2_verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
+	proofWithPis := utils.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
 
 	// Witness
 	assignment := &BenchmarkPlonky2VerifierCircuit{

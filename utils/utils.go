@@ -1,10 +1,10 @@
 package utils
 
 import (
-	"gnark-plonky2-verifier/field"
 	"math/big"
 
 	"github.com/consensys/gnark/frontend"
+	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 )
 
 func StrArrayToBigIntArray(input []string) []big.Int {
