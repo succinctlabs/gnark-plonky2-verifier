@@ -1,15 +1,14 @@
 package poseidon
 
 import (
-	"gnark-plonky2-verifier/field"
-	. "gnark-plonky2-verifier/field"
-	"gnark-plonky2-verifier/utils"
 	"testing"
 
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/consensys/gnark/test"
+	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/utils"
 )
 
 type TestPoseidonCircuit struct {
@@ -19,11 +18,11 @@ type TestPoseidonCircuit struct {
 
 func (circuit *TestPoseidonCircuit) Define(api frontend.API) error {
 	goldilocksApi := field.NewFieldAPI(api)
-	qeAPI := NewQuadraticExtensionAPI(goldilocksApi, 3)
+	qeAPI := field.NewQuadraticExtensionAPI(goldilocksApi, 3)
 
 	var input PoseidonState
 	for i := 0; i < 12; i++ {
-		input[i] = goldilocksApi.FromBinary(api.ToBinary(circuit.In[i], 64)).(F)
+		input[i] = goldilocksApi.FromBinary(api.ToBinary(circuit.In[i], 64)).(field.F)
 	}
 
 	poseidonChip := NewPoseidonChip(api, goldilocksApi, qeAPI)
@@ -32,7 +31,7 @@ func (circuit *TestPoseidonCircuit) Define(api frontend.API) error {
 	for i := 0; i < 12; i++ {
 		goldilocksApi.AssertIsEqual(
 			output[i],
-			goldilocksApi.FromBinary(api.ToBinary(circuit.Out[i])).(F),
+			goldilocksApi.FromBinary(api.ToBinary(circuit.Out[i])).(field.F),
 		)
 	}
 
@@ -45,7 +44,7 @@ func TestPoseidonWitness(t *testing.T) {
 	testCase := func(in [12]frontend.Variable, out [12]frontend.Variable) {
 		circuit := TestPoseidonCircuit{In: in, Out: out}
 		witness := TestPoseidonCircuit{In: in, Out: out}
-		err := test.IsSolved(&circuit, &witness, TEST_CURVE.ScalarField())
+		err := test.IsSolved(&circuit, &witness, field.TEST_CURVE.ScalarField())
 		assert.NoError(err)
 	}
 
@@ -79,12 +78,12 @@ func TestPoseidonProof(t *testing.T) {
 	circuit := TestPoseidonCircuit{In: in, Out: out}
 	assignment := TestPoseidonCircuit{In: in, Out: out}
 
-	r1cs, err := frontend.Compile(TEST_CURVE.ScalarField(), r1cs.NewBuilder, &circuit)
+	r1cs, err := frontend.Compile(field.TEST_CURVE.ScalarField(), r1cs.NewBuilder, &circuit)
 	if err != nil {
 		panic(err)
 	}
 
-	witness, err := frontend.NewWitness(&assignment, TEST_CURVE.ScalarField())
+	witness, err := frontend.NewWitness(&assignment, field.TEST_CURVE.ScalarField())
 	if err != nil {
 		panic(err)
 	}
@@ -94,7 +93,7 @@ func TestPoseidonProof(t *testing.T) {
 		panic(err)
 	}
 
-	err = test.IsSolved(&circuit, &assignment, TEST_CURVE.ScalarField())
+	err = test.IsSolved(&circuit, &assignment, field.TEST_CURVE.ScalarField())
 	if err != nil {
 		panic(err)
 	}

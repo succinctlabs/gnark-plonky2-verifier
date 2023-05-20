@@ -1,10 +1,10 @@
 package utils
 
 import (
-	. "gnark-plonky2-verifier/field"
 	"math/big"
 
 	"github.com/consensys/gnark/frontend"
+	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 )
 
 func StrArrayToBigIntArray(input []string) []big.Int {
@@ -25,30 +25,22 @@ func StrArrayToFrontendVariableArray(input []string) []frontend.Variable {
 	return output
 }
 
-func Uint64ArrayToFArray(input []uint64) []F {
-	var output []F
+func Uint64ArrayToFArray(input []uint64) []field.F {
+	var output []field.F
 	for i := 0; i < len(input); i++ {
-		output = append(output, NewFieldElement(input[i]))
+		output = append(output, field.NewFieldElement(input[i]))
 	}
 	return output
 }
 
-func Uint64ArrayToQuadraticExtension(input []uint64) QuadraticExtension {
-	return [2]F{NewFieldElement(input[0]), NewFieldElement(input[1])}
+func Uint64ArrayToQuadraticExtension(input []uint64) field.QuadraticExtension {
+	return [2]field.F{field.NewFieldElement(input[0]), field.NewFieldElement(input[1])}
 }
 
-func Uint64ArrayToQuadraticExtensionArray(input [][]uint64) []QuadraticExtension {
-	var output []QuadraticExtension
+func Uint64ArrayToQuadraticExtensionArray(input [][]uint64) []field.QuadraticExtension {
+	var output []field.QuadraticExtension
 	for i := 0; i < len(input); i++ {
-		output = append(output, [2]F{NewFieldElement(input[i][0]), NewFieldElement(input[i][1])})
-	}
-	return output
-}
-
-func Uint64ArrayToHashArray(input [][]uint64) []Hash {
-	var output []Hash
-	for i := 0; i < len(input); i++ {
-		output = append(output, [4]F{NewFieldElement(input[i][0]), NewFieldElement(input[i][1]), NewFieldElement(input[i][2]), NewFieldElement(input[i][3])})
+		output = append(output, [2]field.F{field.NewFieldElement(input[i][0]), field.NewFieldElement(input[i][1])})
 	}
 	return output
 }

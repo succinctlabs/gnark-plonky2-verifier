@@ -1,13 +1,13 @@
 package poseidon
 
 import (
-	. "gnark-plonky2-verifier/field"
-	"gnark-plonky2-verifier/utils"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
+	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/utils"
 )
 
 var testCurve = ecc.BN254
@@ -18,12 +18,12 @@ type TestPublicInputsHashCircuit struct {
 }
 
 func (circuit *TestPublicInputsHashCircuit) Define(api frontend.API) error {
-	fieldAPI := NewFieldAPI(api)
+	fieldAPI := field.NewFieldAPI(api)
 
 	// BN254 -> Binary(64) -> F
-	var input [3]F
+	var input [3]field.F
 	for i := 0; i < 3; i++ {
-		input[i] = fieldAPI.FromBinary(api.ToBinary(circuit.In[i], 64)).(F)
+		input[i] = fieldAPI.FromBinary(api.ToBinary(circuit.In[i], 64)).(field.F)
 	}
 
 	poseidonChip := &PoseidonChip{api: api, fieldAPI: fieldAPI}
@@ -33,7 +33,7 @@ func (circuit *TestPublicInputsHashCircuit) Define(api frontend.API) error {
 	for i := 0; i < 4; i++ {
 		fieldAPI.AssertIsEqual(
 			output[i],
-			fieldAPI.FromBinary(api.ToBinary(circuit.Out[i])).(F),
+			fieldAPI.FromBinary(api.ToBinary(circuit.Out[i])).(field.F),
 		)
 	}
 
