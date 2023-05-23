@@ -17,11 +17,11 @@ type TestFriCircuit struct {
 	commonCircuitDataFilename       string `gnark:"-"`
 	verifierOnlyCircuitDataFilename string `gnark:"-"`
 
-	plonkZeta       field.QuadraticExtension
-	friAlpha        field.QuadraticExtension
-	friBetas        []field.QuadraticExtension
-	friPOWResponse  field.F
-	friQueryIndices []field.F
+	PlonkZeta       field.QuadraticExtension
+	FriAlpha        field.QuadraticExtension
+	FriBetas        []field.QuadraticExtension
+	FriPOWResponse  field.F
+	FriQueryIndices []field.F
 }
 
 func (circuit *TestFriCircuit) Define(api frontend.API) error {
@@ -36,10 +36,10 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	friChip := fri.NewFriChip(api, fieldAPI, qeAPI, hashAPI, poseidonChip, &commonCircuitData.FriParams)
 
 	friChallenges := common.FriChallenges{
-		FriAlpha:        circuit.friAlpha,
-		FriBetas:        circuit.friBetas,
-		FriPowResponse:  circuit.friPOWResponse,
-		FriQueryIndices: circuit.friQueryIndices,
+		FriAlpha:        circuit.FriAlpha,
+		FriBetas:        circuit.FriBetas,
+		FriPowResponse:  circuit.FriPOWResponse,
+		FriQueryIndices: circuit.FriQueryIndices,
 	}
 
 	initialMerkleCaps := []common.MerkleCap{
@@ -50,7 +50,7 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	}
 
 	friChip.VerifyFriProof(
-		fri.GetFriInstance(&commonCircuitData, qeAPI, circuit.plonkZeta, commonCircuitData.DegreeBits),
+		fri.GetFriInstance(&commonCircuitData, qeAPI, circuit.PlonkZeta, commonCircuitData.DegreeBits),
 		fri.ToFriOpenings(proofWithPis.Proof.Openings),
 		&friChallenges,
 		initialMerkleCaps,
@@ -68,17 +68,17 @@ func TestFibonacciFriProof(t *testing.T) {
 			proofWithPIsFilename:            "./data/fibonacci/proof_with_public_inputs.json",
 			commonCircuitDataFilename:       "./data/fibonacci/common_circuit_data.json",
 			verifierOnlyCircuitDataFilename: "./data/fibonacci/verifier_only_circuit_data.json",
-			plonkZeta: field.QuadraticExtension{
+			PlonkZeta: field.QuadraticExtension{
 				*field.NewFieldConstFromString("14887793628029982930"),
 				*field.NewFieldConstFromString("1136137158284059037"),
 			},
-			friAlpha: field.QuadraticExtension{
+			FriAlpha: field.QuadraticExtension{
 				*field.NewFieldConstFromString("14641715242626918707"),
 				*field.NewFieldConstFromString("10574243340537902930"),
 			},
-			friBetas:       []field.QuadraticExtension{},
-			friPOWResponse: *field.NewFieldConst(82451580476419),
-			friQueryIndices: []field.F{
+			FriBetas:       []field.QuadraticExtension{},
+			FriPOWResponse: *field.NewFieldConst(82451580476419),
+			FriQueryIndices: []field.F{
 				*field.NewFieldConst(6790812084677375942),
 				*field.NewFieldConst(12394212020331474798),
 				*field.NewFieldConst(16457600747000998582),
@@ -122,18 +122,18 @@ func TestDummyFriProof(t *testing.T) {
 
 	testCase := func() {
 		circuit := TestFriCircuit{
-			proofWithPIsFilename:            "./data/dummy_2^14_gates/proof_with_public_inputs.json",
-			commonCircuitDataFilename:       "./data/dummy_2^14_gates/common_circuit_data.json",
-			verifierOnlyCircuitDataFilename: "./data/dummy_2^14_gates/verifier_only_circuit_data.json",
-			plonkZeta: field.QuadraticExtension{
+			proofWithPIsFilename:            "../../data/dummy_2^14_gates/proof_with_public_inputs.json",
+			commonCircuitDataFilename:       "../../data/dummy_2^14_gates/common_circuit_data.json",
+			verifierOnlyCircuitDataFilename: "../../data/dummy_2^14_gates/verifier_only_circuit_data.json",
+			PlonkZeta: field.QuadraticExtension{
 				*field.NewFieldConstFromString("17377750363769967882"),
 				*field.NewFieldConstFromString("11921191651424768462"),
 			},
-			friAlpha: field.QuadraticExtension{
+			FriAlpha: field.QuadraticExtension{
 				*field.NewFieldConstFromString("16721004555774385479"),
 				*field.NewFieldConstFromString("10688151135543754663"),
 			},
-			friBetas: []field.QuadraticExtension{
+			FriBetas: []field.QuadraticExtension{
 				{
 					*field.NewFieldConstFromString("3312441922957827805"),
 					*field.NewFieldConstFromString("15128092514958289671"),
@@ -147,8 +147,8 @@ func TestDummyFriProof(t *testing.T) {
 					*field.NewFieldConstFromString("5176346568444408396"),
 				},
 			},
-			friPOWResponse: *field.NewFieldConst(4389),
-			friQueryIndices: []field.F{
+			FriPOWResponse: *field.NewFieldConst(4389),
+			FriQueryIndices: []field.F{
 				*field.NewFieldConstFromString("16334967868590615051"),
 				*field.NewFieldConstFromString("2911473540496037915"),
 				*field.NewFieldConstFromString("14887216056886344225"),
@@ -179,7 +179,64 @@ func TestDummyFriProof(t *testing.T) {
 				*field.NewFieldConstFromString("11238419549114325157"),
 			},
 		}
-		witness := TestFriCircuit{}
+		witness := TestFriCircuit{
+			proofWithPIsFilename:            "../../data/dummy_2^14_gates/proof_with_public_inputs.json",
+			commonCircuitDataFilename:       "../../data/dummy_2^14_gates/common_circuit_data.json",
+			verifierOnlyCircuitDataFilename: ".../../data/dummy_2^14_gates/verifier_only_circuit_data.json",
+			PlonkZeta: field.QuadraticExtension{
+				*field.NewFieldConstFromString("17377750363769967882"),
+				*field.NewFieldConstFromString("11921191651424768462"),
+			},
+			FriAlpha: field.QuadraticExtension{
+				*field.NewFieldConstFromString("16721004555774385479"),
+				*field.NewFieldConstFromString("10688151135543754663"),
+			},
+			FriBetas: []field.QuadraticExtension{
+				{
+					*field.NewFieldConstFromString("3312441922957827805"),
+					*field.NewFieldConstFromString("15128092514958289671"),
+				},
+				{
+					*field.NewFieldConstFromString("13630530769060141802"),
+					*field.NewFieldConstFromString("14559883974933163008"),
+				},
+				{
+					*field.NewFieldConstFromString("16146508250083930687"),
+					*field.NewFieldConstFromString("5176346568444408396"),
+				},
+			},
+			FriPOWResponse: *field.NewFieldConst(4389),
+			FriQueryIndices: []field.F{
+				*field.NewFieldConstFromString("16334967868590615051"),
+				*field.NewFieldConstFromString("2911473540496037915"),
+				*field.NewFieldConstFromString("14887216056886344225"),
+				*field.NewFieldConstFromString("7808811227805914295"),
+				*field.NewFieldConstFromString("2018594961417375749"),
+				*field.NewFieldConstFromString("3733368398777208435"),
+				*field.NewFieldConstFromString("2623035669037055104"),
+				*field.NewFieldConstFromString("299243030573481514"),
+				*field.NewFieldConstFromString("7189789717962704433"),
+				*field.NewFieldConstFromString("14566344026886816268"),
+				*field.NewFieldConstFromString("12555390069003437453"),
+				*field.NewFieldConstFromString("17225508403199418233"),
+				*field.NewFieldConstFromString("5088797913879903292"),
+				*field.NewFieldConstFromString("9715691392773433023"),
+				*field.NewFieldConstFromString("7565836764713256165"),
+				*field.NewFieldConstFromString("1500143546029322929"),
+				*field.NewFieldConstFromString("1245802417104422080"),
+				*field.NewFieldConstFromString("6831959786661245110"),
+				*field.NewFieldConstFromString("17271054758535453780"),
+				*field.NewFieldConstFromString("6225460404576395409"),
+				*field.NewFieldConstFromString("15932661092896277351"),
+				*field.NewFieldConstFromString("12452534049198240575"),
+				*field.NewFieldConstFromString("4225199666055520177"),
+				*field.NewFieldConstFromString("13235091290587791090"),
+				*field.NewFieldConstFromString("2562357622728700774"),
+				*field.NewFieldConstFromString("17676678042980201498"),
+				*field.NewFieldConstFromString("5837067135702409874"),
+				*field.NewFieldConstFromString("11238419549114325157"),
+			},
+		}
 		err := test.IsSolved(&circuit, &witness, field.TEST_CURVE.ScalarField())
 		assert.NoError(err)
 	}
