@@ -31,11 +31,6 @@ func NewFieldConstFromString(x string) *F {
 	return &val
 }
 
-func NewFieldConstFromVariable(x frontend.Variable) *F {
-	val := emulated.ValueOf[EmulatedField](x)
-	return &val
-}
-
 func NewFieldTarget() *F {
 	var field emulated.Element[emulated.Goldilocks]
 	return &field

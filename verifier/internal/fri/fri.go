@@ -208,7 +208,7 @@ func (f *FriChip) expFromBitsConstBase(
 				f.fieldAPI.Mul(
 					basePowElement,
 					product),
-				field.NewFieldConstFromVariable(bit)),
+				f.fieldAPI.NewElement(bit)),
 			product,
 		)
 	}
