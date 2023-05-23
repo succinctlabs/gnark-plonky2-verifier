@@ -17,7 +17,7 @@ import (
 )
 
 type BenchmarkPlonky2VerifierCircuit struct {
-	proofWithPis common.ProofWithPublicInputs
+	ProofWithPis common.ProofWithPublicInputs `gnark:",public"`
 
 	verifierChip       *verifier.VerifierChip
 	plonky2CircuitName string
@@ -25,13 +25,12 @@ type BenchmarkPlonky2VerifierCircuit struct {
 
 func (circuit *BenchmarkPlonky2VerifierCircuit) Define(api frontend.API) error {
 	circuitDirname := "./verifier/data/" + circuit.plonky2CircuitName + "/"
-	proofWithPis := utils.DeserializeProofWithPublicInputs(circuitDirname + "proof_with_public_inputs.json")
 	commonCircuitData := utils.DeserializeCommonCircuitData(circuitDirname + "common_circuit_data.json")
 	verifierOnlyCircuitData := utils.DeserializeVerifierOnlyCircuitData(circuitDirname + "verifier_only_circuit_data.json")
 
 	circuit.verifierChip = verifier.NewVerifierChip(api, commonCircuitData)
 
-	circuit.verifierChip.Verify(proofWithPis, verifierOnlyCircuitData, commonCircuitData)
+	circuit.verifierChip.Verify(circuit.ProofWithPis, verifierOnlyCircuitData, commonCircuitData)
 
 	return nil
 }
@@ -41,7 +40,7 @@ func compileCircuit(plonky2Circuit string) frontend.CompiledConstraintSystem {
 		plonky2CircuitName: plonky2Circuit,
 	}
 	proofWithPis := utils.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
-	circuit.proofWithPis = proofWithPis
+	circuit.ProofWithPis = proofWithPis
 
 	r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &circuit)
 	if err != nil {
@@ -57,7 +56,7 @@ func createProof(r1cs frontend.CompiledConstraintSystem, plonky2Circuit string) 
 
 	// Witness
 	assignment := &BenchmarkPlonky2VerifierCircuit{
-		proofWithPis: proofWithPis,
+		ProofWithPis: proofWithPis,
 	}
 
 	fmt.Println("Generating witness", time.Now())

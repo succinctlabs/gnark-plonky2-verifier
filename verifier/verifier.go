@@ -83,9 +83,75 @@ func (c *VerifierChip) GetChallenges(
 	}
 }
 
-func (c *VerifierChip) Verify(proofWithPis common.ProofWithPublicInputs, verifierData common.VerifierOnlyCircuitData, commonData common.CommonCircuitData) {
-	// TODO: Verify shape of the proof?
+/*
+func (c *VerifierChip) generateProofInput(commonData common.CommonCircuitData) common.ProofWithPublicInputs {
+	// Generate the parts of the witness that is for the plonky2 proof input
 
+	capHeight := commonData.Config.FriConfig.CapHeight
+
+	friCommitPhaseMerkleCaps := []common.MerkleCap{}
+	for i := 0; i < len(commonData.FriParams.ReductionArityBits); i++ {
+		friCommitPhaseMerkleCaps = append(friCommitPhaseMerkleCaps, common.NewMerkleCap(capHeight))
+	}
+
+	salt := commonData.SaltSize()
+	numLeavesPerOracle := []uint{
+		commonData.NumPreprocessedPolys(),
+		commonData.Config.NumWires + salt,
+		commonData.NumZsPartialProductsPolys() + salt,
+		commonData.NumQuotientPolys() + salt,
+	}
+	friQueryRoundProofs := []common.FriQueryRound{}
+	for i := uint64(0); i < commonData.FriParams.Config.NumQueryRounds; i++ {
+		evalProofs := []common.EvalProof{}
+		merkleProofLen := commonData.FriParams.LDEBits() - capHeight
+		for _, numLeaves := range numLeavesPerOracle {
+			leaves := make([]field.F, numLeaves)
+			merkleProof := common.NewMerkleProof(merkleProofLen)
+			evalProofs = append(evalProofs, common.NewEvalProof(leaves, merkleProof))
+		}
+
+		initialTreesProof := common.NewFriInitialTreeProof(evalProofs)
+		steps := []common.FriQueryStep{}
+		for _, arityBit := range commonData.FriParams.ReductionArityBits {
+			if merkleProofLen < arityBit {
+				panic("merkleProofLen < arityBits")
+			}
+
+			steps = append(steps, common.NewFriQueryStep(arityBit, merkleProofLen))
+		}
+
+		friQueryRoundProofs = append(friQueryRoundProofs, common.NewFriQueryRound(steps, initialTreesProof))
+	}
+
+	proofInput := common.ProofWithPublicInputs{
+		Proof: common.Proof{
+			WiresCap:                  common.NewMerkleCap(capHeight),
+			PlonkZsPartialProductsCap: common.NewMerkleCap(capHeight),
+			QuotientPolysCap:          common.NewMerkleCap(capHeight),
+			Openings: common.NewOpeningSet(
+				commonData.Config.NumConstants,
+				commonData.Config.NumRoutedWires,
+				commonData.Config.NumWires,
+				commonData.Config.NumChallenges,
+				commonData.NumPartialProducts,
+				commonData.QuotientDegreeFactor,
+			),
+			OpeningProof: common.FriProof{
+				CommitPhaseMerkleCaps: friCommitPhaseMerkleCaps,
+				QueryRoundProofs:      friQueryRoundProofs,
+				FinalPoly:             common.NewPolynomialCoeffs(commonData.FriParams.FinalPolyLen()),
+			},
+		},
+		PublicInputs: make([]field.F, commonData.NumPublicInputs),
+	}
+
+	return proofInput
+}
+*/
+
+func (c *VerifierChip) Verify(proofWithPis common.ProofWithPublicInputs, verifierData common.VerifierOnlyCircuitData, commonData common.CommonCircuitData) {
+	// Generate the parts of the witness that is for the plonky2 proof input
 	publicInputsHash := c.GetPublicInputsHash(proofWithPis.PublicInputs)
 	proofChallenges := c.GetChallenges(proofWithPis, publicInputsHash, commonData, verifierData)
 
