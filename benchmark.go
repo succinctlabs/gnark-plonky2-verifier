@@ -15,6 +15,7 @@ import (
 	"github.com/consensys/gnark/constraint"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
+	"github.com/consensys/gnark/profile"
 )
 
 type BenchmarkPlonky2VerifierCircuit struct {
@@ -43,11 +44,15 @@ func compileCircuit(plonky2Circuit string) constraint.ConstraintSystem {
 	proofWithPis := utils.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
 	circuit.ProofWithPis = proofWithPis
 
+	p := profile.Start()
 	r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &circuit)
 	if err != nil {
 		fmt.Println("error in building circuit", err)
 		os.Exit(1)
 	}
+	p.Stop()
+	fmt.Println(p.NbConstraints())
+	fmt.Println(p.Top())
 
 	return r1cs
 }
