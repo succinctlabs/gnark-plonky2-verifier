@@ -186,7 +186,8 @@ func (c *PoseidonChip) MdsLayer(state_ PoseidonState) PoseidonState {
 	var state [SPONGE_WIDTH]frontend.Variable
 	for i := 0; i < SPONGE_WIDTH; i++ {
 		reducedState := c.fieldAPI.Reduce(&state_[i])
-		state[i] = c.api.FromBinary(c.fieldAPI.ToBits(reducedState)...)
+		//state[i] = c.api.FromBinary(c.fieldAPI.ToBits(reducedState)...)
+		state[i] = reducedState.Limbs[0]
 	}
 
 	for r := 0; r < 12; r++ {
@@ -281,16 +282,19 @@ func (c *PoseidonChip) MdsPartialLayerFast(state PoseidonState, r int) PoseidonS
 		if i < SPONGE_WIDTH {
 			t := frontend.Variable(FAST_PARTIAL_ROUND_W_HATS[r][i-1])
 			reducedState := c.fieldAPI.Reduce(&state[i])
-			si := c.api.FromBinary(c.fieldAPI.ToBits(reducedState)...)
+			//si := c.api.FromBinary(c.fieldAPI.ToBits(reducedState)...)
+			si := reducedState.Limbs[0]
 			dSum = c.api.Add(dSum, c.api.Mul(si, t))
 		}
 	}
 
 	reducedState := c.fieldAPI.Reduce(&state[0])
-	s0 := c.api.FromBinary(c.fieldAPI.ToBits(reducedState)...)
+	//s0 := c.api.FromBinary(c.fieldAPI.ToBits(reducedState)...)
+	s0 := reducedState.Limbs[0]
 	mds0to0 := frontend.Variable(MDS_MATRIX_CIRC[0] + MDS_MATRIX_DIAG[0])
 	dSum = c.api.Add(dSum, c.api.Mul(s0, mds0to0))
 	d := c.fieldAPI.FromBits(c.api.ToBinary(dSum)...)
+	//d := c.fieldAPI.NewElement(dSum)
 
 	var result PoseidonState
 	for i := 0; i < SPONGE_WIDTH; i++ {
