@@ -368,8 +368,71 @@ var ALL_ROUND_CONSTANTS = []field.F{
 	field.NewFieldConst(0xbc8dfb627fe558fc),
 }
 
-var MDS_MATRIX_CIRC = []uint64{17, 15, 41, 16, 2, 28, 13, 13, 39, 18, 34, 20}
-var MDS_MATRIX_DIAG = []uint64{8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+var MDS_MATRIX_CIRC = []field.F{
+	field.NewFieldConst(17),
+	field.NewFieldConst(15),
+	field.NewFieldConst(41),
+	field.NewFieldConst(16),
+	field.NewFieldConst(2),
+	field.NewFieldConst(28),
+	field.NewFieldConst(13),
+	field.NewFieldConst(13),
+	field.NewFieldConst(39),
+	field.NewFieldConst(18),
+	field.NewFieldConst(34),
+	field.NewFieldConst(20),
+}
+
+var MDS_MATRIX_CIRC_VARS = []frontend.Variable{
+	frontend.Variable(17),
+	frontend.Variable(15),
+	frontend.Variable(41),
+	frontend.Variable(16),
+	frontend.Variable(2),
+	frontend.Variable(28),
+	frontend.Variable(13),
+	frontend.Variable(13),
+	frontend.Variable(39),
+	frontend.Variable(18),
+	frontend.Variable(34),
+	frontend.Variable(20),
+}
+
+var MDS_MATRIX_DIAG = []field.F{
+	field.NewFieldConst(8),
+	field.ZERO_F,
+	field.ZERO_F,
+	field.ZERO_F,
+	field.ZERO_F,
+	field.ZERO_F,
+	field.ZERO_F,
+	field.ZERO_F,
+	field.ZERO_F,
+	field.ZERO_F,
+	field.ZERO_F,
+	field.ZERO_F,
+}
+
+var ZERO_VAR = frontend.Variable(0)
+
+var MDS_MATRIX_DIAG_VARS = []frontend.Variable{
+	frontend.Variable(8),
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+}
+
+var MDS0TO0 = field.NewFieldConst(25)
+
+var MDS0TO0_VAR = frontend.Variable(25)
 
 var FAST_PARTIAL_FIRST_ROUND_CONSTANT = []field.F{
 	field.NewFieldConst(0x3cc3f892184df408),

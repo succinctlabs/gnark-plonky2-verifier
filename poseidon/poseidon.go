@@ -148,31 +148,31 @@ func (c *PoseidonChip) SBoxLayerExtension(state PoseidonStateExtension) Poseidon
 }
 
 func (c *PoseidonChip) MdsRowShf(r int, v [SPONGE_WIDTH]frontend.Variable) frontend.Variable {
-	res := frontend.Variable(0)
+	res := ZERO_VAR
 
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
-			res1 := c.api.Mul(v[(i+r)%SPONGE_WIDTH], frontend.Variable(MDS_MATRIX_CIRC[i]))
+			res1 := c.api.Mul(v[(i+r)%SPONGE_WIDTH], MDS_MATRIX_CIRC_VARS[i])
 			res = c.api.Add(res, res1)
 		}
 	}
 
-	res = c.api.Add(res, c.api.Mul(v[r], MDS_MATRIX_DIAG[r]))
+	res = c.api.Add(res, c.api.Mul(v[r], MDS_MATRIX_DIAG_VARS[r]))
 	return res
 }
 
 func (c *PoseidonChip) MdsRowShfExtension(r int, v [SPONGE_WIDTH]field.QuadraticExtension) field.QuadraticExtension {
-	res := c.qeAPI.FieldToQE(field.NewFieldConst(0))
+	res := c.qeAPI.FieldToQE(field.ZERO_F)
 
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
-			matrixVal := c.qeAPI.FieldToQE(field.NewFieldConst(MDS_MATRIX_CIRC[i]))
+			matrixVal := c.qeAPI.FieldToQE(MDS_MATRIX_CIRC[i])
 			res1 := c.qeAPI.MulExtension(v[(i+r)%SPONGE_WIDTH], matrixVal)
 			res = c.qeAPI.AddExtension(res, res1)
 		}
 	}
 
-	matrixVal := c.qeAPI.FieldToQE(field.NewFieldConst(MDS_MATRIX_DIAG[r]))
+	matrixVal := c.qeAPI.FieldToQE(MDS_MATRIX_DIAG[r])
 	res = c.qeAPI.AddExtension(res, c.qeAPI.MulExtension(v[r], matrixVal))
 	return res
 }
@@ -180,7 +180,7 @@ func (c *PoseidonChip) MdsRowShfExtension(r int, v [SPONGE_WIDTH]field.Quadratic
 func (c *PoseidonChip) MdsLayer(state_ PoseidonState) PoseidonState {
 	var result PoseidonState
 	for i := 0; i < SPONGE_WIDTH; i++ {
-		result[i] = field.NewFieldConst(0)
+		result[i] = field.ZERO_F
 	}
 
 	var state [SPONGE_WIDTH]frontend.Variable
@@ -235,7 +235,7 @@ func (c *PoseidonChip) PartialFirstConstantLayerExtension(state PoseidonStateExt
 func (c *PoseidonChip) MdsPartialLayerInit(state PoseidonState) PoseidonState {
 	var result PoseidonState
 	for i := 0; i < 12; i++ {
-		result[i] = field.NewFieldConst(0)
+		result[i] = field.ZERO_F
 	}
 
 	result[0] = state[0]
@@ -257,7 +257,7 @@ func (c *PoseidonChip) MdsPartialLayerInit(state PoseidonState) PoseidonState {
 func (c *PoseidonChip) MdsPartialLayerInitExtension(state PoseidonStateExtension) PoseidonStateExtension {
 	var result PoseidonStateExtension
 	for i := 0; i < 12; i++ {
-		result[i] = c.qeAPI.FieldToQE(field.NewFieldConst(0))
+		result[i] = c.qeAPI.FieldToQE(field.ZERO_F)
 	}
 
 	result[0] = state[0]
@@ -277,10 +277,10 @@ func (c *PoseidonChip) MdsPartialLayerInitExtension(state PoseidonStateExtension
 }
 
 func (c *PoseidonChip) MdsPartialLayerFast(state PoseidonState, r int) PoseidonState {
-	dSum := frontend.Variable(0)
+	dSum := ZERO_VAR
 	for i := 1; i < 12; i++ {
 		if i < SPONGE_WIDTH {
-			t := frontend.Variable(FAST_PARTIAL_ROUND_W_HATS_VARS[r][i-1])
+			t := FAST_PARTIAL_ROUND_W_HATS_VARS[r][i-1]
 			reducedState := c.fieldAPI.Reduce(state[i])
 			//si := c.api.FromBinary(c.fieldAPI.ToBits(reducedState)...)
 			si := reducedState.Limbs[0]
@@ -291,14 +291,13 @@ func (c *PoseidonChip) MdsPartialLayerFast(state PoseidonState, r int) PoseidonS
 	reducedState := c.fieldAPI.Reduce(state[0])
 	//s0 := c.api.FromBinary(c.fieldAPI.ToBits(reducedState)...)
 	s0 := reducedState.Limbs[0]
-	mds0to0 := frontend.Variable(MDS_MATRIX_CIRC[0] + MDS_MATRIX_DIAG[0])
-	dSum = c.api.Add(dSum, c.api.Mul(s0, mds0to0))
+	dSum = c.api.Add(dSum, c.api.Mul(s0, MDS0TO0_VAR))
 	d := c.fieldAPI.FromBits(c.api.ToBinary(dSum)...)
 	//d := c.fieldAPI.NewElement(dSum)
 
 	var result PoseidonState
 	for i := 0; i < SPONGE_WIDTH; i++ {
-		result[i] = field.NewFieldConst(0)
+		result[i] = field.ZERO_F
 	}
 
 	result[0] = d
@@ -315,7 +314,7 @@ func (c *PoseidonChip) MdsPartialLayerFast(state PoseidonState, r int) PoseidonS
 
 func (c *PoseidonChip) MdsPartialLayerFastExtension(state PoseidonStateExtension, r int) PoseidonStateExtension {
 	s0 := state[0]
-	mds0to0 := c.qeAPI.FieldToQE(field.NewFieldConst(MDS_MATRIX_CIRC[0] + MDS_MATRIX_DIAG[0]))
+	mds0to0 := c.qeAPI.FieldToQE(MDS0TO0)
 	d := c.qeAPI.MulExtension(s0, mds0to0)
 	for i := 1; i < 12; i++ {
 		if i < SPONGE_WIDTH {
