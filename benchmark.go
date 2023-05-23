@@ -102,6 +102,14 @@ func main() {
 	}
 
 	r1cs := compileCircuit(*plonky2Circuit)
-	proof := createProof(r1cs, *plonky2Circuit)
-	fmt.Println(proof.CurveID(), time.Now())
+	println("r1cs.GetNbCoefficients(): ", r1cs.GetNbCoefficients())
+	println("r1cs.GetNbConstraints(): ", r1cs.GetNbConstraints())
+	println("r1cs.GetNbSecretVariables(): ", r1cs.GetNbSecretVariables())
+	println("r1cs.GetNbPublicVariables(): ", r1cs.GetNbPublicVariables())
+	println("r1cs.GetNbInternalVariables(): ", r1cs.GetNbInternalVariables())
+
+	/*
+		proof := createProof(r1cs, *plonky2Circuit)
+		fmt.Println(proof.CurveID(), time.Now())
+	*/
 }
