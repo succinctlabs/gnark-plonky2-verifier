@@ -152,7 +152,7 @@ func (g *CosetInterpolationGate) EvalUnfiltered(api frontend.API, qeAPI *field.Q
 	evaluationPoint := vars.GetLocalExtAlgebra(g.wiresEvaluationPoint())
 	shiftedEvaluationPoint := vars.GetLocalExtAlgebra(g.wiresShiftedEvaluationPoint())
 
-	negShift := qeAPI.ScalarMulExtension(shift, *field.NEG_ONE_F)
+	negShift := qeAPI.ScalarMulExtension(shift, field.NEG_ONE_F)
 
 	tmp := qeAPI.ScalarMulExtensionAlgebra(negShift, shiftedEvaluationPoint)
 	tmp = qeAPI.AddExtensionAlgebra(tmp, evaluationPoint)

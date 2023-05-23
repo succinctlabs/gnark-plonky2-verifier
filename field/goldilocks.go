@@ -8,7 +8,7 @@ import (
 )
 
 type EmulatedField = emulated.Goldilocks
-type F = emulated.Element[EmulatedField]
+type F = *emulated.Element[EmulatedField]
 type FieldAPI = *emulated.Field[emulated.Goldilocks]
 
 var TEST_CURVE = ecc.BN254
@@ -21,19 +21,14 @@ func NewFieldAPI(api frontend.API) FieldAPI {
 	return fieldAPI
 }
 
-func NewFieldConst(x uint64) *F {
+func NewFieldConst(x uint64) F {
 	val := emulated.ValueOf[EmulatedField](x)
 	return &val
 }
 
-func NewFieldConstFromString(x string) *F {
+func NewFieldConstFromString(x string) F {
 	val := emulated.ValueOf[EmulatedField](x)
 	return &val
-}
-
-func NewFieldTarget() *F {
-	var field emulated.Element[emulated.Goldilocks]
-	return &field
 }
 
 var ONE_F = NewFieldConst(1)
@@ -74,7 +69,7 @@ func TwoAdicSubgroup(nLog uint64) []goldilocks.Element {
 	return res
 }
 
-func IsZero(api frontend.API, fieldAPI *emulated.Field[emulated.Goldilocks], x *F) frontend.Variable {
+func IsZero(api frontend.API, fieldAPI *emulated.Field[emulated.Goldilocks], x F) frontend.Variable {
 	reduced := fieldAPI.Reduce(x)
 	limbs := reduced.Limbs
 

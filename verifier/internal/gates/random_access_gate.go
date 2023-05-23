@@ -115,7 +115,7 @@ func (g *RandomAccessGate) WireBit(i uint64, copy uint64) uint64 {
 }
 
 func (g *RandomAccessGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticExtensionAPI, vars EvaluationVars) []field.QuadraticExtension {
-	two := field.QuadraticExtension{*field.NewFieldConst(2), *field.NewFieldConst(0)}
+	two := field.QuadraticExtension{field.NewFieldConst(2), field.NewFieldConst(0)}
 	constraints := []field.QuadraticExtension{}
 
 	for copy := uint64(0); copy < g.numCopies; copy++ {

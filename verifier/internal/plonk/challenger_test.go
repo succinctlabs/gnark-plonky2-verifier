@@ -27,32 +27,32 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 
 	var circuitDigest [4]field.F
 	for i := 0; i < len(circuitDigest); i++ {
-		circuitDigest[i] = *fieldAPI.FromBits(api.ToBinary(circuit.CircuitDigest[i], 64)...)
+		circuitDigest[i] = fieldAPI.FromBits(api.ToBinary(circuit.CircuitDigest[i], 64)...)
 	}
 
 	var publicInputs [3]field.F
 	for i := 0; i < len(publicInputs); i++ {
-		publicInputs[i] = *fieldAPI.FromBits(api.ToBinary(circuit.PublicInputs[i], 64)...)
+		publicInputs[i] = fieldAPI.FromBits(api.ToBinary(circuit.PublicInputs[i], 64)...)
 	}
 
 	var wiresCap [16][4]field.F
 	for i := 0; i < len(wiresCap); i++ {
 		for j := 0; j < len(wiresCap[0]); j++ {
-			wiresCap[i][j] = *fieldAPI.FromBits(api.ToBinary(circuit.WiresCap[i][j], 64)...)
+			wiresCap[i][j] = fieldAPI.FromBits(api.ToBinary(circuit.WiresCap[i][j], 64)...)
 		}
 	}
 
 	var plonkZsPartialProductsCap [16][4]field.F
 	for i := 0; i < len(plonkZsPartialProductsCap); i++ {
 		for j := 0; j < len(plonkZsPartialProductsCap[0]); j++ {
-			plonkZsPartialProductsCap[i][j] = *fieldAPI.FromBits(api.ToBinary(circuit.PlonkZsPartialProductsCap[i][j], 64)...)
+			plonkZsPartialProductsCap[i][j] = fieldAPI.FromBits(api.ToBinary(circuit.PlonkZsPartialProductsCap[i][j], 64)...)
 		}
 	}
 
 	var quotientPolysCap [16][4]field.F
 	for i := 0; i < len(quotientPolysCap); i++ {
 		for j := 0; j < len(quotientPolysCap[0]); j++ {
-			quotientPolysCap[i][j] = *fieldAPI.FromBits(api.ToBinary(circuit.QuotientPolysCap[i][j], 64)...)
+			quotientPolysCap[i][j] = fieldAPI.FromBits(api.ToBinary(circuit.QuotientPolysCap[i][j], 64)...)
 		}
 	}
 
@@ -66,53 +66,53 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	plonkGammas := challengerChip.GetNChallenges(numChallenges)
 
 	expectedPublicInputHash := [4]field.F{
-		*field.NewFieldConstFromString("8416658900775745054"),
-		*field.NewFieldConstFromString("12574228347150446423"),
-		*field.NewFieldConstFromString("9629056739760131473"),
-		*field.NewFieldConstFromString("3119289788404190010"),
+		field.NewFieldConstFromString("8416658900775745054"),
+		field.NewFieldConstFromString("12574228347150446423"),
+		field.NewFieldConstFromString("9629056739760131473"),
+		field.NewFieldConstFromString("3119289788404190010"),
 	}
 
 	for i := 0; i < 4; i++ {
-		fieldAPI.AssertIsEqual(&publicInputHash[i], &expectedPublicInputHash[i])
+		fieldAPI.AssertIsEqual(publicInputHash[i], expectedPublicInputHash[i])
 	}
 
 	expectedPlonkBetas := [2]field.F{
-		*field.NewFieldConstFromString("4678728155650926271"),
-		*field.NewFieldConstFromString("13611962404289024887"),
+		field.NewFieldConstFromString("4678728155650926271"),
+		field.NewFieldConstFromString("13611962404289024887"),
 	}
 
 	expectedPlonkGammas := [2]field.F{
-		*field.NewFieldConstFromString("13237663823305715949"),
-		*field.NewFieldConstFromString("15389314098328235145"),
+		field.NewFieldConstFromString("13237663823305715949"),
+		field.NewFieldConstFromString("15389314098328235145"),
 	}
 
 	for i := 0; i < 2; i++ {
-		fieldAPI.AssertIsEqual(&plonkBetas[i], &expectedPlonkBetas[i])
-		fieldAPI.AssertIsEqual(&plonkGammas[i], &expectedPlonkGammas[i])
+		fieldAPI.AssertIsEqual(plonkBetas[i], expectedPlonkBetas[i])
+		fieldAPI.AssertIsEqual(plonkGammas[i], expectedPlonkGammas[i])
 	}
 
 	challengerChip.ObserveCap(plonkZsPartialProductsCap[:])
 	plonkAlphas := challengerChip.GetNChallenges(numChallenges)
 
 	expectedPlonkAlphas := [2]field.F{
-		*field.NewFieldConstFromString("14505919539124304197"),
-		*field.NewFieldConstFromString("1695455639263736117"),
+		field.NewFieldConstFromString("14505919539124304197"),
+		field.NewFieldConstFromString("1695455639263736117"),
 	}
 
 	for i := 0; i < 2; i++ {
-		fieldAPI.AssertIsEqual(&plonkAlphas[i], &expectedPlonkAlphas[i])
+		fieldAPI.AssertIsEqual(plonkAlphas[i], expectedPlonkAlphas[i])
 	}
 
 	challengerChip.ObserveCap(quotientPolysCap[:])
 	plonkZeta := challengerChip.GetExtensionChallenge()
 
 	expectedPlonkZeta := field.QuadraticExtension{
-		*field.NewFieldConstFromString("14887793628029982930"),
-		*field.NewFieldConstFromString("1136137158284059037"),
+		field.NewFieldConstFromString("14887793628029982930"),
+		field.NewFieldConstFromString("1136137158284059037"),
 	}
 
 	for i := 0; i < 2; i++ {
-		fieldAPI.AssertIsEqual(&plonkZeta[i], &expectedPlonkZeta[i])
+		fieldAPI.AssertIsEqual(plonkZeta[i], expectedPlonkZeta[i])
 	}
 
 	return nil

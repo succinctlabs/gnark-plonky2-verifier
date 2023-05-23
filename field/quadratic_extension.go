@@ -28,7 +28,7 @@ type QuadraticExtensionAPI struct {
 func NewQuadraticExtensionAPI(api frontend.API, fieldAPI FieldAPI, degreeBits uint64) *QuadraticExtensionAPI {
 	// TODO:  Should degreeBits be verified that it fits within the field and that degree is within uint64?
 
-	var ZERO_QE = QuadraticExtension{*ZERO_F, *ZERO_F}
+	var ZERO_QE = QuadraticExtension{ZERO_F, ZERO_F}
 
 	var ZERO_QE_ALGEBRA QEAlgebra
 
@@ -40,10 +40,10 @@ func NewQuadraticExtensionAPI(api frontend.API, fieldAPI FieldAPI, degreeBits ui
 		api:      api,
 		fieldAPI: fieldAPI,
 
-		W:        *NewFieldConst(7),
-		DTH_ROOT: *NewFieldConst(18446744069414584320),
+		W:        NewFieldConst(7),
+		DTH_ROOT: NewFieldConst(18446744069414584320),
 
-		ONE_QE:  QuadraticExtension{*ONE_F, *ZERO_F},
+		ONE_QE:  QuadraticExtension{ONE_F, ZERO_F},
 		ZERO_QE: ZERO_QE,
 
 		ZERO_QE_ALGEBRA: ZERO_QE_ALGEBRA,
@@ -55,21 +55,21 @@ func (c *QuadraticExtensionAPI) SquareExtension(a QuadraticExtension) QuadraticE
 }
 
 func (c *QuadraticExtensionAPI) MulExtension(a QuadraticExtension, b QuadraticExtension) QuadraticExtension {
-	c_0 := c.fieldAPI.Add(c.fieldAPI.Mul(&a[0], &b[0]), c.fieldAPI.Mul(c.fieldAPI.Mul(&c.W, &a[1]), &b[1]))
-	c_1 := c.fieldAPI.Add(c.fieldAPI.Mul(&a[0], &b[1]), c.fieldAPI.Mul(&a[1], &b[0]))
-	return QuadraticExtension{*c_0, *c_1}
+	c_0 := c.fieldAPI.Add(c.fieldAPI.Mul(a[0], b[0]), c.fieldAPI.Mul(c.fieldAPI.Mul(c.W, a[1]), b[1]))
+	c_1 := c.fieldAPI.Add(c.fieldAPI.Mul(a[0], b[1]), c.fieldAPI.Mul(a[1], b[0]))
+	return QuadraticExtension{c_0, c_1}
 }
 
 func (c *QuadraticExtensionAPI) AddExtension(a QuadraticExtension, b QuadraticExtension) QuadraticExtension {
-	c_0 := c.fieldAPI.Add(&a[0], &b[0])
-	c_1 := c.fieldAPI.Add(&a[1], &b[1])
-	return QuadraticExtension{*c_0, *c_1}
+	c_0 := c.fieldAPI.Add(a[0], b[0])
+	c_1 := c.fieldAPI.Add(a[1], b[1])
+	return QuadraticExtension{c_0, c_1}
 }
 
 func (c *QuadraticExtensionAPI) SubExtension(a QuadraticExtension, b QuadraticExtension) QuadraticExtension {
-	c_0 := c.fieldAPI.Sub(&a[0], &b[0])
-	c_1 := c.fieldAPI.Sub(&a[1], &b[1])
-	return QuadraticExtension{*c_0, *c_1}
+	c_0 := c.fieldAPI.Sub(a[0], b[0])
+	c_1 := c.fieldAPI.Sub(a[1], b[1])
+	return QuadraticExtension{c_0, c_1}
 }
 
 func (c *QuadraticExtensionAPI) DivExtension(a QuadraticExtension, b QuadraticExtension) QuadraticExtension {
@@ -77,30 +77,30 @@ func (c *QuadraticExtensionAPI) DivExtension(a QuadraticExtension, b QuadraticEx
 }
 
 func (c *QuadraticExtensionAPI) IsZero(a QuadraticExtension) frontend.Variable {
-	return c.api.Mul(IsZero(c.api, c.fieldAPI, &a[0]), IsZero(c.api, c.fieldAPI, &a[1]))
+	return c.api.Mul(IsZero(c.api, c.fieldAPI, a[0]), IsZero(c.api, c.fieldAPI, a[1]))
 }
 
 // TODO: Instead of calculating the inverse within the circuit, can witness the
 // inverse and assert that a_inverse * a = 1.  Should reduce # of constraints.
 func (c *QuadraticExtensionAPI) InverseExtension(a QuadraticExtension) QuadraticExtension {
 	// First assert that a doesn't have 0 value coefficients
-	a0_is_zero := IsZero(c.api, c.fieldAPI, &a[0])
-	a1_is_zero := IsZero(c.api, c.fieldAPI, &a[1])
+	a0_is_zero := IsZero(c.api, c.fieldAPI, a[0])
+	a1_is_zero := IsZero(c.api, c.fieldAPI, a[1])
 
 	// assert that a0_is_zero OR a1_is_zero == false
 	c.api.AssertIsEqual(c.api.Mul(a0_is_zero, a1_is_zero), frontend.Variable(0))
 
-	a_pow_r_minus_1 := QuadraticExtension{a[0], *c.fieldAPI.Mul(&a[1], &c.DTH_ROOT)}
+	a_pow_r_minus_1 := QuadraticExtension{a[0], c.fieldAPI.Mul(a[1], c.DTH_ROOT)}
 	a_pow_r := c.MulExtension(a_pow_r_minus_1, a)
-	return c.ScalarMulExtension(a_pow_r_minus_1, *c.fieldAPI.Inverse(&a_pow_r[0]))
+	return c.ScalarMulExtension(a_pow_r_minus_1, c.fieldAPI.Inverse(a_pow_r[0]))
 }
 
 func (c *QuadraticExtensionAPI) ScalarMulExtension(a QuadraticExtension, scalar F) QuadraticExtension {
-	return QuadraticExtension{*c.fieldAPI.Mul(&a[0], &scalar), *c.fieldAPI.Mul(&a[1], &scalar)}
+	return QuadraticExtension{c.fieldAPI.Mul(a[0], scalar), c.fieldAPI.Mul(a[1], scalar)}
 }
 
 func (c *QuadraticExtensionAPI) FieldToQE(a F) QuadraticExtension {
-	return QuadraticExtension{a, *ZERO_F}
+	return QuadraticExtension{a, ZERO_F}
 }
 
 // / Exponentiate `base` to the power of a known `exponent`.
@@ -151,7 +151,7 @@ func (c *QuadraticExtensionAPI) Select(b frontend.Variable, qe0, qe1 QuadraticEx
 	var retQE QuadraticExtension
 
 	for i := 0; i < 2; i++ {
-		retQE[i] = *c.fieldAPI.Select(b, &qe0[i], &qe1[i])
+		retQE[i] = c.fieldAPI.Select(b, qe0[i], qe1[i])
 	}
 
 	return retQE
@@ -161,7 +161,7 @@ func (c *QuadraticExtensionAPI) Lookup2(b0 frontend.Variable, b1 frontend.Variab
 	var retQE QuadraticExtension
 
 	for i := 0; i < 2; i++ {
-		retQE[i] = *c.fieldAPI.Lookup2(b0, b1, &qe0[i], &qe1[i], &qe2[i], &qe3[i])
+		retQE[i] = c.fieldAPI.Lookup2(b0, b1, qe0[i], qe1[i], qe2[i], qe3[i])
 	}
 
 	return retQE
@@ -169,7 +169,7 @@ func (c *QuadraticExtensionAPI) Lookup2(b0 frontend.Variable, b1 frontend.Variab
 
 func (c *QuadraticExtensionAPI) AssertIsEqual(a, b QuadraticExtension) {
 	for i := 0; i < 2; i++ {
-		c.fieldAPI.AssertIsEqual(&a[i], &b[i])
+		c.fieldAPI.AssertIsEqual(a[i], b[i])
 	}
 }
 
@@ -214,7 +214,7 @@ func (c *QuadraticExtensionAPI) MulExtensionAlgebra(a, b QEAlgebra) QEAlgebra {
 	var product QEAlgebra
 	for i := 0; i < D; i++ {
 		acc := c.InnerProductExtension(c.W, c.ZERO_QE, inner_w[i])
-		product[i] = c.InnerProductExtension(*ONE_F, acc, inner[i])
+		product[i] = c.InnerProductExtension(ONE_F, acc, inner[i])
 	}
 
 	return product
@@ -272,9 +272,9 @@ func (c *QuadraticExtensionAPI) PartialInterpolateExtAlgebra(
 		val := values[i]
 		x := domain[i]
 		xField := NewFieldConst(x.Uint64())
-		xQE := QuadraticExtension{*xField, *ZERO_F}
+		xQE := QuadraticExtension{xField, ZERO_F}
 		xQEAlgebra := QEAlgebra{xQE, c.ZERO_QE}
-		weight := QuadraticExtension{*NewFieldConst(barycentricWeights[i].Uint64()), *ZERO_F}
+		weight := QuadraticExtension{NewFieldConst(barycentricWeights[i].Uint64()), ZERO_F}
 		term := c.SubExtensionAlgebra(point, xQEAlgebra)
 		weightedVal := c.ScalarMulExtensionAlgebra(weight, val)
 		newEval = c.MulExtensionAlgebra(newEval, term)

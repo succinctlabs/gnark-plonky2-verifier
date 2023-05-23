@@ -22,7 +22,7 @@ func (circuit *TestPoseidonCircuit) Define(api frontend.API) error {
 
 	var input PoseidonState
 	for i := 0; i < 12; i++ {
-		input[i] = *goldilocksApi.FromBits(api.ToBinary(circuit.In[i], 64)...)
+		input[i] = goldilocksApi.FromBits(api.ToBinary(circuit.In[i], 64)...)
 	}
 
 	poseidonChip := NewPoseidonChip(api, goldilocksApi, qeAPI)
@@ -30,7 +30,7 @@ func (circuit *TestPoseidonCircuit) Define(api frontend.API) error {
 
 	for i := 0; i < 12; i++ {
 		goldilocksApi.AssertIsEqual(
-			&output[i],
+			output[i],
 			goldilocksApi.FromBits(api.ToBinary(circuit.Out[i])...),
 		)
 	}

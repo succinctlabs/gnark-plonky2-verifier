@@ -96,7 +96,7 @@ func (g *PoseidonGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticEx
 
 	// Assert that `swap` is binary.
 	swap := vars.localWires[g.WireSwap()]
-	swapMinusOne := qeAPI.SubExtension(swap, qeAPI.FieldToQE(*field.ONE_F))
+	swapMinusOne := qeAPI.SubExtension(swap, qeAPI.FieldToQE(field.ONE_F))
 	constraints = append(constraints, qeAPI.MulExtension(swap, swapMinusOne))
 
 	// Assert that each delta wire is set properly: `delta_i = swap * (rhs - lhs)`.
@@ -147,7 +147,7 @@ func (g *PoseidonGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticEx
 		sBoxIn := vars.localWires[g.WirePartialSBox(r)]
 		constraints = append(constraints, qeAPI.SubExtension(state[0], sBoxIn))
 		state[0] = poseidonChip.SBoxMonomialExtension(sBoxIn)
-		state[0] = qeAPI.AddExtension(state[0], qeAPI.FieldToQE(*field.NewFieldConst(poseidon.FAST_PARTIAL_ROUND_CONSTANTS[r])))
+		state[0] = qeAPI.AddExtension(state[0], qeAPI.FieldToQE(poseidon.FAST_PARTIAL_ROUND_CONSTANTS[r]))
 		state = poseidonChip.MdsPartialLayerFastExtension(state, int(r))
 	}
 	sBoxIn := vars.localWires[g.WirePartialSBox(poseidon.N_PARTIAL_ROUNDS-1)]
