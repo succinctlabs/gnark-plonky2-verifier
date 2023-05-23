@@ -71,7 +71,7 @@ func (g *BaseSumGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticExt
 		limbs[i] = vars.localWires[limbIdx]
 	}
 
-	base_qe := qeAPI.FieldToQE(field.NewFieldElement(g.base))
+	base_qe := qeAPI.FieldToQE(*field.NewFieldConst(g.base))
 	computedSum := qeAPI.ReduceWithPowers(
 		limbs,
 		base_qe,
@@ -82,7 +82,7 @@ func (g *BaseSumGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticExt
 	for _, limb := range limbs {
 		acc := qeAPI.ONE_QE
 		for i := uint64(0); i < g.base; i++ {
-			difference := qeAPI.SubExtension(limb, qeAPI.FieldToQE(field.NewFieldElement(i)))
+			difference := qeAPI.SubExtension(limb, qeAPI.FieldToQE(*field.NewFieldConst(i)))
 			acc = qeAPI.MulExtension(acc, difference)
 		}
 		constraints = append(constraints, acc)

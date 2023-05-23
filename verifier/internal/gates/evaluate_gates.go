@@ -45,11 +45,11 @@ func (g *EvaluateGatesChip) computeFilter(
 			continue
 		}
 
-		product = g.qeAPI.MulExtension(product, g.qeAPI.SubExtension(g.qeAPI.FieldToQE(field.NewFieldElement(i)), s))
+		product = g.qeAPI.MulExtension(product, g.qeAPI.SubExtension(g.qeAPI.FieldToQE(*field.NewFieldConst(i)), s))
 	}
 
 	if manySelector {
-		product = g.qeAPI.MulExtension(product, g.qeAPI.SubExtension(g.qeAPI.FieldToQE(field.NewFieldElement(UNUSED_SELECTOR)), s))
+		product = g.qeAPI.MulExtension(product, g.qeAPI.SubExtension(g.qeAPI.FieldToQE(*field.NewFieldConst(UNUSED_SELECTOR)), s))
 	}
 
 	return product

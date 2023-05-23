@@ -15,7 +15,7 @@ import (
 
 type FriChip struct {
 	api      frontend.API                 `gnark:"-"`
-	fieldAPI frontend.API                 `gnark:"-"`
+	fieldAPI field.FieldAPI               `gnark:"-"`
 	qeAPI    *field.QuadraticExtensionAPI `gnark:"-"`
 	hashAPI  *poseidon.HashAPI            `gnark:"-"`
 
@@ -26,7 +26,7 @@ type FriChip struct {
 
 func NewFriChip(
 	api frontend.API,
-	fieldAPI frontend.API,
+	fieldAPI field.FieldAPI,
 	qeAPI *field.QuadraticExtensionAPI,
 	hashAPI *poseidon.HashAPI,
 	poseidonChip *poseidon.PoseidonChip,
@@ -47,7 +47,7 @@ func (f *FriChip) assertLeadingZeros(powWitness field.F, friConfig common.FriCon
 	// Note that this is assuming that the Goldilocks field is being used.  Specfically that the
 	// field is 64 bits long
 	maxPowWitness := uint64(math.Pow(2, float64(64-friConfig.ProofOfWorkBits))) - 1
-	f.fieldAPI.AssertIsLessOrEqual(powWitness, field.NewFieldElement(maxPowWitness))
+	f.fieldAPI.AssertIsLessOrEqual(&powWitness, field.NewFieldConst(maxPowWitness))
 }
 
 func (f *FriChip) fromOpeningsAndAlpha(openings *FriOpenings, alpha field.QuadraticExtension) []field.QuadraticExtension {
@@ -70,7 +70,7 @@ func (f *FriChip) hashOrNoop(data []field.F) poseidon.Hash {
 			elements[i] = inputElement
 		}
 		for i := len(data); i < 4; i++ {
-			elements[i] = field.ZERO_F
+			elements[i] = *field.ZERO_F
 		}
 
 		return elements
@@ -91,7 +91,7 @@ func (f *FriChip) hashOrNoop(data []field.F) poseidon.Hash {
 
 func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []field.F, leafIndexBits []frontend.Variable, capIndexBits []frontend.Variable, merkleCap common.MerkleCap, proof *common.MerkleProof) {
 	currentDigest := f.hashOrNoop(leafData)
-	fourZeros := [4]field.F{field.ZERO_F, field.ZERO_F, field.ZERO_F, field.ZERO_F}
+	fourZeros := [4]field.F{*field.ZERO_F, *field.ZERO_F, *field.ZERO_F, *field.ZERO_F}
 	for i, sibling := range proof.Siblings {
 		bit := leafIndexBits[i]
 
@@ -200,19 +200,19 @@ func (f *FriChip) expFromBitsConstBase(
 		basePow := goldilocks.NewElement(0)
 		basePow.Exp(base, big.NewInt(pow))
 
-		basePowElement := field.NewFieldElement(basePow.Uint64() - 1)
+		basePowElement := field.NewFieldConst(basePow.Uint64() - 1)
 
 		product = f.fieldAPI.Add(
 			f.fieldAPI.Mul(
-				basePowElement,
-				product,
-				bit,
-			),
+				f.fieldAPI.Mul(
+					basePowElement,
+					product),
+				field.NewFieldConstFromVariable(bit)),
 			product,
-		).(field.F)
+		)
 	}
 
-	return product
+	return *product
 }
 
 func (f *FriChip) calculateSubgroupX(
@@ -222,7 +222,7 @@ func (f *FriChip) calculateSubgroupX(
 	// Compute x from its index
 	// `subgroup_x` is `subgroup[x_index]`, i.e., the actual field element in the domain.
 	// TODO - Make these as global values
-	g := field.NewFieldElement(field.GOLDILOCKS_MULTIPLICATIVE_GROUP_GENERATOR.Uint64())
+	g := field.NewFieldConst(field.GOLDILOCKS_MULTIPLICATIVE_GROUP_GENERATOR.Uint64())
 	base := field.GoldilocksPrimitiveRootOfUnity(nLog)
 
 	// Create a reverse list of xIndexBits
@@ -233,7 +233,7 @@ func (f *FriChip) calculateSubgroupX(
 
 	product := f.expFromBitsConstBase(base, xIndexBitsRev)
 
-	return f.fieldAPI.Mul(g, product).(field.F)
+	return *f.fieldAPI.Mul(g, &product)
 }
 
 func (f *FriChip) friCombineInitial(
@@ -258,7 +258,7 @@ func (f *FriChip) friCombineInitial(
 		for _, polynomial := range batch.Polynomials {
 			evals = append(
 				evals,
-				field.QuadraticExtension{proof.EvalsProofs[polynomial.OracleIndex].Elements[polynomial.PolynomialInfo], field.ZERO_F},
+				field.QuadraticExtension{proof.EvalsProofs[polynomial.OracleIndex].Elements[polynomial.PolynomialInfo], *field.ZERO_F},
 			)
 		}
 
@@ -376,14 +376,14 @@ func (f *FriChip) computeEvaluation(
 		revXIndexWithinCosetBits[len(xIndexWithinCosetBits)-1-i] = xIndexWithinCosetBits[i]
 	}
 	start := f.expFromBitsConstBase(gInv, revXIndexWithinCosetBits)
-	cosetStart := f.fieldAPI.Mul(start, x).(field.F)
+	cosetStart := f.fieldAPI.Mul(&start, &x)
 
 	xPoints := make([]field.QuadraticExtension, len(evals))
 	yPoints := permutedEvals
 
 	// TODO: Make g_F a constant
-	g_F := f.qeAPI.FieldToQE(field.NewFieldElement(g.Uint64()))
-	xPoints[0] = f.qeAPI.FieldToQE(cosetStart)
+	g_F := f.qeAPI.FieldToQE(*field.NewFieldConst(g.Uint64()))
+	xPoints[0] = f.qeAPI.FieldToQE(*cosetStart)
 	for i := 1; i < len(evals); i++ {
 		xPoints[i] = f.qeAPI.MulExtension(xPoints[i-1], g_F)
 	}
@@ -421,7 +421,7 @@ func (f *FriChip) verifyQueryRound(
 	roundProof *common.FriQueryRound,
 ) {
 	f.assertNoncanonicalIndicesOK()
-	xIndexBits := f.fieldAPI.ToBinary(xIndex, int(nLog))
+	xIndexBits := f.fieldAPI.ToBits(&xIndex)
 	capIndexBits := xIndexBits[len(xIndexBits)-int(f.friParams.Config.CapHeight):]
 
 	f.verifyInitialProof(xIndexBits, &roundProof.InitialTreesProof, initialMerkleCaps, capIndexBits)
@@ -431,7 +431,7 @@ func (f *FriChip) verifyQueryRound(
 		nLog,
 	)
 
-	subgroupX_QE := field.QuadraticExtension{subgroupX, field.ZERO_F}
+	subgroupX_QE := field.QuadraticExtension{subgroupX, *field.ZERO_F}
 
 	oldEval := f.friCombineInitial(
 		instance,
@@ -506,7 +506,7 @@ func (f *FriChip) verifyQueryRound(
 
 		// Update the point x to x^arity.
 		for j := uint64(0); j < arityBits; j++ {
-			subgroupX = f.fieldAPI.Mul(subgroupX, subgroupX).(field.F)
+			subgroupX = *f.fieldAPI.Mul(&subgroupX, &subgroupX)
 		}
 
 		xIndexBits = cosetIndexBits

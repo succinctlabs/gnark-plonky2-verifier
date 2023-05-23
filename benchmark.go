@@ -12,6 +12,7 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
+	"github.com/consensys/gnark/constraint"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 )
@@ -35,7 +36,7 @@ func (circuit *BenchmarkPlonky2VerifierCircuit) Define(api frontend.API) error {
 	return nil
 }
 
-func compileCircuit(plonky2Circuit string) frontend.CompiledConstraintSystem {
+func compileCircuit(plonky2Circuit string) constraint.ConstraintSystem {
 	circuit := BenchmarkPlonky2VerifierCircuit{
 		plonky2CircuitName: plonky2Circuit,
 	}
@@ -51,7 +52,7 @@ func compileCircuit(plonky2Circuit string) frontend.CompiledConstraintSystem {
 	return r1cs
 }
 
-func createProof(r1cs frontend.CompiledConstraintSystem, plonky2Circuit string) groth16.Proof {
+func createProof(r1cs constraint.ConstraintSystem, plonky2Circuit string) groth16.Proof {
 	proofWithPis := utils.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
 
 	// Witness

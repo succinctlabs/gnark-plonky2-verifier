@@ -11,7 +11,7 @@ import (
 
 type VerifierChip struct {
 	api          frontend.API                 `gnark:"-"`
-	fieldAPI     frontend.API                 `gnark:"-"`
+	fieldAPI     field.FieldAPI               `gnark:"-"`
 	qeAPI        *field.QuadraticExtensionAPI `gnark:"-"`
 	poseidonChip *poseidon.PoseidonChip
 	plonkChip    *plonk.PlonkChip
@@ -21,7 +21,7 @@ type VerifierChip struct {
 func NewVerifierChip(api frontend.API, commonCircuitData common.CommonCircuitData) *VerifierChip {
 
 	fieldAPI := field.NewFieldAPI(api)
-	qeAPI := field.NewQuadraticExtensionAPI(fieldAPI, commonCircuitData.DegreeBits)
+	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI, commonCircuitData.DegreeBits)
 	hashAPI := poseidon.NewHashAPI(fieldAPI)
 	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
 
@@ -166,21 +166,21 @@ func (c *VerifierChip) Verify(proofWithPis common.ProofWithPublicInputs, verifie
 
 	// Seems like there is a bug in the emulated field code.
 	// Add ZERO to all of the fri challenges values to reduce them.
-	proofChallenges.PlonkZeta[0] = c.fieldAPI.Add(proofChallenges.PlonkZeta[0], field.ZERO_F).(field.F)
-	proofChallenges.PlonkZeta[1] = c.fieldAPI.Add(proofChallenges.PlonkZeta[1], field.ZERO_F).(field.F)
+	proofChallenges.PlonkZeta[0] = *c.fieldAPI.Add(&proofChallenges.PlonkZeta[0], field.ZERO_F)
+	proofChallenges.PlonkZeta[1] = *c.fieldAPI.Add(&proofChallenges.PlonkZeta[1], field.ZERO_F)
 
-	proofChallenges.FriChallenges.FriAlpha[0] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriAlpha[0], field.ZERO_F).(field.F)
-	proofChallenges.FriChallenges.FriAlpha[1] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriAlpha[1], field.ZERO_F).(field.F)
+	proofChallenges.FriChallenges.FriAlpha[0] = *c.fieldAPI.Add(&proofChallenges.FriChallenges.FriAlpha[0], field.ZERO_F)
+	proofChallenges.FriChallenges.FriAlpha[1] = *c.fieldAPI.Add(&proofChallenges.FriChallenges.FriAlpha[1], field.ZERO_F)
 
 	for i := 0; i < len(proofChallenges.FriChallenges.FriBetas); i++ {
-		proofChallenges.FriChallenges.FriBetas[i][0] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriBetas[i][0], field.ZERO_F).(field.F)
-		proofChallenges.FriChallenges.FriBetas[i][1] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriBetas[i][1], field.ZERO_F).(field.F)
+		proofChallenges.FriChallenges.FriBetas[i][0] = *c.fieldAPI.Add(&proofChallenges.FriChallenges.FriBetas[i][0], field.ZERO_F)
+		proofChallenges.FriChallenges.FriBetas[i][1] = *c.fieldAPI.Add(&proofChallenges.FriChallenges.FriBetas[i][1], field.ZERO_F)
 	}
 
-	proofChallenges.FriChallenges.FriPowResponse = c.fieldAPI.Add(proofChallenges.FriChallenges.FriPowResponse, field.ZERO_F).(field.F)
+	proofChallenges.FriChallenges.FriPowResponse = *c.fieldAPI.Add(&proofChallenges.FriChallenges.FriPowResponse, field.ZERO_F)
 
 	for i := 0; i < len(proofChallenges.FriChallenges.FriQueryIndices); i++ {
-		proofChallenges.FriChallenges.FriQueryIndices[i] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriQueryIndices[i], field.ZERO_F).(field.F)
+		proofChallenges.FriChallenges.FriQueryIndices[i] = *c.fieldAPI.Add(&proofChallenges.FriChallenges.FriQueryIndices[i], field.ZERO_F)
 	}
 
 	c.friChip.VerifyFriProof(

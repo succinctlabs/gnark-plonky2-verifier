@@ -23,7 +23,7 @@ func (circuit *TestPublicInputsHashCircuit) Define(api frontend.API) error {
 	// BN254 -> Binary(64) -> F
 	var input [3]field.F
 	for i := 0; i < 3; i++ {
-		input[i] = fieldAPI.FromBinary(api.ToBinary(circuit.In[i], 64)).(field.F)
+		input[i] = *fieldAPI.FromBits(api.ToBinary(circuit.In[i], 64)...)
 	}
 
 	poseidonChip := &PoseidonChip{api: api, fieldAPI: fieldAPI}
@@ -32,8 +32,8 @@ func (circuit *TestPublicInputsHashCircuit) Define(api frontend.API) error {
 	// Check that output is correct
 	for i := 0; i < 4; i++ {
 		fieldAPI.AssertIsEqual(
-			output[i],
-			fieldAPI.FromBinary(api.ToBinary(circuit.Out[i])).(field.F),
+			&output[i],
+			fieldAPI.FromBits(api.ToBinary(circuit.Out[i])...),
 		)
 	}
 
