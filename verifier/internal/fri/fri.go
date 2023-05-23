@@ -47,7 +47,8 @@ func (f *FriChip) assertLeadingZeros(powWitness field.F, friConfig common.FriCon
 	// Note that this is assuming that the Goldilocks field is being used.  Specfically that the
 	// field is 64 bits long
 	maxPowWitness := uint64(math.Pow(2, float64(64-friConfig.ProofOfWorkBits))) - 1
-	f.fieldAPI.AssertIsLessOrEqual(&powWitness, field.NewFieldConst(maxPowWitness))
+	reducedPOWWitness := f.fieldAPI.Reduce(&powWitness)
+	f.fieldAPI.AssertIsLessOrEqual(reducedPOWWitness, field.NewFieldConst(maxPowWitness))
 }
 
 func (f *FriChip) fromOpeningsAndAlpha(openings *FriOpenings, alpha field.QuadraticExtension) []field.QuadraticExtension {
