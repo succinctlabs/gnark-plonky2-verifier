@@ -12,12 +12,14 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
+	"github.com/consensys/gnark/constraint"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
+	"github.com/consensys/gnark/profile"
 )
 
 type BenchmarkPlonky2VerifierCircuit struct {
-	proofWithPis common.ProofWithPublicInputs
+	ProofWithPis common.ProofWithPublicInputs `gnark:",public"`
 
 	verifierChip       *verifier.VerifierChip
 	plonky2CircuitName string
@@ -25,39 +27,42 @@ type BenchmarkPlonky2VerifierCircuit struct {
 
 func (circuit *BenchmarkPlonky2VerifierCircuit) Define(api frontend.API) error {
 	circuitDirname := "./verifier/data/" + circuit.plonky2CircuitName + "/"
-	proofWithPis := utils.DeserializeProofWithPublicInputs(circuitDirname + "proof_with_public_inputs.json")
 	commonCircuitData := utils.DeserializeCommonCircuitData(circuitDirname + "common_circuit_data.json")
 	verifierOnlyCircuitData := utils.DeserializeVerifierOnlyCircuitData(circuitDirname + "verifier_only_circuit_data.json")
 
 	circuit.verifierChip = verifier.NewVerifierChip(api, commonCircuitData)
 
-	circuit.verifierChip.Verify(proofWithPis, verifierOnlyCircuitData, commonCircuitData)
+	circuit.verifierChip.Verify(circuit.ProofWithPis, verifierOnlyCircuitData, commonCircuitData)
 
 	return nil
 }
 
-func compileCircuit(plonky2Circuit string) frontend.CompiledConstraintSystem {
+func compileCircuit(plonky2Circuit string) constraint.ConstraintSystem {
 	circuit := BenchmarkPlonky2VerifierCircuit{
 		plonky2CircuitName: plonky2Circuit,
 	}
 	proofWithPis := utils.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
-	circuit.proofWithPis = proofWithPis
+	circuit.ProofWithPis = proofWithPis
 
+	p := profile.Start()
 	r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &circuit)
 	if err != nil {
 		fmt.Println("error in building circuit", err)
 		os.Exit(1)
 	}
+	p.Stop()
+	fmt.Println(p.NbConstraints())
+	fmt.Println(p.Top())
 
 	return r1cs
 }
 
-func createProof(r1cs frontend.CompiledConstraintSystem, plonky2Circuit string) groth16.Proof {
+func createProof(r1cs constraint.ConstraintSystem, plonky2Circuit string) groth16.Proof {
 	proofWithPis := utils.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
 
 	// Witness
 	assignment := &BenchmarkPlonky2VerifierCircuit{
-		proofWithPis: proofWithPis,
+		ProofWithPis: proofWithPis,
 	}
 
 	fmt.Println("Generating witness", time.Now())
@@ -97,6 +102,14 @@ func main() {
 	}
 
 	r1cs := compileCircuit(*plonky2Circuit)
-	proof := createProof(r1cs, *plonky2Circuit)
-	fmt.Println(proof.CurveID(), time.Now())
+	println("r1cs.GetNbCoefficients(): ", r1cs.GetNbCoefficients())
+	println("r1cs.GetNbConstraints(): ", r1cs.GetNbConstraints())
+	println("r1cs.GetNbSecretVariables(): ", r1cs.GetNbSecretVariables())
+	println("r1cs.GetNbPublicVariables(): ", r1cs.GetNbPublicVariables())
+	println("r1cs.GetNbInternalVariables(): ", r1cs.GetNbInternalVariables())
+
+	/*
+		proof := createProof(r1cs, *plonky2Circuit)
+		fmt.Println(proof.CurveID(), time.Now())
+	*/
 }

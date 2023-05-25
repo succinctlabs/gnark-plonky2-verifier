@@ -21,38 +21,38 @@ type TestChallengerCircuit struct {
 func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	fieldAPI := field.NewFieldAPI(api)
 	degreeBits := 3
-	qeAPI := field.NewQuadraticExtensionAPI(fieldAPI, uint64(degreeBits))
+	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI, uint64(degreeBits))
 	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
 	challengerChip := NewChallengerChip(api, fieldAPI, poseidonChip)
 
 	var circuitDigest [4]field.F
 	for i := 0; i < len(circuitDigest); i++ {
-		circuitDigest[i] = fieldAPI.FromBinary(api.ToBinary(circuit.CircuitDigest[i], 64)).(field.F)
+		circuitDigest[i] = fieldAPI.FromBits(api.ToBinary(circuit.CircuitDigest[i], 64)...)
 	}
 
 	var publicInputs [3]field.F
 	for i := 0; i < len(publicInputs); i++ {
-		publicInputs[i] = fieldAPI.FromBinary(api.ToBinary(circuit.PublicInputs[i], 64)).(field.F)
+		publicInputs[i] = fieldAPI.FromBits(api.ToBinary(circuit.PublicInputs[i], 64)...)
 	}
 
 	var wiresCap [16][4]field.F
 	for i := 0; i < len(wiresCap); i++ {
 		for j := 0; j < len(wiresCap[0]); j++ {
-			wiresCap[i][j] = fieldAPI.FromBinary(api.ToBinary(circuit.WiresCap[i][j], 64)).(field.F)
+			wiresCap[i][j] = fieldAPI.FromBits(api.ToBinary(circuit.WiresCap[i][j], 64)...)
 		}
 	}
 
 	var plonkZsPartialProductsCap [16][4]field.F
 	for i := 0; i < len(plonkZsPartialProductsCap); i++ {
 		for j := 0; j < len(plonkZsPartialProductsCap[0]); j++ {
-			plonkZsPartialProductsCap[i][j] = fieldAPI.FromBinary(api.ToBinary(circuit.PlonkZsPartialProductsCap[i][j], 64)).(field.F)
+			plonkZsPartialProductsCap[i][j] = fieldAPI.FromBits(api.ToBinary(circuit.PlonkZsPartialProductsCap[i][j], 64)...)
 		}
 	}
 
 	var quotientPolysCap [16][4]field.F
 	for i := 0; i < len(quotientPolysCap); i++ {
 		for j := 0; j < len(quotientPolysCap[0]); j++ {
-			quotientPolysCap[i][j] = fieldAPI.FromBinary(api.ToBinary(circuit.QuotientPolysCap[i][j], 64)).(field.F)
+			quotientPolysCap[i][j] = fieldAPI.FromBits(api.ToBinary(circuit.QuotientPolysCap[i][j], 64)...)
 		}
 	}
 
@@ -66,10 +66,10 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	plonkGammas := challengerChip.GetNChallenges(numChallenges)
 
 	expectedPublicInputHash := [4]field.F{
-		field.NewFieldElementFromString("8416658900775745054"),
-		field.NewFieldElementFromString("12574228347150446423"),
-		field.NewFieldElementFromString("9629056739760131473"),
-		field.NewFieldElementFromString("3119289788404190010"),
+		field.NewFieldConstFromString("8416658900775745054"),
+		field.NewFieldConstFromString("12574228347150446423"),
+		field.NewFieldConstFromString("9629056739760131473"),
+		field.NewFieldConstFromString("3119289788404190010"),
 	}
 
 	for i := 0; i < 4; i++ {
@@ -77,13 +77,13 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	}
 
 	expectedPlonkBetas := [2]field.F{
-		field.NewFieldElementFromString("4678728155650926271"),
-		field.NewFieldElementFromString("13611962404289024887"),
+		field.NewFieldConstFromString("4678728155650926271"),
+		field.NewFieldConstFromString("13611962404289024887"),
 	}
 
-	expectedPlonkGammas := [2]frontend.Variable{
-		field.NewFieldElementFromString("13237663823305715949"),
-		field.NewFieldElementFromString("15389314098328235145"),
+	expectedPlonkGammas := [2]field.F{
+		field.NewFieldConstFromString("13237663823305715949"),
+		field.NewFieldConstFromString("15389314098328235145"),
 	}
 
 	for i := 0; i < 2; i++ {
@@ -95,8 +95,8 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	plonkAlphas := challengerChip.GetNChallenges(numChallenges)
 
 	expectedPlonkAlphas := [2]field.F{
-		field.NewFieldElementFromString("14505919539124304197"),
-		field.NewFieldElementFromString("1695455639263736117"),
+		field.NewFieldConstFromString("14505919539124304197"),
+		field.NewFieldConstFromString("1695455639263736117"),
 	}
 
 	for i := 0; i < 2; i++ {
@@ -107,8 +107,8 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	plonkZeta := challengerChip.GetExtensionChallenge()
 
 	expectedPlonkZeta := field.QuadraticExtension{
-		field.NewFieldElementFromString("14887793628029982930"),
-		field.NewFieldElementFromString("1136137158284059037"),
+		field.NewFieldConstFromString("14887793628029982930"),
+		field.NewFieldConstFromString("1136137158284059037"),
 	}
 
 	for i := 0; i < 2; i++ {

@@ -11,7 +11,7 @@ import (
 
 type VerifierChip struct {
 	api          frontend.API                 `gnark:"-"`
-	fieldAPI     frontend.API                 `gnark:"-"`
+	fieldAPI     field.FieldAPI               `gnark:"-"`
 	qeAPI        *field.QuadraticExtensionAPI `gnark:"-"`
 	poseidonChip *poseidon.PoseidonChip
 	plonkChip    *plonk.PlonkChip
@@ -21,7 +21,7 @@ type VerifierChip struct {
 func NewVerifierChip(api frontend.API, commonCircuitData common.CommonCircuitData) *VerifierChip {
 
 	fieldAPI := field.NewFieldAPI(api)
-	qeAPI := field.NewQuadraticExtensionAPI(fieldAPI, commonCircuitData.DegreeBits)
+	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI, commonCircuitData.DegreeBits)
 	hashAPI := poseidon.NewHashAPI(fieldAPI)
 	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
 
@@ -83,9 +83,75 @@ func (c *VerifierChip) GetChallenges(
 	}
 }
 
-func (c *VerifierChip) Verify(proofWithPis common.ProofWithPublicInputs, verifierData common.VerifierOnlyCircuitData, commonData common.CommonCircuitData) {
-	// TODO: Verify shape of the proof?
+/*
+func (c *VerifierChip) generateProofInput(commonData common.CommonCircuitData) common.ProofWithPublicInputs {
+	// Generate the parts of the witness that is for the plonky2 proof input
 
+	capHeight := commonData.Config.FriConfig.CapHeight
+
+	friCommitPhaseMerkleCaps := []common.MerkleCap{}
+	for i := 0; i < len(commonData.FriParams.ReductionArityBits); i++ {
+		friCommitPhaseMerkleCaps = append(friCommitPhaseMerkleCaps, common.NewMerkleCap(capHeight))
+	}
+
+	salt := commonData.SaltSize()
+	numLeavesPerOracle := []uint{
+		commonData.NumPreprocessedPolys(),
+		commonData.Config.NumWires + salt,
+		commonData.NumZsPartialProductsPolys() + salt,
+		commonData.NumQuotientPolys() + salt,
+	}
+	friQueryRoundProofs := []common.FriQueryRound{}
+	for i := uint64(0); i < commonData.FriParams.Config.NumQueryRounds; i++ {
+		evalProofs := []common.EvalProof{}
+		merkleProofLen := commonData.FriParams.LDEBits() - capHeight
+		for _, numLeaves := range numLeavesPerOracle {
+			leaves := make([]field.F, numLeaves)
+			merkleProof := common.NewMerkleProof(merkleProofLen)
+			evalProofs = append(evalProofs, common.NewEvalProof(leaves, merkleProof))
+		}
+
+		initialTreesProof := common.NewFriInitialTreeProof(evalProofs)
+		steps := []common.FriQueryStep{}
+		for _, arityBit := range commonData.FriParams.ReductionArityBits {
+			if merkleProofLen < arityBit {
+				panic("merkleProofLen < arityBits")
+			}
+
+			steps = append(steps, common.NewFriQueryStep(arityBit, merkleProofLen))
+		}
+
+		friQueryRoundProofs = append(friQueryRoundProofs, common.NewFriQueryRound(steps, initialTreesProof))
+	}
+
+	proofInput := common.ProofWithPublicInputs{
+		Proof: common.Proof{
+			WiresCap:                  common.NewMerkleCap(capHeight),
+			PlonkZsPartialProductsCap: common.NewMerkleCap(capHeight),
+			QuotientPolysCap:          common.NewMerkleCap(capHeight),
+			Openings: common.NewOpeningSet(
+				commonData.Config.NumConstants,
+				commonData.Config.NumRoutedWires,
+				commonData.Config.NumWires,
+				commonData.Config.NumChallenges,
+				commonData.NumPartialProducts,
+				commonData.QuotientDegreeFactor,
+			),
+			OpeningProof: common.FriProof{
+				CommitPhaseMerkleCaps: friCommitPhaseMerkleCaps,
+				QueryRoundProofs:      friQueryRoundProofs,
+				FinalPoly:             common.NewPolynomialCoeffs(commonData.FriParams.FinalPolyLen()),
+			},
+		},
+		PublicInputs: make([]field.F, commonData.NumPublicInputs),
+	}
+
+	return proofInput
+}
+*/
+
+func (c *VerifierChip) Verify(proofWithPis common.ProofWithPublicInputs, verifierData common.VerifierOnlyCircuitData, commonData common.CommonCircuitData) {
+	// Generate the parts of the witness that is for the plonky2 proof input
 	publicInputsHash := c.GetPublicInputsHash(proofWithPis.PublicInputs)
 	proofChallenges := c.GetChallenges(proofWithPis, publicInputsHash, commonData, verifierData)
 
@@ -100,21 +166,21 @@ func (c *VerifierChip) Verify(proofWithPis common.ProofWithPublicInputs, verifie
 
 	// Seems like there is a bug in the emulated field code.
 	// Add ZERO to all of the fri challenges values to reduce them.
-	proofChallenges.PlonkZeta[0] = c.fieldAPI.Add(proofChallenges.PlonkZeta[0], field.ZERO_F).(field.F)
-	proofChallenges.PlonkZeta[1] = c.fieldAPI.Add(proofChallenges.PlonkZeta[1], field.ZERO_F).(field.F)
+	proofChallenges.PlonkZeta[0] = c.fieldAPI.Add(proofChallenges.PlonkZeta[0], field.ZERO_F)
+	proofChallenges.PlonkZeta[1] = c.fieldAPI.Add(proofChallenges.PlonkZeta[1], field.ZERO_F)
 
-	proofChallenges.FriChallenges.FriAlpha[0] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriAlpha[0], field.ZERO_F).(field.F)
-	proofChallenges.FriChallenges.FriAlpha[1] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriAlpha[1], field.ZERO_F).(field.F)
+	proofChallenges.FriChallenges.FriAlpha[0] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriAlpha[0], field.ZERO_F)
+	proofChallenges.FriChallenges.FriAlpha[1] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriAlpha[1], field.ZERO_F)
 
 	for i := 0; i < len(proofChallenges.FriChallenges.FriBetas); i++ {
-		proofChallenges.FriChallenges.FriBetas[i][0] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriBetas[i][0], field.ZERO_F).(field.F)
-		proofChallenges.FriChallenges.FriBetas[i][1] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriBetas[i][1], field.ZERO_F).(field.F)
+		proofChallenges.FriChallenges.FriBetas[i][0] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriBetas[i][0], field.ZERO_F)
+		proofChallenges.FriChallenges.FriBetas[i][1] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriBetas[i][1], field.ZERO_F)
 	}
 
-	proofChallenges.FriChallenges.FriPowResponse = c.fieldAPI.Add(proofChallenges.FriChallenges.FriPowResponse, field.ZERO_F).(field.F)
+	proofChallenges.FriChallenges.FriPowResponse = c.fieldAPI.Add(proofChallenges.FriChallenges.FriPowResponse, field.ZERO_F)
 
 	for i := 0; i < len(proofChallenges.FriChallenges.FriQueryIndices); i++ {
-		proofChallenges.FriChallenges.FriQueryIndices[i] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriQueryIndices[i], field.ZERO_F).(field.F)
+		proofChallenges.FriChallenges.FriQueryIndices[i] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriQueryIndices[i], field.ZERO_F)
 	}
 
 	c.friChip.VerifyFriProof(

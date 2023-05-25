@@ -147,7 +147,7 @@ func (g *PoseidonGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticEx
 		sBoxIn := vars.localWires[g.WirePartialSBox(r)]
 		constraints = append(constraints, qeAPI.SubExtension(state[0], sBoxIn))
 		state[0] = poseidonChip.SBoxMonomialExtension(sBoxIn)
-		state[0] = qeAPI.AddExtension(state[0], qeAPI.FieldToQE(field.NewFieldElement(poseidon.FAST_PARTIAL_ROUND_CONSTANTS[r])))
+		state[0] = qeAPI.AddExtension(state[0], qeAPI.FieldToQE(poseidon.FAST_PARTIAL_ROUND_CONSTANTS[r]))
 		state = poseidonChip.MdsPartialLayerFastExtension(state, int(r))
 	}
 	sBoxIn := vars.localWires[g.WirePartialSBox(poseidon.N_PARTIAL_ROUNDS-1)]

@@ -185,7 +185,7 @@ func GetFriInstance(c *common.CommonCircuitData, qeAPI *field.QuadraticExtension
 	}
 
 	g := field.GoldilocksPrimitiveRootOfUnity(degreeBits)
-	zetaNext := qeAPI.MulExtension(qeAPI.FieldToQE(field.NewFieldElement(g.Uint64())), zeta)
+	zetaNext := qeAPI.MulExtension(qeAPI.FieldToQE(field.NewFieldConst(g.Uint64())), zeta)
 
 	zetaNextBath := FriBatchInfo{
 		Point:       zetaNext,

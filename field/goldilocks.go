@@ -8,29 +8,32 @@ import (
 )
 
 type EmulatedField = emulated.Goldilocks
-type F = emulated.Element[EmulatedField]
+type F = *emulated.Element[EmulatedField]
+type FieldAPI = *emulated.Field[emulated.Goldilocks]
 
 var TEST_CURVE = ecc.BN254
 
-func NewFieldElement(x uint64) F {
-	return emulated.NewElement[EmulatedField](x)
-}
-
-func NewFieldElementFromString(x string) F {
-	return emulated.NewElement[EmulatedField](x)
-}
-
-func NewFieldAPI(api frontend.API) frontend.API {
-	field, err := emulated.NewField[EmulatedField](api)
+func NewFieldAPI(api frontend.API) FieldAPI {
+	fieldAPI, err := emulated.NewField[EmulatedField](api)
 	if err != nil {
 		panic(err)
 	}
-	return field
+	return fieldAPI
 }
 
-var ONE_F = NewFieldElement(1)
-var ZERO_F = NewFieldElement(0)
-var NEG_ONE_F = NewFieldElement(EmulatedField{}.Modulus().Uint64() - 1)
+func NewFieldConst(x uint64) F {
+	val := emulated.ValueOf[EmulatedField](x)
+	return &val
+}
+
+func NewFieldConstFromString(x string) F {
+	val := emulated.ValueOf[EmulatedField](x)
+	return &val
+}
+
+var ONE_F = NewFieldConst(1)
+var ZERO_F = NewFieldConst(0)
+var NEG_ONE_F = NewFieldConst(EmulatedField{}.Modulus().Uint64() - 1)
 
 var GOLDILOCKS_MULTIPLICATIVE_GROUP_GENERATOR = goldilocks.NewElement(7)
 var GOLDILOCKS_TWO_ADICITY = uint64(32)
@@ -64,4 +67,17 @@ func TwoAdicSubgroup(nLog uint64) []goldilocks.Element {
 	}
 
 	return res
+}
+
+func IsZero(api frontend.API, fieldAPI *emulated.Field[emulated.Goldilocks], x F) frontend.Variable {
+	reduced := fieldAPI.Reduce(x)
+	limbs := reduced.Limbs
+
+	isZero := api.IsZero(limbs[0])
+	for i := 1; i < len(limbs); i++ {
+		isZero = api.Mul(isZero, api.IsZero(limbs[i]))
+	}
+
+	return isZero
+
 }
