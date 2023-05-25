@@ -413,21 +413,19 @@ var MDS_MATRIX_DIAG = []field.F{
 	field.ZERO_F,
 }
 
-var ZERO_VAR = frontend.Variable(0)
-
 var MDS_MATRIX_DIAG_VARS = []frontend.Variable{
 	frontend.Variable(8),
-	ZERO_VAR,
-	ZERO_VAR,
-	ZERO_VAR,
-	ZERO_VAR,
-	ZERO_VAR,
-	ZERO_VAR,
-	ZERO_VAR,
-	ZERO_VAR,
-	ZERO_VAR,
-	ZERO_VAR,
-	ZERO_VAR,
+	field.ZERO_VAR,
+	field.ZERO_VAR,
+	field.ZERO_VAR,
+	field.ZERO_VAR,
+	field.ZERO_VAR,
+	field.ZERO_VAR,
+	field.ZERO_VAR,
+	field.ZERO_VAR,
+	field.ZERO_VAR,
+	field.ZERO_VAR,
+	field.ZERO_VAR,
 }
 
 var MDS0TO0 = field.NewFieldConst(25)

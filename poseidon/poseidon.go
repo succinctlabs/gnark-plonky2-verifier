@@ -148,7 +148,7 @@ func (c *PoseidonChip) SBoxLayerExtension(state PoseidonStateExtension) Poseidon
 }
 
 func (c *PoseidonChip) MdsRowShf(r int, v [SPONGE_WIDTH]frontend.Variable) frontend.Variable {
-	res := ZERO_VAR
+	res := field.ZERO_VAR
 
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
@@ -277,7 +277,7 @@ func (c *PoseidonChip) MdsPartialLayerInitExtension(state PoseidonStateExtension
 }
 
 func (c *PoseidonChip) MdsPartialLayerFast(state PoseidonState, r int) PoseidonState {
-	dSum := ZERO_VAR
+	dSum := field.ZERO_VAR
 	for i := 1; i < 12; i++ {
 		if i < SPONGE_WIDTH {
 			t := FAST_PARTIAL_ROUND_W_HATS_VARS[r][i-1]

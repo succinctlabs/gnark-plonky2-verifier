@@ -18,7 +18,7 @@ type PlonkChip struct {
 	DEGREE_BITS_F field.F                  `gnark:"-"`
 	DEGREE_QE     field.QuadraticExtension `gnark:"-"`
 
-	evaluateGatesChip *gates.EvaluateGatesChip
+	evaluateGatesChip *gates.EvaluateGatesChip `gnark:"-"`
 }
 
 func NewPlonkChip(api frontend.API, qeAPI *field.QuadraticExtensionAPI, commonData common.CommonCircuitData) *PlonkChip {
