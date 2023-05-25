@@ -6,6 +6,7 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/field/goldilocks"
+	"github.com/consensys/gnark/backend/hint"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/bits"
 	"github.com/consensys/gnark/std/math/emulated"
@@ -40,7 +41,7 @@ var ONE_F = NewFieldConst(1)
 var ZERO_F = NewFieldConst(0)
 var NEG_ONE_F = NewFieldConst(EmulatedField{}.Modulus().Uint64() - 1)
 var NEG_ONE_VAR = frontend.Variable(EmulatedField{}.Modulus().Uint64() - 1)
-var GOLDILOCKS_MODULUS_VAR = frontend.Variable(EmulatedField{}.Modulus().Uint64())
+var GOLDILOCKS_MODULUS = EmulatedField{}.Modulus()
 
 var ZERO_VAR = frontend.Variable(0)
 var ONE_VAR = frontend.Variable(1)
@@ -90,6 +91,12 @@ func IsZero(api frontend.API, fieldAPI *emulated.Field[emulated.Goldilocks], x F
 
 	return isZero
 
+}
+
+func init() {
+	// register hints
+	hint.Register(GoldilocksMulAddHint)
+	hint.Register(GoldilocksReduceHint)
 }
 
 func GoldilocksRangeCheck(api frontend.API, x frontend.Variable) {
@@ -150,20 +157,22 @@ func GoldilocksMulAdd(api frontend.API, operands ...frontend.Variable) frontend.
 		panic("GoldilocksMulAdd expects at 3 or 4 operands")
 	}
 
-	mulResults, err := api.Compiler().NewHint(GoldilocksMulAddHint, 2, operands...)
+	result, err := api.Compiler().NewHint(GoldilocksMulAddHint, 2, operands...)
 	if err != nil {
 		panic(err)
 	}
-	quotient := mulResults[0]
-	remainder := mulResults[1]
+
+	quotient := result[0]
+	remainder := result[1]
 
 	// Verify the calculated value
 	lhs := frontend.Variable(1)
 	for i := 0; i < len(operands)-1; i++ {
 		lhs = api.Mul(lhs, operands[i])
 	}
+
 	lhs = api.Add(lhs, operands[len(operands)-1])
-	rhs := api.Add(api.Mul(quotient, GOLDILOCKS_MODULUS_VAR), remainder)
+	rhs := api.Add(api.Mul(quotient, GOLDILOCKS_MODULUS), remainder)
 	api.AssertIsEqual(lhs, rhs)
 
 	GoldilocksRangeCheck(api, quotient)
@@ -177,9 +186,8 @@ func GoldilocksMulAddHint(_ *big.Int, inputs []*big.Int, results []*big.Int) err
 		return fmt.Errorf("GoldilocksMulAddHint expects at least 3 inputs")
 	}
 
-	goldilocksModulus := EmulatedField{}.Modulus()
 	for _, operand := range inputs {
-		if operand.Cmp(goldilocksModulus) >= 0 {
+		if operand.Cmp(GOLDILOCKS_MODULUS) >= 0 {
 			return fmt.Errorf("%s is not in the field", operand.String())
 		}
 	}
@@ -190,11 +198,11 @@ func GoldilocksMulAddHint(_ *big.Int, inputs []*big.Int, results []*big.Int) err
 	}
 
 	sum := new(big.Int).Add(product, inputs[len(inputs)-1])
-	quotient := new(big.Int).Div(sum, goldilocksModulus)
-	remainder := new(big.Int).Rem(sum, goldilocksModulus)
+	quotient := new(big.Int).Div(sum, GOLDILOCKS_MODULUS)
+	remainder := new(big.Int).Rem(sum, GOLDILOCKS_MODULUS)
 
-	results = append(results, quotient)
-	results = append(results, remainder)
+	results[0] = quotient
+	results[1] = remainder
 
 	return nil
 }
@@ -208,7 +216,7 @@ func GoldilocksReduce(api frontend.API, x frontend.Variable) frontend.Variable {
 	remainder := mulResults[1]
 
 	// Verify that x == quotient * modulus + remainder
-	rhs := api.Add(api.Mul(quotient, GOLDILOCKS_MODULUS_VAR), remainder)
+	rhs := api.Add(api.Mul(quotient, GOLDILOCKS_MODULUS), remainder)
 	api.AssertIsEqual(x, rhs)
 
 	GoldilocksRangeCheck(api, quotient)
@@ -228,8 +236,8 @@ func GoldilocksReduceHint(_ *big.Int, inputs []*big.Int, results []*big.Int) err
 	quotient := new(big.Int).Div(x, goldilocksModulus)
 	remainder := new(big.Int).Rem(x, goldilocksModulus)
 
-	results = append(results, quotient)
-	results = append(results, remainder)
+	results[0] = quotient
+	results[1] = remainder
 
 	return nil
 }
