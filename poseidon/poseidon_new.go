@@ -99,8 +99,10 @@ func (c *PoseidonNewChip) ConstantLayer(state PoseidonNewState, roundCounter *in
 
 // Can assume that X is in the field
 func (c *PoseidonNewChip) SBoxMonomial(x frontend.Variable) frontend.Variable {
-	x3 := field.GoldilocksMulAdd(c.api, x, x, x, field.ZERO_VAR)
-	return field.GoldilocksMulAdd(c.api, x3, x3, x, field.ZERO_VAR)
+	x2 := field.GoldilocksMulAdd(c.api, x, x, field.ZERO_VAR)
+	x4 := field.GoldilocksMulAdd(c.api, x2, x2, field.ZERO_VAR)
+	x3 := field.GoldilocksMulAdd(c.api, x, x2, field.ZERO_VAR)
+	return field.GoldilocksMulAdd(c.api, x3, x4, field.ZERO_VAR)
 }
 
 func (c *PoseidonNewChip) SBoxLayer(state PoseidonNewState) PoseidonNewState {

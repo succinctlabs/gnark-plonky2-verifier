@@ -17,21 +17,13 @@ type TestPoseidonCircuit struct {
 }
 
 func (circuit *TestPoseidonCircuit) Define(api frontend.API) error {
-	goldilocksApi := field.NewFieldAPI(api)
-	qeAPI := field.NewQuadraticExtensionAPI(api, goldilocksApi, 3)
-
-	var input PoseidonState
-	for i := 0; i < 12; i++ {
-		input[i] = goldilocksApi.FromBits(api.ToBinary(circuit.In[i], 64)...)
-	}
-
-	poseidonChip := NewPoseidonChip(api, goldilocksApi, qeAPI)
-	output := poseidonChip.Poseidon(input)
+	poseidonChip := NewPoseidonNewChip(api)
+	output := poseidonChip.Poseidon(circuit.In)
 
 	for i := 0; i < 12; i++ {
-		goldilocksApi.AssertIsEqual(
+		api.AssertIsEqual(
 			output[i],
-			goldilocksApi.FromBits(api.ToBinary(circuit.Out[i])...),
+			circuit.Out[i],
 		)
 	}
 

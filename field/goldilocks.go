@@ -99,6 +99,132 @@ func init() {
 	hint.Register(GoldilocksReduceHint)
 }
 
+func QuotientRangeCheck(api frontend.API, x frontend.Variable) {
+	// Assuming that BN254 is the underlying curve, then the quotient
+	// is in the range [0, 1186564023953193351969894564072376490961964393355920015360]
+	// Big endian binary representation (190 digits) is
+	// 11000001100100010011100111001100010001100101011110111000000000000000000000000000000
+	// 00000000000000000000000000000000000000000000000000000000000000000000000000000000000
+	// 000000000000000000000000
+	//
+	// This function will verify all the 190+ bits are 0
+	// Will break up the bit representation into chunks where each chunk is a sequence of
+	// contiguous 1 or 0.
+
+	// First decompose x into bits.
+	if api.Compiler().Field().Cmp(ecc.BN254.ScalarField()) != 0 {
+		panic("This function only works for BN254")
+	}
+
+	maxBitLen := api.Compiler().FieldBitLen()
+
+	bits, err := api.Compiler().NewHint(bits.NBits, maxBitLen, x)
+	if err != nil {
+		panic(err)
+	}
+
+	// All bits that are >= 190 should be zero
+	bitAccumulator := ZERO_VAR
+	for i := 190; i < len(bits); i++ {
+		bitAccumulator = api.Add(bitAccumulator, bits[i])
+	}
+	api.IsZero(bitAccumulator)
+
+	// All the remaining bits should compose back to x
+	reconstructedX := ZERO_VAR
+	c := big.NewInt(1)
+	for i := 0; i < 190; i++ {
+		reconstructedX = api.Add(reconstructedX, api.Mul(bits[i], c))
+		c = c.Lsh(c, 1)
+		api.AssertIsBoolean(bits[i])
+	}
+	api.AssertIsEqual(x, reconstructedX)
+
+	// Break up the bit representation into chunks where each chunk is a sequence of
+	// contiguous 1 or 0.
+	chunks := [][]int{
+		{137, 138, 139},
+		{140},
+		{141, 142, 143, 144},
+		{145},
+		{146},
+		{147},
+		{148},
+		{149, 150},
+		{151, 152},
+		{153, 154, 155},
+		{156},
+		{157, 158, 159},
+		{160, 161},
+		{162, 163},
+		{164, 165, 166},
+		{167, 168},
+		{169, 170, 171},
+		{172, 173},
+		{174},
+		{175, 176, 177},
+		{178},
+		{179, 180},
+		{181, 182},
+		{183, 184, 185, 186, 187},
+		{188, 189},
+	}
+
+	chunkOnes := []bool{
+		true,
+		false,
+		true,
+		false,
+		true,
+		false,
+		true,
+		false,
+		true,
+		false,
+		true,
+		false,
+		true,
+		false,
+		true,
+		false,
+		true,
+		false,
+		true,
+		false,
+		true,
+		false,
+		true,
+		false,
+		true,
+	}
+
+	lastChunkCheck := ZERO_VAR
+	for i := 0; i < 137; i++ {
+		lastChunkCheck = api.Add(lastChunkCheck, bits[i])
+	}
+
+	previousChunkCheck := api.Sub(api.IsZero(lastChunkCheck), ONE_VAR)
+	for i := 0; i < len(chunks); i++ {
+		chunkSum := ZERO_VAR
+		for j := 0; j < len(chunks[i]); j++ {
+			chunkSum = api.Add(chunkSum, bits[chunks[i][j]])
+		}
+
+		if chunkOnes[i] {
+			// Check if all the bits are 1s
+			shouldCheckPrevChunk := api.IsZero(api.Sub(chunkSum, uint64(len(chunks[i]))))
+			previousChunkCheck = api.Select(shouldCheckPrevChunk, previousChunkCheck, ZERO_VAR)
+		} else {
+			// Check if all the bits are 0s
+			shouldCheckPrevChunk := api.IsZero(chunkSum)
+			previousChunkCheck = api.Select(shouldCheckPrevChunk, previousChunkCheck, ONE_VAR)
+		}
+
+	}
+
+	api.AssertIsEqual(previousChunkCheck, ZERO_VAR)
+}
+
 func GoldilocksRangeCheck(api frontend.API, x frontend.Variable) {
 	// Goldilocks' modulus is "1111111111111111111111111111111100000000000000000000000000000001' in big endian binary
 	// We first check that all of the 64+ bits are zero
@@ -152,6 +278,7 @@ func GoldilocksRangeCheck(api frontend.API, x frontend.Variable) {
 }
 
 // Calculates product(operands[0:len(operands)-1]) + operands[len(operands)-1]
+// This function assumes that all operands are within goldilocks, and will panic otherwise
 func GoldilocksMulAdd(api frontend.API, operands ...frontend.Variable) frontend.Variable {
 	if len(operands) < 3 || len(operands) > 4 {
 		panic("GoldilocksMulAdd expects at 3 or 4 operands")
@@ -219,7 +346,7 @@ func GoldilocksReduce(api frontend.API, x frontend.Variable) frontend.Variable {
 	rhs := api.Add(api.Mul(quotient, GOLDILOCKS_MODULUS), remainder)
 	api.AssertIsEqual(x, rhs)
 
-	GoldilocksRangeCheck(api, quotient)
+	QuotientRangeCheck(api, quotient)
 	GoldilocksRangeCheck(api, remainder)
 
 	return remainder

@@ -38,13 +38,39 @@ func TestGoldilocksRangeCheck(t *testing.T) {
 	assert.ProverSucceeded(&circuit, &witness, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16))
 }
 
+type TestQuotientRangeCheckCircuit struct {
+	X frontend.Variable
+}
+
+func (c *TestQuotientRangeCheckCircuit) Define(api frontend.API) error {
+	QuotientRangeCheck(api, c.X)
+	return nil
+}
+func TestQuotientRangeCheck(t *testing.T) {
+	assert := test.NewAssert(t)
+
+	var circuit, witness TestQuotientRangeCheckCircuit
+
+	witness.X = 1
+	assert.ProverSucceeded(&circuit, &witness, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16), test.NoFuzzing())
+
+	witness.X = 0
+	assert.ProverSucceeded(&circuit, &witness, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16), test.NoFuzzing())
+
+	witness.X, _ = new(big.Int).SetString("1186564023953193351969894564072376490961964393355920015360", 10)
+	assert.ProverSucceeded(&circuit, &witness, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16), test.NoFuzzing())
+
+	witness.X, _ = new(big.Int).SetString("1186564023953193351969894564072376490961964393355920015361", 10)
+	assert.ProverFailed(&circuit, &witness, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16), test.NoFuzzing())
+}
+
 type TestGoldilocksMulAddCircuit struct {
-	Operands       []frontend.Variable
+	X, Y, Z        frontend.Variable
 	ExpectedResult frontend.Variable
 }
 
 func (c *TestGoldilocksMulAddCircuit) Define(api frontend.API) error {
-	calculateValue := GoldilocksMulAdd(api, c.Operands...)
+	calculateValue := GoldilocksMulAdd(api, c.X, c.Y, c.Z)
 	api.AssertIsEqual(calculateValue, c.ExpectedResult)
 
 	return nil
@@ -55,16 +81,19 @@ func TestGoldilocksMulAdd(t *testing.T) {
 
 	var circuit, witness TestGoldilocksMulAddCircuit
 
-	witness.Operands = []frontend.Variable{1, 2, 3}
+	witness.X = 1
+	witness.Y = 2
+	witness.Z = 3
 	witness.ExpectedResult = 5
-	circuit.Operands = make([]frontend.Variable, len(witness.Operands))
 	assert.ProverSucceeded(&circuit, &witness, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16), test.NoFuzzing())
 
 	bigOperand := new(big.Int).SetUint64(9223372036854775808)
 	expectedValue, _ := new(big.Int).SetString("18446744068340842500", 10)
-	witness.Operands = []frontend.Variable{bigOperand, bigOperand, 3}
+
+	witness.X = bigOperand
+	witness.Y = bigOperand
+	witness.Z = 3
 	witness.ExpectedResult = expectedValue
-	circuit.Operands = make([]frontend.Variable, len(witness.Operands))
 	assert.ProverSucceeded(&circuit, &witness, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16), test.NoFuzzing())
 }
 
