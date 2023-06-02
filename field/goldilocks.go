@@ -37,6 +37,11 @@ func NewFieldConstFromString(x string) F {
 	return &val
 }
 
+func NewFieldElement(x frontend.Variable) F {
+	val := emulated.ValueOf[EmulatedField](x)
+	return &val
+}
+
 var ONE_F = NewFieldConst(1)
 var ZERO_F = NewFieldConst(0)
 var NEG_ONE_F = NewFieldConst(EmulatedField{}.Modulus().Uint64() - 1)
@@ -230,20 +235,11 @@ func GoldilocksRangeCheck(api frontend.API, x frontend.Variable) {
 	// We first check that all of the 64+ bits are zero
 	// We then check that if the 32rd bit to 63th bit are all 1, then the 0th bit to the 31st bit are all zero
 
-	// First decompose x into bits.
-	maxBitLen := api.Compiler().FieldBitLen()
-
-	bits, err := api.Compiler().NewHint(bits.NBits, maxBitLen, x)
+	// First decompose x into 64 bits.
+	bits, err := api.Compiler().NewHint(bits.NBits, 64, x)
 	if err != nil {
 		panic(err)
 	}
-
-	// All bits that are >= 64 should be zero
-	bitAccumulator := ZERO_VAR
-	for i := 64; i < len(bits); i++ {
-		bitAccumulator = api.Add(bitAccumulator, bits[i])
-	}
-	api.IsZero(bitAccumulator)
 
 	// All the remaining bits should compose back to x
 	reconstructedX := ZERO_VAR

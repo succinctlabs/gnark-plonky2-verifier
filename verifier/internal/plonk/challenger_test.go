@@ -20,19 +20,12 @@ type TestChallengerCircuit struct {
 
 func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	fieldAPI := field.NewFieldAPI(api)
-	degreeBits := 3
-	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI, uint64(degreeBits))
-	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
+	poseidonChip := poseidon.NewPoseidonChip(api)
 	challengerChip := NewChallengerChip(api, fieldAPI, poseidonChip)
 
 	var circuitDigest [4]field.F
 	for i := 0; i < len(circuitDigest); i++ {
 		circuitDigest[i] = fieldAPI.FromBits(api.ToBinary(circuit.CircuitDigest[i], 64)...)
-	}
-
-	var publicInputs [3]field.F
-	for i := 0; i < len(publicInputs); i++ {
-		publicInputs[i] = fieldAPI.FromBits(api.ToBinary(circuit.PublicInputs[i], 64)...)
 	}
 
 	var wiresCap [16][4]field.F
@@ -56,9 +49,15 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 		}
 	}
 
-	publicInputHash := poseidonChip.HashNoPad(publicInputs[:])
+	publicInputHash := poseidonChip.HashNoPad(circuit.PublicInputs[:])
 	challengerChip.ObserveHash(circuitDigest)
-	challengerChip.ObserveHash(publicInputHash)
+	publicInputHashField := [4]field.F{
+		field.NewFieldElement(publicInputHash[0]),
+		field.NewFieldElement(publicInputHash[1]),
+		field.NewFieldElement(publicInputHash[2]),
+		field.NewFieldElement(publicInputHash[3]),
+	}
+	challengerChip.ObserveHash(publicInputHashField)
 	challengerChip.ObserveCap(wiresCap[:])
 
 	numChallenges := uint64(2)
@@ -73,7 +72,7 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	}
 
 	for i := 0; i < 4; i++ {
-		fieldAPI.AssertIsEqual(publicInputHash[i], expectedPublicInputHash[i])
+		fieldAPI.AssertIsEqual(publicInputHashField[i], expectedPublicInputHash[i])
 	}
 
 	expectedPlonkBetas := [2]field.F{

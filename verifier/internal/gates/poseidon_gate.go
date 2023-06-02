@@ -92,7 +92,7 @@ func (g *PoseidonGate) WiresEnd() uint64 {
 func (g *PoseidonGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticExtensionAPI, vars EvaluationVars) []field.QuadraticExtension {
 	constraints := []field.QuadraticExtension{}
 
-	poseidonChip := poseidon.NewPoseidonChip(api, field.NewFieldAPI(api), qeAPI)
+	poseidonChip := poseidon.NewPoseidonChip(api)
 
 	// Assert that `swap` is binary.
 	swap := vars.localWires[g.WireSwap()]
