@@ -29,14 +29,16 @@ type ProofWithPublicInputsRaw struct {
 			QuotientPolys   [][]uint64 `json:"quotient_polys"`
 		} `json:"openings"`
 		OpeningProof struct {
-			CommitPhaseMerkleCaps []MerkleCapsRaw `json:"commit_phase_merkle_caps"`
+			CommitPhaseMerkleCaps [][]string `json:"commit_phase_merkle_caps"`
 			QueryRoundProofs      []struct {
 				InitialTreesProof struct {
 					EvalsProofs []EvalProofRaw `json:"evals_proofs"`
 				} `json:"initial_trees_proof"`
 				Steps []struct {
-					Evals       [][]uint64     `json:"evals"`
-					MerkleProof MerkleProofRaw `json:"merkle_proof"`
+					Evals       [][]uint64 `json:"evals"`
+					MerkleProof struct {
+						Siblings []string `json:"siblings"`
+					} `json:"merkle_proof"`
 				} `json:"steps"`
 			} `json:"query_round_proofs"`
 			FinalPoly struct {
@@ -48,35 +50,17 @@ type ProofWithPublicInputsRaw struct {
 	PublicInputs []uint64 `json:"public_inputs"`
 }
 
-type MerkleCapsRaw struct {
-	hashes []string
-}
-
-func (m *MerkleCapsRaw) UnmarshalJSON(data []byte) error {
-	var merkleCaps []string
-	if err := json.Unmarshal(data, &merkleCaps); err != nil {
-		panic(err)
-	}
-
-	m.hashes = make([]string, len(merkleCaps))
-	for i := 0; i < len(merkleCaps); i++ {
-		m.hashes[i] = merkleCaps[i]
-	}
-
-	return nil
-}
-
 type EvalProofRaw struct {
-	leafElements []uint64
-	merkleProof  MerkleProofRaw
+	LeafElements []uint64
+	MerkleProof  MerkleProofRaw
 }
 
 func (e *EvalProofRaw) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &[]interface{}{&e.leafElements, &e.merkleProof})
+	return json.Unmarshal(data, &[]interface{}{&e.LeafElements, &e.MerkleProof})
 }
 
 type MerkleProofRaw struct {
-	hash []string
+	Hash []string
 }
 
 func (m *MerkleProofRaw) UnmarshalJSON(data []byte) error {
@@ -89,10 +73,8 @@ func (m *MerkleProofRaw) UnmarshalJSON(data []byte) error {
 		panic(err)
 	}
 
-	m.hash = make([]string, len(siblings.Siblings))
-	for siblingIdx, sibling := range siblings.Siblings {
-		m.hash[siblingIdx] = sibling
-	}
+	m.Hash = make([]string, len(siblings.Siblings))
+	copy(m.Hash[:], siblings.Siblings)
 
 	return nil
 }
@@ -219,14 +201,16 @@ func StringArrayToHashBN128Array(rawHashes []string) []poseidon.PoseidonBN128Has
 }
 
 func DeserializeFriProof(openingProofRaw struct {
-	CommitPhaseMerkleCaps []MerkleCapsRaw
+	CommitPhaseMerkleCaps [][]string
 	QueryRoundProofs      []struct {
 		InitialTreesProof struct {
 			EvalsProofs []EvalProofRaw
 		}
 		Steps []struct {
 			Evals       [][]uint64
-			MerkleProof MerkleProofRaw
+			MerkleProof struct {
+				Siblings []string
+			}
 		}
 	}
 	FinalPoly struct {
@@ -240,7 +224,7 @@ func DeserializeFriProof(openingProofRaw struct {
 
 	openingProof.CommitPhaseMerkleCaps = make([]common.MerkleCap, len(openingProofRaw.CommitPhaseMerkleCaps))
 	for i := 0; i < len(openingProofRaw.CommitPhaseMerkleCaps); i++ {
-		openingProof.CommitPhaseMerkleCaps[i] = StringArrayToHashBN128Array(openingProofRaw.CommitPhaseMerkleCaps[i].hashes)
+		openingProof.CommitPhaseMerkleCaps[i] = StringArrayToHashBN128Array(openingProofRaw.CommitPhaseMerkleCaps[i])
 	}
 
 	numQueryRoundProofs := len(openingProofRaw.QueryRoundProofs)
@@ -250,15 +234,15 @@ func DeserializeFriProof(openingProofRaw struct {
 		numEvalProofs := len(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs)
 		openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs = make([]common.EvalProof, numEvalProofs)
 		for j := 0; j < numEvalProofs; j++ {
-			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].Elements = utils.Uint64ArrayToFArray(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].leafElements)
-			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Siblings = StringArrayToHashBN128Array(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].merkleProof.hash)
+			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].Elements = utils.Uint64ArrayToFArray(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].LeafElements)
+			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Siblings = StringArrayToHashBN128Array(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Hash)
 		}
 
 		numSteps := len(openingProofRaw.QueryRoundProofs[i].Steps)
 		openingProof.QueryRoundProofs[i].Steps = make([]common.FriQueryStep, numSteps)
 		for j := 0; j < numSteps; j++ {
 			openingProof.QueryRoundProofs[i].Steps[j].Evals = utils.Uint64ArrayToQuadraticExtensionArray(openingProofRaw.QueryRoundProofs[i].Steps[j].Evals)
-			openingProof.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings = StringArrayToHashBN128Array(openingProofRaw.QueryRoundProofs[i].Steps[j].MerkleProof.hash)
+			openingProof.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings = StringArrayToHashBN128Array(openingProofRaw.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings)
 		}
 	}
 
@@ -294,14 +278,16 @@ func DeserializeProofWithPublicInputs(path string) common.ProofWithPublicInputs 
 		QuotientPolys   [][]uint64
 	}(raw.Proof.Openings))
 	proofWithPis.Proof.OpeningProof = DeserializeFriProof(struct {
-		CommitPhaseMerkleCaps []MerkleCapsRaw
+		CommitPhaseMerkleCaps [][]string
 		QueryRoundProofs      []struct {
 			InitialTreesProof struct {
 				EvalsProofs []EvalProofRaw
 			}
 			Steps []struct {
 				Evals       [][]uint64
-				MerkleProof MerkleProofRaw
+				MerkleProof struct {
+					Siblings []string
+				}
 			}
 		}
 		FinalPoly  struct{ Coeffs [][]uint64 }
