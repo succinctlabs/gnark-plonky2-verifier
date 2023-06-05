@@ -162,9 +162,7 @@ type ProofChallengesRaw struct {
 
 type VerifierOnlyCircuitDataRaw struct {
 	ConstantsSigmasCap []string `json:"constants_sigmas_cap"`
-	CircuitDigest      struct {
-		Elements []uint64 `json:"elements"`
-	} `json:"circuit_digest"`
+	CircuitDigest      string   `json:"circuit_digest"`
 }
 
 func DeserializeMerkleCap(merkleCapRaw []string) common.MerkleCap {
@@ -445,7 +443,8 @@ func DeserializeVerifierOnlyCircuitData(path string) common.VerifierOnlyCircuitD
 
 	var verifierOnlyCircuitData common.VerifierOnlyCircuitData
 	verifierOnlyCircuitData.ConstantSigmasCap = DeserializeMerkleCap(raw.ConstantsSigmasCap)
-	copy(verifierOnlyCircuitData.CircuitDigest[:], utils.Uint64ArrayToFArray(raw.CircuitDigest.Elements))
-
+	circuitDigestBigInt, _ := new(big.Int).SetString(raw.CircuitDigest, 10)
+	circuitDigestVar := frontend.Variable(circuitDigestBigInt)
+	verifierOnlyCircuitData.CircuitDigest = poseidon.PoseidonBN128HashOut(circuitDigestVar)
 	return verifierOnlyCircuitData
 }

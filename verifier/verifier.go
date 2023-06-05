@@ -57,7 +57,7 @@ func (c *VerifierChip) GetChallenges(
 
 	var circuitDigest = verifierData.CircuitDigest
 
-	challenger.ObserveHash(circuitDigest)
+	challenger.ObserveBN128Hash(circuitDigest)
 	challenger.ObserveHash(publicInputsHash)
 	challenger.ObserveCap(proofWithPis.Proof.WiresCap)
 	plonkBetas := challenger.GetNChallenges(numChallenges)

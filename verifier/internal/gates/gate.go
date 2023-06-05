@@ -23,6 +23,7 @@ var gateRegexHandlers = map[*regexp.Regexp]func(parameters map[string]string) Ga
 	mulExtensionGateRegex:       deserializeMulExtensionGate,
 	noopGateRegex:               deserializeNoopGate,
 	poseidonGateRegex:           deserializePoseidonGate,
+	poseidonMdsGateRegex:        deserializePoseidonMdsGate,
 	publicInputGateRegex:        deserializePublicInputGate,
 	randomAccessGateRegex:       deserializeRandomAccessGate,
 	reducingExtensionGateRegex:  deserializeReducingExtensionGate,
