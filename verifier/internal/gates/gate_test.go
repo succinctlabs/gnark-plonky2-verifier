@@ -161,7 +161,7 @@ var localWires = []field.QuadraticExtension{
 	{field.NewFieldConst(5102771513133979026), field.NewFieldConst(12570336536575987923)},
 }
 
-var publicInputsHash = poseidon.Hash{field.ZERO_F, field.ZERO_F, field.ZERO_F, field.ZERO_F}
+var publicInputsHash = poseidon.PoseidonHashOut{field.ZERO_F, field.ZERO_F, field.ZERO_F, field.ZERO_F}
 
 var publicInputGateExpectedConstraints = []field.QuadraticExtension{
 	{field.NewFieldConst(10289971018233574142), field.NewFieldConst(4567684908222573778)},

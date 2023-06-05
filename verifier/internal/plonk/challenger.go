@@ -11,15 +11,16 @@ import (
 )
 
 type ChallengerChip struct {
-	api          frontend.API   `gnark:"-"`
-	field        field.FieldAPI `gnark:"-"`
-	poseidonChip *poseidon.PoseidonChip
-	spongeState  [poseidon.SPONGE_WIDTH]field.F
-	inputBuffer  []field.F
-	outputBuffer []field.F
+	api               frontend.API   `gnark:"-"`
+	field             field.FieldAPI `gnark:"-"`
+	poseidonChip      *poseidon.PoseidonChip
+	poseidonBN128Chip *poseidon.PoseidonBN128Chip
+	spongeState       [poseidon.SPONGE_WIDTH]field.F
+	inputBuffer       []field.F
+	outputBuffer      []field.F
 }
 
-func NewChallengerChip(api frontend.API, fieldAPI field.FieldAPI, poseidonChip *poseidon.PoseidonChip) *ChallengerChip {
+func NewChallengerChip(api frontend.API, fieldAPI field.FieldAPI, poseidonChip *poseidon.PoseidonChip, poseidonBN128Chip *poseidon.PoseidonBN128Chip) *ChallengerChip {
 	var spongeState [poseidon.SPONGE_WIDTH]field.F
 	var inputBuffer []field.F
 	var outputBuffer []field.F
@@ -29,12 +30,13 @@ func NewChallengerChip(api frontend.API, fieldAPI field.FieldAPI, poseidonChip *
 	}
 
 	return &ChallengerChip{
-		api:          api,
-		field:        fieldAPI,
-		poseidonChip: poseidonChip,
-		spongeState:  spongeState,
-		inputBuffer:  inputBuffer,
-		outputBuffer: outputBuffer,
+		api:               api,
+		field:             fieldAPI,
+		poseidonChip:      poseidonChip,
+		poseidonBN128Chip: poseidonBN128Chip,
+		spongeState:       spongeState,
+		inputBuffer:       inputBuffer,
+		outputBuffer:      outputBuffer,
 	}
 }
 
@@ -52,13 +54,19 @@ func (c *ChallengerChip) ObserveElements(elements []field.F) {
 	}
 }
 
-func (c *ChallengerChip) ObserveHash(hash poseidon.Hash) {
-	c.ObserveElements(hash[:])
+func (c *ChallengerChip) ObserveHash(hash poseidon.PoseidonHashOut) {
+	elements := c.poseidonChip.ToVec(hash)
+	c.ObserveElements(elements)
 }
 
-func (c *ChallengerChip) ObserveCap(cap []poseidon.Hash) {
+func (c *ChallengerChip) ObserveBN128Hash(hash poseidon.PoseidonBN128HashOut) {
+	elements := c.poseidonBN128Chip.ToVec(hash)
+	c.ObserveElements(elements)
+}
+
+func (c *ChallengerChip) ObserveCap(cap []poseidon.PoseidonBN128HashOut) {
 	for i := 0; i < len(cap); i++ {
-		c.ObserveHash(cap[i])
+		c.ObserveBN128Hash(cap[i])
 	}
 }
 
@@ -102,7 +110,7 @@ func (c *ChallengerChip) GetExtensionChallenge() field.QuadraticExtension {
 	return field.QuadraticExtension{values[0], values[1]}
 }
 
-func (c *ChallengerChip) GetHash() poseidon.Hash {
+func (c *ChallengerChip) GetHash() poseidon.PoseidonHashOut {
 	return [4]field.F{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
 }
 
@@ -140,9 +148,7 @@ func (c *ChallengerChip) duplexing() {
 		panic("something went wrong")
 	}
 
-	for i := 0; i < len(c.inputBuffer); i++ {
-		c.spongeState[i] = c.inputBuffer[i]
-	}
+	copy(c.spongeState[:], c.inputBuffer)
 	c.inputBuffer = clearBuffer(c.inputBuffer)
 	c.spongeState = c.poseidonChip.Poseidon(c.spongeState)
 	clearBuffer(c.outputBuffer)

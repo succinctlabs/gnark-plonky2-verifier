@@ -1,21 +1,21 @@
 package plonk
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
-	"github.com/succinctlabs/gnark-plonky2-verifier/utils"
 )
 
 type TestChallengerCircuit struct {
-	PublicInputs              [3]frontend.Variable
-	CircuitDigest             [4]frontend.Variable
-	WiresCap                  [16][4]frontend.Variable
-	PlonkZsPartialProductsCap [16][4]frontend.Variable
-	QuotientPolysCap          [16][4]frontend.Variable
+	PublicInputs              []field.F
+	CircuitDigest             poseidon.PoseidonBN128HashOut
+	WiresCap                  [16]poseidon.PoseidonBN128HashOut
+	PlonkZsPartialProductsCap [16]poseidon.PoseidonBN128HashOut
+	QuotientPolysCap          [16]poseidon.PoseidonBN128HashOut
 }
 
 func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
@@ -23,53 +23,23 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	degreeBits := 3
 	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI, uint64(degreeBits))
 	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
-	challengerChip := NewChallengerChip(api, fieldAPI, poseidonChip)
+	poseidonBN128Chip := poseidon.NewPoseidonBN128Chip(api, fieldAPI)
+	challengerChip := NewChallengerChip(api, fieldAPI, poseidonChip, poseidonBN128Chip)
 
-	var circuitDigest [4]field.F
-	for i := 0; i < len(circuitDigest); i++ {
-		circuitDigest[i] = fieldAPI.FromBits(api.ToBinary(circuit.CircuitDigest[i], 64)...)
-	}
-
-	var publicInputs [3]field.F
-	for i := 0; i < len(publicInputs); i++ {
-		publicInputs[i] = fieldAPI.FromBits(api.ToBinary(circuit.PublicInputs[i], 64)...)
-	}
-
-	var wiresCap [16][4]field.F
-	for i := 0; i < len(wiresCap); i++ {
-		for j := 0; j < len(wiresCap[0]); j++ {
-			wiresCap[i][j] = fieldAPI.FromBits(api.ToBinary(circuit.WiresCap[i][j], 64)...)
-		}
-	}
-
-	var plonkZsPartialProductsCap [16][4]field.F
-	for i := 0; i < len(plonkZsPartialProductsCap); i++ {
-		for j := 0; j < len(plonkZsPartialProductsCap[0]); j++ {
-			plonkZsPartialProductsCap[i][j] = fieldAPI.FromBits(api.ToBinary(circuit.PlonkZsPartialProductsCap[i][j], 64)...)
-		}
-	}
-
-	var quotientPolysCap [16][4]field.F
-	for i := 0; i < len(quotientPolysCap); i++ {
-		for j := 0; j < len(quotientPolysCap[0]); j++ {
-			quotientPolysCap[i][j] = fieldAPI.FromBits(api.ToBinary(circuit.QuotientPolysCap[i][j], 64)...)
-		}
-	}
-
-	publicInputHash := poseidonChip.HashNoPad(publicInputs[:])
-	challengerChip.ObserveHash(circuitDigest)
+	challengerChip.ObserveBN128Hash(circuit.CircuitDigest)
+	publicInputHash := poseidonChip.HashNoPad(circuit.PublicInputs[:])
 	challengerChip.ObserveHash(publicInputHash)
-	challengerChip.ObserveCap(wiresCap[:])
+	challengerChip.ObserveCap(circuit.WiresCap[:])
 
 	numChallenges := uint64(2)
 	plonkBetas := challengerChip.GetNChallenges(numChallenges)
 	plonkGammas := challengerChip.GetNChallenges(numChallenges)
 
 	expectedPublicInputHash := [4]field.F{
-		field.NewFieldConstFromString("8416658900775745054"),
-		field.NewFieldConstFromString("12574228347150446423"),
-		field.NewFieldConstFromString("9629056739760131473"),
-		field.NewFieldConstFromString("3119289788404190010"),
+		field.NewFieldConstFromString("0"),
+		field.NewFieldConstFromString("0"),
+		field.NewFieldConstFromString("0"),
+		field.NewFieldConstFromString("0"),
 	}
 
 	for i := 0; i < 4; i++ {
@@ -77,13 +47,13 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	}
 
 	expectedPlonkBetas := [2]field.F{
-		field.NewFieldConstFromString("4678728155650926271"),
-		field.NewFieldConstFromString("13611962404289024887"),
+		field.NewFieldConstFromString("809252424062446818"),
+		field.NewFieldConstFromString("7397814711529672408"),
 	}
 
 	expectedPlonkGammas := [2]field.F{
-		field.NewFieldConstFromString("13237663823305715949"),
-		field.NewFieldConstFromString("15389314098328235145"),
+		field.NewFieldConstFromString("13664745396605828986"),
+		field.NewFieldConstFromString("6326995011410399325"),
 	}
 
 	for i := 0; i < 2; i++ {
@@ -91,24 +61,24 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 		fieldAPI.AssertIsEqual(plonkGammas[i], expectedPlonkGammas[i])
 	}
 
-	challengerChip.ObserveCap(plonkZsPartialProductsCap[:])
+	challengerChip.ObserveCap(circuit.PlonkZsPartialProductsCap[:])
 	plonkAlphas := challengerChip.GetNChallenges(numChallenges)
 
 	expectedPlonkAlphas := [2]field.F{
-		field.NewFieldConstFromString("14505919539124304197"),
-		field.NewFieldConstFromString("1695455639263736117"),
+		field.NewFieldConstFromString("7047735366822651495"),
+		field.NewFieldConstFromString("17475415137365152178"),
 	}
 
 	for i := 0; i < 2; i++ {
 		fieldAPI.AssertIsEqual(plonkAlphas[i], expectedPlonkAlphas[i])
 	}
 
-	challengerChip.ObserveCap(quotientPolysCap[:])
+	challengerChip.ObserveCap(circuit.QuotientPolysCap[:])
 	plonkZeta := challengerChip.GetExtensionChallenge()
 
 	expectedPlonkZeta := field.QuadraticExtension{
-		field.NewFieldConstFromString("14887793628029982930"),
-		field.NewFieldConstFromString("1136137158284059037"),
+		field.NewFieldConstFromString("13764317411448234631"),
+		field.NewFieldConstFromString("1167233795392151493"),
 	}
 
 	for i := 0; i < 2; i++ {
@@ -118,15 +88,26 @@ func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	return nil
 }
 
+func hexStringToBN128Hash(hashHexStr string) poseidon.PoseidonBN128HashOut {
+	hashBigInt, ok := new(big.Int).SetString(hashHexStr, 16)
+	if !(ok) {
+		panic("Invalid hash: " + hashHexStr)
+	}
+
+	println("hashBigInt is ", hashBigInt.String())
+	hashVar := frontend.Variable(*hashBigInt)
+	return poseidon.PoseidonBN128HashOut(hashVar)
+}
+
 func TestChallengerWitness(t *testing.T) {
 	assert := test.NewAssert(t)
 
 	testCase := func(
-		publicInputs [3]frontend.Variable,
-		circuitDigest [4]frontend.Variable,
-		wiresCap [16][4]frontend.Variable,
-		plonkZsPartialProductsCap [16][4]frontend.Variable,
-		quotientPolysCap [16][4]frontend.Variable,
+		publicInputs []field.F,
+		circuitDigest poseidon.PoseidonBN128HashOut,
+		wiresCap [16]poseidon.PoseidonBN128HashOut,
+		plonkZsPartialProductsCap [16]poseidon.PoseidonBN128HashOut,
+		quotientPolysCap [16]poseidon.PoseidonBN128HashOut,
 	) {
 		circuit := TestChallengerCircuit{
 			PublicInputs:              publicInputs,
@@ -146,80 +127,63 @@ func TestChallengerWitness(t *testing.T) {
 		assert.NoError(err)
 	}
 
-	publicInputsStr := []string{"0", "1", "3736710860384812976"}
-	circuitDigestStr := []string{"7754113318730736048", "18436136620016916513", "18054530212389526288", "5893739326632906028"}
-	wiresCapStr := [][]string{
-		{"13884351014873073118", "5174249846243191862", "2208632528791973868", "1071582828677910652"},
-		{"11475361245556894879", "14867351574926692044", "17013374066934071379", "1027671036932569748"},
-		{"5604634992452399010", "3684464596850094189", "5565599237356852406", "4136295609943151014"},
-		{"8463721840990025805", "5922588965472526198", "8096699027533803435", "2210089353004111478"},
-		{"17531628199677307555", "11513452064460680964", "1482441508929181375", "5139566233781982440"},
-		{"13271417993289093233", "17257193898955790413", "16883807866578566670", "7423179920948669117"},
-		{"13462567520785358202", "15555103598281658890", "5859961276885232601", "4464568704709749394"},
-		{"153012620162729043", "14072764618167122665", "3025694603779494447", "15948104906680148838"},
-		{"18050235253694287284", "11467396424826912141", "11302553396166323353", "10976271719722841224"},
-		{"15208241660644051470", "8520722208187871063", "10775022596056682771", "16048513824198271730"},
-		{"6929477084755896240", "11382029470138215117", "13205948643259905511", "9421863267852221772"},
-		{"15449187573546292268", "10216729601353604194", "9493934392442974211", "9848643714440191835"},
-		{"2172475758127444753", "16681095938683502188", "9983383760611275566", "2603547977557388755"},
-		{"17440301588003279095", "11799356585691460705", "1386003375936412946", "11059100806278290279"},
-		{"10758265002546797581", "1374136260999724547", "7200401521491969338", "219493657547391496"},
-		{"5995963332181008902", "4442996285152250372", "2005936434281221193", "6869325719052666642"},
-	}
-	plonkZsPartialProductsCapStr := [][]string{
-		{"1209867952068639569", "4958824272276746373", "8278739766347565702", "1966940898171663504"},
-		{"12599305286358028697", "8932511136775685440", "5376267558248004641", "6313904687311555884"},
-		{"11190791343943249124", "4016631697385248176", "10356629842603047568", "10968099068686195317"},
-		{"1963983823153667719", "6333891613271539690", "12318891063769180636", "10443318253972130654"},
-		{"7799898099378084347", "2751829638242157622", "8351904444410446701", "5284662773710644867"},
-		{"1588568181448440843", "10836321455257423751", "5543952383542989142", "12946954522116753258"},
-		{"15710202198621978057", "13746115173212319217", "6103259182317700987", "17589471289629134988"},
-		{"12877950969971815168", "4963889190939310439", "8868772654550990048", "11774978531783219015"},
-		{"16832740767463005599", "15040340114131672027", "7469306538360789573", "3154855824233652432"},
-		{"9383568437827143152", "1741060064145647394", "17668587021570420286", "5241789470902809114"},
-		{"2087729156816989530", "8248918881937854542", "8673194597758568216", "10710697836634846115"},
-		{"11253371860840267365", "16818881664594712299", "11933553751682199585", "1936353232880935379"},
-		{"12163553231829171860", "17244267969759347515", "2003902333564157189", "6934019871173840760"},
-		{"2082141893879862527", "18267460725569427782", "1129651898415533808", "14011240934155569890"},
-		{"2526273401266876282", "6955959191669943337", "5926536548217021446", "17949337312612691782"},
-		{"8858882459906353593", "5813258279939597857", "6320047506247573502", "15969724232572328561"},
-	}
-	quotientPolysCapStr := [][]string{
-		{"9435614145733021495", "1742717829476348934", "11178548223985487003", "14531951007568589725"},
-		{"11747844681527676730", "3089691012847802165", "5887135310661642077", "13943570416123664971"},
-		{"11150071448774479229", "4486829025930200476", "9369448886033958276", "15757606153229850783"},
-		{"14603194410536469617", "11776185929725558373", "3122936423686490326", "10128277488128872810"},
-		{"4990578700975083076", "4997575606014863069", "14499603187047727337", "14028694557236527137"},
-		{"2279147899956815983", "16034899207717647338", "14763350037932939672", "10075834812570828076"},
-		{"1102006741007271956", "15242779529961262072", "6900547375301951311", "8631780317175902419"},
-		{"6299112770394539219", "6297397453582105768", "14148031335065995704", "3794733067587629405"},
-		{"7891039548997763820", "4260484126440019022", "6493066317319943586", "14775252570136307979"},
-		{"10790514248728420789", "14444029601980227412", "17514190309172155536", "12973059492411164965"},
-		{"8940755416742726696", "8469566845539112244", "7642612722784522739", "15276772682665052607"},
-		{"18306931819862706026", "14374659904694625207", "8609543532143656606", "17350044275494282679"},
-		{"9062024023737444614", "13780128979028684176", "6115495431779737008", "7170446003855284754"},
-		{"6191400598853400595", "7806485717076924017", "3225145303141729264", "3644550749005104128"},
-		{"15759718266801608721", "2406060174022670585", "15679263832775538866", "18066847192985300443"},
-		{"9184823221361582966", "4767786405185004644", "9827047623720647370", "993615002460432327"},
-	}
+	publicInputs := []field.F{}
 
-	var publicInputs [3]frontend.Variable
-	var circuitDigest [4]frontend.Variable
-	var wiresCap [16][4]frontend.Variable
-	var plonkZsPartialProductsCap [16][4]frontend.Variable
-	var quotientPolysCap [16][4]frontend.Variable
+	circuitDigest := hexStringToBN128Hash("197f2a50ecbd8909ca03c144d328f43aab2568f74db4b535f0ddfd00338b0b6d")
 
-	copy(publicInputs[:], utils.StrArrayToFrontendVariableArray(publicInputsStr))
-	copy(circuitDigest[:], utils.StrArrayToFrontendVariableArray(circuitDigestStr))
-	for i := 0; i < len(wiresCapStr); i++ {
-		copy(wiresCap[i][:], utils.StrArrayToFrontendVariableArray(wiresCapStr[i]))
-	}
-	for i := 0; i < len(plonkZsPartialProductsCapStr); i++ {
-		copy(plonkZsPartialProductsCap[i][:], utils.StrArrayToFrontendVariableArray(plonkZsPartialProductsCapStr[i]))
-	}
-	for i := 0; i < len(quotientPolysCapStr); i++ {
-		copy(quotientPolysCap[i][:], utils.StrArrayToFrontendVariableArray(quotientPolysCapStr[i]))
-	}
+	wiresCaps := [16]poseidon.PoseidonBN128HashOut{}
+	wiresCaps[0] = hexStringToBN128Hash("0e689880d35b356f9d5adb56831182a8b42ce6997e5513ede80db8a3a883113d")
+	wiresCaps[1] = hexStringToBN128Hash("2af7a57fd3c08fcfab5d974e24a4a8a8fd3c3ddb7fdd4222a9a2729bb2052501")
+	wiresCaps[2] = hexStringToBN128Hash("0e9b8f5292ba96d6c08ae34b992dcb704f352a490dd005bf4bac012c9515fd6a")
+	wiresCaps[3] = hexStringToBN128Hash("0622b3031ccbb15894a19fb2ea5561725704a95f1f40be48882bf5cc076de5e9")
+	wiresCaps[4] = hexStringToBN128Hash("2c807d20d902d1e3f2d8d7e42b8e41e53a4338d1de89bbcb431576784bd4f5f4")
+	wiresCaps[5] = hexStringToBN128Hash("111a6f40ac135a44435055a3a69659a3978f39b8da19c036a6dc28d74decb735")
+	wiresCaps[6] = hexStringToBN128Hash("149aeb16cea471928d008d39e0d94ddf89447517281558b3204f897dd3a07014")
+	wiresCaps[7] = hexStringToBN128Hash("0485b4c6b22e3a3319a6dc7ae2557999b1bb6c71a2759346a3f06a0271ca054f")
+	wiresCaps[8] = hexStringToBN128Hash("12a823b9948f9b1020c9b034cb21a96651aa5bbde7054b08b851bf4f8c719210")
+	wiresCaps[9] = hexStringToBN128Hash("2d6fabcb1f11d438dcc8f9872468542722f3b359c29c4128ca52a58fe2e1bef3")
+	wiresCaps[10] = hexStringToBN128Hash("2abc9d440ce5ab10ab5c76c8eea40ee963471b60e71dcfc398ce74105f76b95c")
+	wiresCaps[11] = hexStringToBN128Hash("0c0f2a9f30cc7b04a308f3c51e6c4d748c937f7a1911b9a449c202a5cc3d30b1")
+	wiresCaps[12] = hexStringToBN128Hash("1b0e9fdcaef2a6b3c9e6b3c3c0a57a9610c28be71fa9dccf87c8d2bda5050f7d")
+	wiresCaps[13] = hexStringToBN128Hash("2576890fb64676e2befab00ba8d315ca98f2b09bfa7852becb3361110a023ab9")
+	wiresCaps[14] = hexStringToBN128Hash("1596113640b8d643d8ec32b2e2556e09a2b7f9d0ed03e9b4f004317f266470a3")
+	wiresCaps[15] = hexStringToBN128Hash("2963b098124cbe3988bf3146a707c13d860765014cb7cb90d4c550540a1f65de")
 
-	testCase(publicInputs, circuitDigest, wiresCap, plonkZsPartialProductsCap, quotientPolysCap)
+	plonkZsPartialProductsCaps := [16]poseidon.PoseidonBN128HashOut{}
+	plonkZsPartialProductsCaps[0] = hexStringToBN128Hash("0110b6ee5f9f6dd2cf85e622932cc9e2b294543c06aff8f39fefd4979cdb39c8")
+	plonkZsPartialProductsCaps[1] = hexStringToBN128Hash("0c8b5890de655d31cc5f9fa410576351d0ac52b5dd53aacaaf21dcfcd5b5e6ec")
+	plonkZsPartialProductsCaps[2] = hexStringToBN128Hash("1bbeabb166e95c348073c0e42e7f52ccd3fcfc32c60f2ed9fa22029255c4babb")
+	plonkZsPartialProductsCaps[3] = hexStringToBN128Hash("1c5b784d9f44eb944fc4655dedb3c985703a447210bc2e1443ff38961adebcd6")
+	plonkZsPartialProductsCaps[4] = hexStringToBN128Hash("120aa34fdf54512db9b9d2958ed63f3657ecc523bfb75267f4892d0ef6b93628")
+	plonkZsPartialProductsCaps[5] = hexStringToBN128Hash("2c020c74b4a037c22dcbf27432a56fb8de986e933f86211bb4af8451622cc7d3")
+	plonkZsPartialProductsCaps[6] = hexStringToBN128Hash("0f25f5c4978e0e75e4ad373154eb129bb2548b32429b397aea3d164e88f4d831")
+	plonkZsPartialProductsCaps[7] = hexStringToBN128Hash("1ba85f4aaf468ac1b7c023a1ee7cd764b839879cc48221230d461b66ee43d60b")
+	plonkZsPartialProductsCaps[8] = hexStringToBN128Hash("2a2adac69871e3704357a5d493338d45ca143bf27726191a81ef1c8b17404c11")
+	plonkZsPartialProductsCaps[9] = hexStringToBN128Hash("196096a3abe31a883fe40f296f07ee4bb3248fc4556c21f74dcf48d9b4e637ff")
+	plonkZsPartialProductsCaps[10] = hexStringToBN128Hash("0d22cb53a410ab0518d5fba620646766440551afb78c7624169f3522772db700")
+	plonkZsPartialProductsCaps[11] = hexStringToBN128Hash("1eb4a2ee13f9f2965edb0bef25c851978a5a9a3aab26725589cd84822eb41ae6")
+	plonkZsPartialProductsCaps[12] = hexStringToBN128Hash("01e3f850dc3dddc8976c76385ca54ee3158d58871b6a855bd514041e28bb7837")
+	plonkZsPartialProductsCaps[13] = hexStringToBN128Hash("1b75a0baaeeda519bc414f48a808bf265e9af411991653f4e523c2ffd021e88a")
+	plonkZsPartialProductsCaps[14] = hexStringToBN128Hash("0a994c8ae2db5d794898db4db1d8ce47bfae19389d4b454934ca52c6ceaad5bd")
+	plonkZsPartialProductsCaps[15] = hexStringToBN128Hash("222f190ad8dc2ab6d6e35dc24b8f6e37816f1c612a70b00bd71629295e9a9f14")
+
+	quotientPolysCaps := [16]poseidon.PoseidonBN128HashOut{}
+	quotientPolysCaps[0] = hexStringToBN128Hash("26755c7d6b392fc3e4cd66f07f8ae67d034a0d2d38061368e0ba1e6324e57868")
+	quotientPolysCaps[1] = hexStringToBN128Hash("298ee3376ae25fa53123e6d85d9956f2268270941d8e489c8995073dd6fe5e5a")
+	quotientPolysCaps[2] = hexStringToBN128Hash("1135072daa3bd243cc02e796edcd12ba139389cd86703519b0e9aef590b76975")
+	quotientPolysCaps[3] = hexStringToBN128Hash("1023a198b7cc0ca68c577be73fca042a88b36a792e26af67274975b708e2203b")
+	quotientPolysCaps[4] = hexStringToBN128Hash("21e475225d588d1e81f4289fbbb3aaa364a4b3291314dc0032044b2258c261bc")
+	quotientPolysCaps[5] = hexStringToBN128Hash("2be2f3f25bc8edae98ee680513442cc11ab03d4563f23f3663d3f728ecd497c4")
+	quotientPolysCaps[6] = hexStringToBN128Hash("1d4bcac9b9cde1972809157cd1e341160e835bb01b6365c112c15ce69bc75289")
+	quotientPolysCaps[7] = hexStringToBN128Hash("0918a2c60afdbcf07e37633794351ee2bb57f4a5376c0fa495952e7ee1fa753a")
+	quotientPolysCaps[8] = hexStringToBN128Hash("1d2d5399b5cce8bf3c4bf56cfc1af05b142bbb94e457a99ae43e78c917824f84")
+	quotientPolysCaps[9] = hexStringToBN128Hash("0efed09ab9c86bcfb5744ed29136c47482f58bd838a4a93b65f00aa6189d1986")
+	quotientPolysCaps[10] = hexStringToBN128Hash("00fdb648d88876de8e0ed48d060a3ac8d778890c144e6ce8cf8b7b83b40c0703")
+	quotientPolysCaps[11] = hexStringToBN128Hash("267dd6ec5c70f0f0949f5355099a78412e4ee2d2a1fe63f334c758988a2fe771")
+	quotientPolysCaps[12] = hexStringToBN128Hash("1d82ed080a8108e5db601b8e8688fddca7ecbc61a76aacc100d167a1305033fd")
+	quotientPolysCaps[13] = hexStringToBN128Hash("2d74e7e086f04f4f3abe8f04086516201520d699a579a0d29403d1d9dfeaa619")
+	quotientPolysCaps[14] = hexStringToBN128Hash("1fd72ab2ae36d7cf6461e46b890f49134f43fca96f237d9aed70401e5a4542a8")
+	quotientPolysCaps[15] = hexStringToBN128Hash("2e081f059297cb460dc8f8518ae8fda429d1d68737990828f20bc9e54a0ba5dc")
+
+	testCase(publicInputs, circuitDigest, wiresCaps, plonkZsPartialProductsCaps, quotientPolysCaps)
 }

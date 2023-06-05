@@ -10,23 +10,26 @@ import (
 )
 
 type VerifierChip struct {
-	api          frontend.API                 `gnark:"-"`
-	fieldAPI     field.FieldAPI               `gnark:"-"`
-	qeAPI        *field.QuadraticExtensionAPI `gnark:"-"`
-	poseidonChip *poseidon.PoseidonChip
-	plonkChip    *plonk.PlonkChip
-	friChip      *fri.FriChip
+	api               frontend.API                 `gnark:"-"`
+	fieldAPI          field.FieldAPI               `gnark:"-"`
+	qeAPI             *field.QuadraticExtensionAPI `gnark:"-"`
+	poseidonChip      *poseidon.PoseidonChip
+	poseidonBN128Chip *poseidon.PoseidonBN128Chip
+	plonkChip         *plonk.PlonkChip
+	friChip           *fri.FriChip
 }
 
 func NewVerifierChip(api frontend.API, commonCircuitData common.CommonCircuitData) *VerifierChip {
 
 	fieldAPI := field.NewFieldAPI(api)
 	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI, commonCircuitData.DegreeBits)
-	hashAPI := poseidon.NewHashAPI(fieldAPI)
-	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
+	poseidonBN128Chip := poseidon.NewPoseidonBN128Chip(api, fieldAPI)
 
-	friChip := fri.NewFriChip(api, fieldAPI, qeAPI, hashAPI, poseidonChip, &commonCircuitData.FriParams)
+	friChip := fri.NewFriChip(api, fieldAPI, qeAPI, poseidonBN128Chip, &commonCircuitData.FriParams)
 	plonkChip := plonk.NewPlonkChip(api, qeAPI, commonCircuitData)
+
+	// We are using goldilocks poseidon for the challenge computation
+	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
 
 	return &VerifierChip{
 		api:          api,
@@ -38,19 +41,19 @@ func NewVerifierChip(api frontend.API, commonCircuitData common.CommonCircuitDat
 	}
 }
 
-func (c *VerifierChip) GetPublicInputsHash(publicInputs []field.F) poseidon.Hash {
+func (c *VerifierChip) GetPublicInputsHash(publicInputs []field.F) poseidon.PoseidonHashOut {
 	return c.poseidonChip.HashNoPad(publicInputs)
 }
 
 func (c *VerifierChip) GetChallenges(
 	proofWithPis common.ProofWithPublicInputs,
-	publicInputsHash poseidon.Hash,
+	publicInputsHash poseidon.PoseidonHashOut,
 	commonData common.CommonCircuitData,
 	verifierData common.VerifierOnlyCircuitData,
 ) common.ProofChallenges {
 	config := commonData.Config
 	numChallenges := config.NumChallenges
-	challenger := plonk.NewChallengerChip(c.api, c.fieldAPI, c.poseidonChip)
+	challenger := plonk.NewChallengerChip(c.api, c.fieldAPI, c.poseidonChip, c.poseidonBN128Chip)
 
 	var circuitDigest = verifierData.CircuitDigest
 

@@ -6,15 +6,14 @@ import (
 )
 
 const HALF_N_FULL_ROUNDS = 4
-const N_FULL_ROUNDS_TOTAL = 2 * HALF_N_FULL_ROUNDS
 const N_PARTIAL_ROUNDS = 22
-const N_ROUNDS = N_FULL_ROUNDS_TOTAL + N_PARTIAL_ROUNDS
 const MAX_WIDTH = 12
 const SPONGE_WIDTH = 12
 const SPONGE_RATE = 8
 
 type PoseidonState = [SPONGE_WIDTH]field.F
 type PoseidonStateExtension = [SPONGE_WIDTH]field.QuadraticExtension
+type PoseidonHashOut = [4]field.F
 
 type PoseidonChip struct {
 	api      frontend.API                 `gnark:"-"`
@@ -64,10 +63,14 @@ func (c *PoseidonChip) HashNToMNoPad(input []field.F, nbOutputs int) []field.F {
 	}
 }
 
-func (c *PoseidonChip) HashNoPad(input []field.F) Hash {
-	var hash Hash
+func (c *PoseidonChip) HashNoPad(input []field.F) PoseidonHashOut {
+	var hash PoseidonHashOut
 	copy(hash[:], c.HashNToMNoPad(input, 4))
 	return hash
+}
+
+func (c *PoseidonChip) ToVec(hash PoseidonHashOut) []field.F {
+	return hash[:]
 }
 
 func (c *PoseidonChip) FullRounds(state PoseidonState, roundCounter *int) PoseidonState {

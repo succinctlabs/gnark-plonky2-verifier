@@ -13,9 +13,8 @@ import (
 )
 
 type TestVerifierChallengesCircuit struct {
-	fieldAPI frontend.API                 `gnark:"-"`
-	qeAPI    *field.QuadraticExtensionAPI `gnark:"-"`
-	hashAPI  *poseidon.HashAPI            `gnark:"-"`
+	api   frontend.API                 `gnark:"-"`
+	qeAPI *field.QuadraticExtensionAPI `gnark:"-"`
 
 	proofWithPIsFilename            string `gnark:"-"`
 	commonCircuitDataFilename       string `gnark:"-"`
@@ -26,7 +25,7 @@ type TestVerifierChallengesCircuit struct {
 
 	t *testing.T `gnark:"-"`
 
-	expectedPublicInputsHash poseidon.Hash
+	expectedPublicInputsHash poseidon.PoseidonHashOut
 	expectedPlonkBetas       []field.F // slice length == num challenges
 	expectedPlonkGammas      []field.F // slice length == num challenges
 	expectedPlonkAlphas      []field.F // slice length == num challenges
@@ -46,27 +45,29 @@ func (c *TestVerifierChallengesCircuit) GetChallengesSanityCheck(
 	publicInputsHash := c.verifierChip.GetPublicInputsHash(proofWithPis.PublicInputs)
 	proofChallenges := c.verifierChip.GetChallenges(proofWithPis, publicInputsHash, commonData, verifierData)
 
-	c.hashAPI.AssertIsEqualHash(publicInputsHash, c.expectedPublicInputsHash)
+	for i := 0; i < poseidon.SPONGE_WIDTH; i++ {
+		c.api.AssertIsEqual(publicInputsHash[i], c.expectedPublicInputsHash[i])
+	}
 
 	if len(proofChallenges.PlonkBetas) != int(c.numChallenges) {
 		c.t.Errorf("len(PlonkBetas) should equal numChallenges")
 	}
 	for i := 0; i < int(c.numChallenges); i++ {
-		c.fieldAPI.AssertIsEqual(proofChallenges.PlonkBetas[i], c.expectedPlonkBetas[i])
+		c.api.AssertIsEqual(proofChallenges.PlonkBetas[i], c.expectedPlonkBetas[i])
 	}
 
 	if len(proofChallenges.PlonkGammas) != int(c.numChallenges) {
 		c.t.Errorf("len(PlonkGammas) should equal numChallenges")
 	}
 	for i := 0; i < int(c.numChallenges); i++ {
-		c.fieldAPI.AssertIsEqual(proofChallenges.PlonkGammas[i], c.expectedPlonkGammas[i])
+		c.api.AssertIsEqual(proofChallenges.PlonkGammas[i], c.expectedPlonkGammas[i])
 	}
 
 	if len(proofChallenges.PlonkAlphas) != int(c.numChallenges) {
 		c.t.Errorf("len(PlonkAlphas) should equal numChallenges")
 	}
 	for i := 0; i < int(c.numChallenges); i++ {
-		c.fieldAPI.AssertIsEqual(proofChallenges.PlonkAlphas[i], c.expectedPlonkAlphas[i])
+		c.api.AssertIsEqual(proofChallenges.PlonkAlphas[i], c.expectedPlonkAlphas[i])
 	}
 
 	c.qeAPI.AssertIsEqual(proofChallenges.PlonkZeta, c.expectedPlonkZeta)
@@ -89,7 +90,7 @@ func (c *TestVerifierChallengesCircuit) GetChallengesSanityCheck(
 	}
 
 	for i := 0; i < int(c.numFriQueries); i++ {
-		c.fieldAPI.AssertIsEqual(c.expectedFriQueryIndices[i], proofChallenges.FriChallenges.FriQueryIndices[i])
+		c.api.AssertIsEqual(c.expectedFriQueryIndices[i], proofChallenges.FriChallenges.FriQueryIndices[i])
 	}
 }
 
@@ -117,7 +118,7 @@ func TestFibonacciVerifierWitness(t *testing.T) {
 			verifierOnlyCircuitDataFilename: "./data/fibonacci/verifier_only_circuit_data.json",
 			t:                               t,
 
-			expectedPublicInputsHash: poseidon.Hash{
+			expectedPublicInputsHash: poseidon.PoseidonHashOut{
 				field.NewFieldConstFromString("8416658900775745054"),
 				field.NewFieldConstFromString("12574228347150446423"),
 				field.NewFieldConstFromString("9629056739760131473"),
@@ -200,7 +201,7 @@ func TestDummyVerifierWitness(t *testing.T) {
 			verifierOnlyCircuitDataFilename: "./data/dummy_2^14_gates/verifier_only_circuit_data.json",
 			t:                               t,
 
-			expectedPublicInputsHash: poseidon.Hash{
+			expectedPublicInputsHash: poseidon.PoseidonHashOut{
 				field.NewFieldConstFromString("0"),
 				field.NewFieldConstFromString("0"),
 				field.NewFieldConstFromString("0"),
