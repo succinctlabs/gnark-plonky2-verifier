@@ -32,37 +32,33 @@ func (c *PoseidonBN128Chip) Poseidon(state PoseidonBN128State) PoseidonBN128Stat
 	return state
 }
 
-func (c *PoseidonBN128Chip) HashNToMNoPad(input []field.F, nbOutputs int) []frontend.Variable {
-	var inputs PoseidonBN128State
-	var state PoseidonBN128State
-
-	inputs[0] = frontend.Variable(0)
-	for i := 0; i < len(input); i += spongeRate {
-		for j := 0; j < spongeRate; j++ {
-			if i+j < len(input) {
-				inputs[j+1] = input[i+j]
-			}
-		}
-		state = c.Poseidon(inputs)
-		inputs[0] = state[0]
+func (c *PoseidonBN128Chip) HashNoPad(input []field.F) PoseidonBN128HashOut {
+	state := PoseidonBN128State{
+		frontend.Variable(0),
+		frontend.Variable(0),
+		frontend.Variable(0),
+		frontend.Variable(0),
 	}
 
-	var outputs []frontend.Variable
+	for i := 0; i < len(input); i += spongeRate * 3 {
+		endI := c.min(len(input), i+spongeRate*3)
+		rateChunk := input[i:endI]
+		for j, stateIdx := 0, 0; j < len(rateChunk); j, stateIdx = j+3, stateIdx+1 {
+			endJ := c.min(len(rateChunk), j+3)
+			bn128Chunk := rateChunk[j:endJ]
 
-	for {
-		for i := 0; i < spongeRate; i++ {
-			outputs = append(outputs, state[i])
-			if len(outputs) == nbOutputs {
-				return outputs
+			bits := []frontend.Variable{}
+			for k := 0; k < len(bn128Chunk); k++ {
+				bits = append(bits, c.fieldAPI.ToBits(bn128Chunk[k])...)
 			}
+
+			state[stateIdx+1] = c.api.FromBinary(bits...)
 		}
+
 		state = c.Poseidon(state)
 	}
-}
 
-func (c *PoseidonBN128Chip) HashNoPad(input []field.F) PoseidonBN128HashOut {
-	hash := c.HashNToMNoPad(input, 1)[0]
-	return hash
+	return PoseidonBN128HashOut(state[0])
 }
 
 func (c *PoseidonBN128Chip) HashOrNoop(input []field.F) PoseidonBN128HashOut {
@@ -76,7 +72,7 @@ func (c *PoseidonBN128Chip) HashOrNoop(input []field.F) PoseidonBN128HashOut {
 
 		return PoseidonBN128HashOut(returnVal)
 	} else {
-		return c.HashNToMNoPad(input, 4)
+		return c.HashNoPad(input)
 	}
 }
 
@@ -97,20 +93,21 @@ func (c *PoseidonBN128Chip) ToVec(hash PoseidonBN128HashOut) []field.F {
 
 	// Split into 7 byte chunks, since 8 byte chunks can result in collisions
 	chunkSize := 56
-	min := func(x, y int) int {
-		if x < y {
-			return x
-		}
-
-		return y
-	}
 	for i := 0; i < len(bits); i += chunkSize {
-		maxIdx := min(len(bits), i+chunkSize)
+		maxIdx := c.min(len(bits), i+chunkSize)
 		bitChunk := bits[i:maxIdx]
 		returnElements = append(returnElements, c.fieldAPI.FromBits(bitChunk...))
 	}
 
 	return returnElements
+}
+
+func (c *PoseidonBN128Chip) min(x, y int) int {
+	if x < y {
+		return x
+	}
+
+	return y
 }
 
 func (c *PoseidonBN128Chip) fullRounds(state PoseidonBN128State, isFirst bool) PoseidonBN128State {
