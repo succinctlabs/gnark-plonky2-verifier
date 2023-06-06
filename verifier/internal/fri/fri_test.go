@@ -47,6 +47,8 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	plonkZeta := challengerChip.GetExtensionChallenge()
 	fieldAPI.AssertIsEqual(plonkZeta[0], field.NewFieldConst(3892795992421241388))
 
+	challengerChip.ObserveOpenings(fri.ToFriOpenings(proofWithPis.Proof.Openings))
+
 	friChallenges := challengerChip.GetFriChallenges(
 		proofWithPis.Proof.OpeningProof.CommitPhaseMerkleCaps,
 		proofWithPis.Proof.OpeningProof.FinalPoly,
@@ -55,11 +57,36 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 		commonCircuitData.Config.FriConfig,
 	)
 
+	fieldAPI.AssertIsEqual(friChallenges.FriAlpha[0], field.NewFieldConst(885535811531859621))
+
+	fieldAPI.AssertIsEqual(friChallenges.FriBetas[0][0], field.NewFieldConst(5231781384587895507))
+
+	fieldAPI.AssertIsEqual(friChallenges.FriPowResponse, field.NewFieldConst(70715523064019))
+
 	initialMerkleCaps := []common.MerkleCap{
 		verifierOnlyCircuitData.ConstantSigmasCap,
 		proofWithPis.Proof.WiresCap,
 		proofWithPis.Proof.PlonkZsPartialProductsCap,
 		proofWithPis.Proof.QuotientPolysCap,
+	}
+
+	// Seems like there is a bug in the emulated field code.
+	// Add ZERO to all of the fri challenges values to reduce them.
+	plonkZeta[0] = fieldAPI.Add(plonkZeta[0], field.ZERO_F)
+	plonkZeta[1] = fieldAPI.Add(plonkZeta[1], field.ZERO_F)
+
+	friChallenges.FriAlpha[0] = fieldAPI.Add(friChallenges.FriAlpha[0], field.ZERO_F)
+	friChallenges.FriAlpha[1] = fieldAPI.Add(friChallenges.FriAlpha[1], field.ZERO_F)
+
+	for i := 0; i < len(friChallenges.FriBetas); i++ {
+		friChallenges.FriBetas[i][0] = fieldAPI.Add(friChallenges.FriBetas[i][0], field.ZERO_F)
+		friChallenges.FriBetas[i][1] = fieldAPI.Add(friChallenges.FriBetas[i][1], field.ZERO_F)
+	}
+
+	friChallenges.FriPowResponse = fieldAPI.Add(friChallenges.FriPowResponse, field.ZERO_F)
+
+	for i := 0; i < len(friChallenges.FriQueryIndices); i++ {
+		friChallenges.FriQueryIndices[i] = fieldAPI.Add(friChallenges.FriQueryIndices[i], field.ZERO_F)
 	}
 
 	friChip.VerifyFriProof(
@@ -73,7 +100,7 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	return nil
 }
 
-func TestDummyFriProof(t *testing.T) {
+func TestDecodeBlockFriProof(t *testing.T) {
 	assert := test.NewAssert(t)
 
 	testCase := func() {
