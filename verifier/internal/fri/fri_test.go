@@ -102,7 +102,7 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	return nil
 }
 
-func TestDecodeBlockFriProof(t *testing.T) {
+func TestDecodeBlockFriVerification(t *testing.T) {
 	assert := test.NewAssert(t)
 
 	testCase := func() {

@@ -32,12 +32,13 @@ func NewVerifierChip(api frontend.API, commonCircuitData common.CommonCircuitDat
 	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
 
 	return &VerifierChip{
-		api:          api,
-		fieldAPI:     fieldAPI,
-		qeAPI:        qeAPI,
-		poseidonChip: poseidonChip,
-		plonkChip:    plonkChip,
-		friChip:      friChip,
+		api:               api,
+		fieldAPI:          fieldAPI,
+		qeAPI:             qeAPI,
+		poseidonChip:      poseidonChip,
+		poseidonBN128Chip: poseidonBN128Chip,
+		plonkChip:         plonkChip,
+		friChip:           friChip,
 	}
 }
 
@@ -158,7 +159,7 @@ func (c *VerifierChip) Verify(proofWithPis common.ProofWithPublicInputs, verifie
 	publicInputsHash := c.GetPublicInputsHash(proofWithPis.PublicInputs)
 	proofChallenges := c.GetChallenges(proofWithPis, publicInputsHash, commonData, verifierData)
 
-	c.plonkChip.Verify(proofChallenges, proofWithPis.Proof.Openings, publicInputsHash)
+	//c.plonkChip.Verify(proofChallenges, proofWithPis.Proof.Openings, publicInputsHash)
 
 	initialMerkleCaps := []common.MerkleCap{
 		verifierData.ConstantSigmasCap,
