@@ -49,6 +49,7 @@ func (c *PoseidonBN128Chip) HashNoPad(input []field.F) PoseidonBN128HashOut {
 
 			bits := []frontend.Variable{}
 			for k := 0; k < len(bn128Chunk); k++ {
+				bn128Chunk[k] = c.fieldAPI.Reduce(bn128Chunk[k])
 				bits = append(bits, c.fieldAPI.ToBits(bn128Chunk[k])...)
 			}
 

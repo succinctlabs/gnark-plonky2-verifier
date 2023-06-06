@@ -63,6 +63,8 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 
 	fieldAPI.AssertIsEqual(friChallenges.FriPowResponse, field.NewFieldConst(70715523064019))
 
+	fieldAPI.AssertIsEqual(friChallenges.FriQueryIndices[0], field.NewFieldConst(11890500485816111017))
+
 	initialMerkleCaps := []common.MerkleCap{
 		verifierOnlyCircuitData.ConstantSigmasCap,
 		proofWithPis.Proof.WiresCap,

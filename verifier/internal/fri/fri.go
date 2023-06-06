@@ -368,7 +368,8 @@ func (f *FriChip) verifyQueryRound(
 	roundProof *common.FriQueryRound,
 ) {
 	f.assertNoncanonicalIndicesOK()
-	xIndexBits := f.fieldAPI.ToBits(xIndex)
+	xIndex = f.fieldAPI.Reduce(xIndex)
+	xIndexBits := f.fieldAPI.ToBits(xIndex)[0 : f.friParams.DegreeBits+f.friParams.Config.RateBits]
 	capIndexBits := xIndexBits[len(xIndexBits)-int(f.friParams.Config.CapHeight):]
 
 	f.verifyInitialProof(xIndexBits, &roundProof.InitialTreesProof, initialMerkleCaps, capIndexBits)
