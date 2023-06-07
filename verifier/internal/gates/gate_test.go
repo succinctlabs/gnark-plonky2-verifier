@@ -688,7 +688,7 @@ func (circuit *TestGateCircuit) Define(api frontend.API) error {
 	numSelectors := commonCircuitData.SelectorsInfo.NumSelectors()
 
 	fieldAPI := field.NewFieldAPI(api)
-	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI, commonCircuitData.DegreeBits)
+	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI)
 
 	vars := gates.NewEvaluationVars(localConstants[numSelectors:], localWires, publicInputsHash)
 

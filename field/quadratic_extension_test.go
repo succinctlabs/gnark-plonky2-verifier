@@ -20,8 +20,7 @@ type TestQuadraticExtensionMulCircuit struct {
 
 func (c *TestQuadraticExtensionMulCircuit) Define(api frontend.API) error {
 	fieldAPI := NewFieldAPI(api)
-	degreeBits := 3
-	c.qeAPI = NewQuadraticExtensionAPI(api, fieldAPI, uint64(degreeBits))
+	c.qeAPI = NewQuadraticExtensionAPI(api, fieldAPI)
 
 	actualRes := c.qeAPI.MulExtension(c.Operand1, c.Operand2)
 
@@ -54,8 +53,7 @@ type TestQuadraticExtensionDivCircuit struct {
 
 func (c *TestQuadraticExtensionDivCircuit) Define(api frontend.API) error {
 	fieldAPI := NewFieldAPI(api)
-	degreeBits := 3
-	c.qeAPI = NewQuadraticExtensionAPI(api, fieldAPI, uint64(degreeBits))
+	c.qeAPI = NewQuadraticExtensionAPI(api, fieldAPI)
 
 	actualRes := c.qeAPI.DivExtension(c.Operand1, c.Operand2)
 

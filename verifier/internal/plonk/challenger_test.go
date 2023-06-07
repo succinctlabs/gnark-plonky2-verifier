@@ -20,8 +20,7 @@ type TestChallengerCircuit struct {
 
 func (circuit *TestChallengerCircuit) Define(api frontend.API) error {
 	fieldAPI := field.NewFieldAPI(api)
-	degreeBits := 3
-	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI, uint64(degreeBits))
+	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI)
 	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
 	poseidonBN128Chip := poseidon.NewPoseidonBN128Chip(api, fieldAPI)
 	challengerChip := NewChallengerChip(api, fieldAPI, poseidonChip, poseidonBN128Chip)
