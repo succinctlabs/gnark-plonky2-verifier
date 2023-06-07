@@ -187,7 +187,7 @@ func (p *PlonkChip) evalVanishingPoly(vars gates.EvaluationVars, proofChallenges
 	return reducedValues
 }
 
-func (p *PlonkChip) Verify(proofChallenges common.ProofChallenges, openings common.OpeningSet, publicInputsHash poseidon.Hash) {
+func (p *PlonkChip) Verify(proofChallenges common.ProofChallenges, openings common.OpeningSet, publicInputsHash poseidon.PoseidonHashOut) {
 	// Calculate zeta^n
 	zetaPowN := p.expPowerOf2Extension(proofChallenges.PlonkZeta)
 

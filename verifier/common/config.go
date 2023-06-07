@@ -8,7 +8,7 @@ import (
 
 type VerifierOnlyCircuitData struct {
 	ConstantSigmasCap MerkleCap
-	CircuitDigest     poseidon.Hash
+	CircuitDigest     poseidon.PoseidonBN128HashOut
 }
 
 type CircuitConfig struct {

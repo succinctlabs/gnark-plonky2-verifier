@@ -35,10 +35,8 @@
             "num_query_rounds": 28
         },
         "hiding": false,
-        "degree_bits": 21,
+        "degree_bits": 12,
         "reduction_arity_bits": [
-            4,
-            4,
             4,
             4
         ]
@@ -46,26 +44,17 @@
     "gates": [
         "NoopGate",
         "ConstantGate { num_consts: 2 }",
+        "PoseidonMdsGate(PhantomData<plonky2_field::goldilocks_field::GoldilocksField>)<WIDTH=12>",
         "PublicInputGate",
-        "BaseSumGate { num_limbs: 32 } + Base: 2",
         "BaseSumGate { num_limbs: 63 } + Base: 2",
+        "ReducingExtensionGate { num_coeffs: 33 }",
+        "ReducingGate { num_coeffs: 44 }",
+        "ArithmeticExtensionGate { num_ops: 10 }",
         "ArithmeticGate { num_ops: 20 }",
-        "RandomAccessGate { bits: 2, num_copies: 13, num_extra_constants: 2, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>",
-        "XOR3Gate { num_xors: 16 }",
-        "BaseSumGate { num_limbs: 16 } + Base: 4",
-        "ComparisonGate { num_bits: 32, num_chunks: 16, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>",
-        "U32AddManyGate { num_addends: 11, num_ops: 4, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }",
-        "U32AddManyGate { num_addends: 13, num_ops: 4, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }",
-        "U32AddManyGate { num_addends: 15, num_ops: 3, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }",
-        "U32AddManyGate { num_addends: 16, num_ops: 3, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }",
-        "U32AddManyGate { num_addends: 3, num_ops: 5, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }",
-        "U32AddManyGate { num_addends: 5, num_ops: 5, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }",
-        "U32AddManyGate { num_addends: 7, num_ops: 4, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }",
-        "U32AddManyGate { num_addends: 9, num_ops: 4, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }",
-        "U32ArithmeticGate { num_ops: 3, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }",
-        "U32RangeCheckGate { num_input_limbs: 8, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }",
-        "U32SubtractionGate { num_ops: 6, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }",
-        "RandomAccessGate { bits: 4, num_copies: 4, num_extra_constants: 2, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>"
+        "MulExtensionGate { num_ops: 13 }",
+        "RandomAccessGate { bits: 4, num_copies: 4, num_extra_constants: 2, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>",
+        "CosetInterpolationGate { subgroup_bits: 4, degree: 6, barycentric_weights: [17293822565076172801, 18374686475376656385, 18446744069413535745, 281474976645120, 17592186044416, 18446744069414584577, 18446744000695107601, 18446744065119617025, 1152921504338411520, 72057594037927936, 18446744069415632897, 18446462594437939201, 18446726477228539905, 18446744069414584065, 68719476720, 4294967296], _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>",
+        "PoseidonGate(PhantomData<plonky2_field::goldilocks_field::GoldilocksField>)<WIDTH=12>"
     ],
     "selectors_info": {
         "selector_indices": [
@@ -75,49 +64,32 @@
             0,
             0,
             0,
-            1,
+            0,
             1,
             1,
             1,
             1,
             2,
-            2,
-            2,
-            2,
-            2,
-            3,
-            3,
-            3,
-            3,
-            3,
-            4
+            2
         ],
         "groups": [
             {
                 "start": 0,
-                "end": 6
+                "end": 7
             },
             {
-                "start": 6,
+                "start": 7,
                 "end": 11
             },
             {
                 "start": 11,
-                "end": 16
-            },
-            {
-                "start": 16,
-                "end": 21
-            },
-            {
-                "start": 21,
-                "end": 22
+                "end": 13
             }
         ]
     },
     "quotient_degree_factor": 8,
-    "num_gate_constraints": 136,
-    "num_constants": 7,
+    "num_gate_constraints": 123,
+    "num_constants": 5,
     "num_public_inputs": 0,
     "k_is": [
         1,

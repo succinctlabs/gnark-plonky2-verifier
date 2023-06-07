@@ -17,9 +17,8 @@ type FriChip struct {
 	api      frontend.API                 `gnark:"-"`
 	fieldAPI field.FieldAPI               `gnark:"-"`
 	qeAPI    *field.QuadraticExtensionAPI `gnark:"-"`
-	hashAPI  *poseidon.HashAPI            `gnark:"-"`
 
-	poseidonChip *poseidon.PoseidonChip
+	poseidonBN128Chip *poseidon.PoseidonBN128Chip
 
 	friParams *common.FriParams `gnark:"-"`
 }
@@ -28,17 +27,15 @@ func NewFriChip(
 	api frontend.API,
 	fieldAPI field.FieldAPI,
 	qeAPI *field.QuadraticExtensionAPI,
-	hashAPI *poseidon.HashAPI,
-	poseidonChip *poseidon.PoseidonChip,
+	poseidonBN128Chip *poseidon.PoseidonBN128Chip,
 	friParams *common.FriParams,
 ) *FriChip {
 	return &FriChip{
-		api:          api,
-		fieldAPI:     fieldAPI,
-		qeAPI:        qeAPI,
-		hashAPI:      hashAPI,
-		poseidonChip: poseidonChip,
-		friParams:    friParams,
+		api:               api,
+		fieldAPI:          fieldAPI,
+		qeAPI:             qeAPI,
+		poseidonBN128Chip: poseidonBN128Chip,
+		friParams:         friParams,
 	}
 }
 
@@ -63,66 +60,15 @@ func (f *FriChip) fromOpeningsAndAlpha(openings *FriOpenings, alpha field.Quadra
 	return reducedOpenings
 }
 
-func (f *FriChip) hashOrNoop(data []field.F) poseidon.Hash {
-	var elements poseidon.Hash
-	if len(data) <= 4 {
-		// Pad the data to have a size of 4
-		for i, inputElement := range data {
-			elements[i] = inputElement
-		}
-		for i := len(data); i < 4; i++ {
-			elements[i] = field.ZERO_F
-		}
-
-		return elements
-	} else {
-		hashOutput := f.poseidonChip.HashNToMNoPad(data, 4)
-
-		if len(hashOutput) != len(elements) {
-			panic("The length of hashOutput and elements is different")
-		}
-
-		for i, hashField := range hashOutput {
-			elements[i] = hashField
-		}
-
-		return elements
-	}
-}
-
 func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []field.F, leafIndexBits []frontend.Variable, capIndexBits []frontend.Variable, merkleCap common.MerkleCap, proof *common.MerkleProof) {
-	currentDigest := f.hashOrNoop(leafData)
-	fourZeros := [4]field.F{field.ZERO_F, field.ZERO_F, field.ZERO_F, field.ZERO_F}
+	currentDigest := f.poseidonBN128Chip.HashOrNoop(leafData)
 	for i, sibling := range proof.Siblings {
 		bit := leafIndexBits[i]
-
-		var leftSiblingState poseidon.PoseidonState
-		copy(leftSiblingState[0:4], sibling[0:4])
-		copy(leftSiblingState[4:8], currentDigest[0:4])
-		copy(leftSiblingState[8:12], fourZeros[0:4])
-
-		leftHash := f.poseidonChip.Poseidon(leftSiblingState)
-
-		var leftHashCompress poseidon.Hash
-		leftHashCompress[0] = leftHash[0]
-		leftHashCompress[1] = leftHash[1]
-		leftHashCompress[2] = leftHash[2]
-		leftHashCompress[3] = leftHash[3]
-
-		var rightSiblingState poseidon.PoseidonState
-		copy(rightSiblingState[0:4], currentDigest[0:4])
-		copy(rightSiblingState[4:8], sibling[0:4])
-		copy(rightSiblingState[8:12], fourZeros[0:4])
-
-		rightHash := f.poseidonChip.Poseidon(rightSiblingState)
-
-		var rightHashCompress poseidon.Hash
-		rightHashCompress[0] = rightHash[0]
-		rightHashCompress[1] = rightHash[1]
-		rightHashCompress[2] = rightHash[2]
-		rightHashCompress[3] = rightHash[3]
-
-		currentDigest = f.hashAPI.SelectHash(bit, leftHashCompress, rightHashCompress)
+		// TODO: Don't need to do two hashes by using a trick that the plonky2 verifier circuit does
+		// https://github.com/mir-protocol/plonky2/blob/973624f12d2d12d74422b3ea051358b9eaacb050/plonky2/src/gates/poseidon.rs#L298
+		leftHash := f.poseidonBN128Chip.TwoToOne(sibling, currentDigest)
+		rightHash := f.poseidonBN128Chip.TwoToOne(currentDigest, sibling)
+		currentDigest = f.api.Select(bit, leftHash, rightHash)
 	}
 
 	// We assume that the cap_height is 4.  Create two levels of the Lookup2 circuit
@@ -136,19 +82,19 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []field.F, leafInd
 	}
 
 	const NUM_LEAF_LOOKUPS = 4
-	var leafLookups [NUM_LEAF_LOOKUPS]poseidon.Hash
+	var leafLookups [NUM_LEAF_LOOKUPS]poseidon.PoseidonBN128HashOut
 	// First create the "leaf" lookup2 circuits
 	// The will use the least significant bits of the capIndexBits array
 	for i := 0; i < NUM_LEAF_LOOKUPS; i++ {
-		leafLookups[i] = f.hashAPI.Lookup2Hash(
+		leafLookups[i] = f.api.Lookup2(
 			capIndexBits[0], capIndexBits[1],
 			merkleCap[i*NUM_LEAF_LOOKUPS], merkleCap[i*NUM_LEAF_LOOKUPS+1], merkleCap[i*NUM_LEAF_LOOKUPS+2], merkleCap[i*NUM_LEAF_LOOKUPS+3],
 		)
 	}
 
 	// Use the most 2 significant bits of the capIndexBits array for the "root" lookup
-	merkleCapEntry := f.hashAPI.Lookup2Hash(capIndexBits[2], capIndexBits[3], leafLookups[0], leafLookups[1], leafLookups[2], leafLookups[3])
-	f.hashAPI.AssertIsEqualHash(currentDigest, merkleCapEntry)
+	merkleCapEntry := f.api.Lookup2(capIndexBits[2], capIndexBits[3], leafLookups[0], leafLookups[1], leafLookups[2], leafLookups[3])
+	f.api.AssertIsEqual(currentDigest, merkleCapEntry)
 }
 
 func (f *FriChip) verifyInitialProof(xIndexBits []frontend.Variable, proof *common.FriInitialTreeProof, initialMerkleCaps []common.MerkleCap, capIndexBits []frontend.Variable) {
@@ -422,7 +368,8 @@ func (f *FriChip) verifyQueryRound(
 	roundProof *common.FriQueryRound,
 ) {
 	f.assertNoncanonicalIndicesOK()
-	xIndexBits := f.fieldAPI.ToBits(xIndex)
+	xIndex = f.fieldAPI.Reduce(xIndex)
+	xIndexBits := f.fieldAPI.ToBits(xIndex)[0 : f.friParams.DegreeBits+f.friParams.Config.RateBits]
 	capIndexBits := xIndexBits[len(xIndexBits)-int(f.friParams.Config.CapHeight):]
 
 	f.verifyInitialProof(xIndexBits, &roundProof.InitialTreesProof, initialMerkleCaps, capIndexBits)

@@ -3,8 +3,10 @@ package utils
 import (
 	"encoding/json"
 	"io"
+	"math/big"
 	"os"
 
+	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/utils"
@@ -14,16 +16,10 @@ import (
 
 type ProofWithPublicInputsRaw struct {
 	Proof struct {
-		WiresCap []struct {
-			Elements []uint64 `json:"elements"`
-		} `json:"wires_cap"`
-		PlonkZsPartialProductsCap []struct {
-			Elements []uint64 `json:"elements"`
-		} `json:"plonk_zs_partial_products_cap"`
-		QuotientPolysCap []struct {
-			Elements []uint64 `json:"elements"`
-		} `json:"quotient_polys_cap"`
-		Openings struct {
+		WiresCap                  []string `json:"wires_cap"`
+		PlonkZsPartialProductsCap []string `json:"plonk_zs_partial_products_cap"`
+		QuotientPolysCap          []string `json:"quotient_polys_cap"`
+		Openings                  struct {
 			Constants       [][]uint64 `json:"constants"`
 			PlonkSigmas     [][]uint64 `json:"plonk_sigmas"`
 			Wires           [][]uint64 `json:"wires"`
@@ -33,14 +29,16 @@ type ProofWithPublicInputsRaw struct {
 			QuotientPolys   [][]uint64 `json:"quotient_polys"`
 		} `json:"openings"`
 		OpeningProof struct {
-			CommitPhaseMerkleCaps []MerkleCapsRaw `json:"commit_phase_merkle_caps"`
+			CommitPhaseMerkleCaps [][]string `json:"commit_phase_merkle_caps"`
 			QueryRoundProofs      []struct {
 				InitialTreesProof struct {
 					EvalsProofs []EvalProofRaw `json:"evals_proofs"`
 				} `json:"initial_trees_proof"`
 				Steps []struct {
-					Evals       [][]uint64     `json:"evals"`
-					MerkleProof MerkleProofRaw `json:"merkle_proof"`
+					Evals       [][]uint64 `json:"evals"`
+					MerkleProof struct {
+						Siblings []string `json:"siblings"`
+					} `json:"merkle_proof"`
 				} `json:"steps"`
 			} `json:"query_round_proofs"`
 			FinalPoly struct {
@@ -52,39 +50,22 @@ type ProofWithPublicInputsRaw struct {
 	PublicInputs []uint64 `json:"public_inputs"`
 }
 
-type MerkleCapsRaw struct {
-	hashes [][]uint64
-}
-
-func (m *MerkleCapsRaw) UnmarshalJSON(data []byte) error {
-	var merkleCaps []map[string][]uint64
-	if err := json.Unmarshal(data, &merkleCaps); err != nil {
-		panic(err)
-	}
-
-	m.hashes = make([][]uint64, len(merkleCaps))
-	for i := 0; i < len(merkleCaps); i++ {
-		m.hashes[i] = merkleCaps[i]["elements"]
-	}
-	return nil
-}
-
 type EvalProofRaw struct {
-	leafElements []uint64
-	merkleProof  MerkleProofRaw
+	LeafElements []uint64
+	MerkleProof  MerkleProofRaw
 }
 
 func (e *EvalProofRaw) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &[]interface{}{&e.leafElements, &e.merkleProof})
+	return json.Unmarshal(data, &[]interface{}{&e.LeafElements, &e.MerkleProof})
 }
 
 type MerkleProofRaw struct {
-	hash [][]uint64
+	Hash []string
 }
 
 func (m *MerkleProofRaw) UnmarshalJSON(data []byte) error {
 	type SiblingObject struct {
-		Siblings []map[string][]uint64 // "siblings"
+		Siblings []string // "siblings"
 	}
 
 	var siblings SiblingObject
@@ -92,10 +73,8 @@ func (m *MerkleProofRaw) UnmarshalJSON(data []byte) error {
 		panic(err)
 	}
 
-	m.hash = make([][]uint64, len(siblings.Siblings))
-	for siblingIdx, sibling := range siblings.Siblings {
-		m.hash[siblingIdx] = sibling["elements"]
-	}
+	m.Hash = make([]string, len(siblings.Siblings))
+	copy(m.Hash[:], siblings.Siblings)
 
 	return nil
 }
@@ -164,19 +143,16 @@ type ProofChallengesRaw struct {
 }
 
 type VerifierOnlyCircuitDataRaw struct {
-	ConstantsSigmasCap []struct {
-		Elements []uint64 `json:"elements"`
-	} `json:"constants_sigmas_cap"`
-	CircuitDigest struct {
-		Elements []uint64 `json:"elements"`
-	} `json:"circuit_digest"`
+	ConstantsSigmasCap []string `json:"constants_sigmas_cap"`
+	CircuitDigest      string   `json:"circuit_digest"`
 }
 
-func DeserializeMerkleCap(merkleCapRaw []struct{ Elements []uint64 }) common.MerkleCap {
+func DeserializeMerkleCap(merkleCapRaw []string) common.MerkleCap {
 	n := len(merkleCapRaw)
-	merkleCap := make([]poseidon.Hash, n)
+	merkleCap := make([]poseidon.PoseidonBN128HashOut, n)
 	for i := 0; i < n; i++ {
-		copy(merkleCap[i][:], utils.Uint64ArrayToFArray(merkleCapRaw[i].Elements))
+		capBigInt, _ := new(big.Int).SetString(merkleCapRaw[i], 10)
+		merkleCap[i] = frontend.Variable(capBigInt)
 	}
 	return merkleCap
 }
@@ -184,10 +160,10 @@ func DeserializeMerkleCap(merkleCapRaw []struct{ Elements []uint64 }) common.Mer
 func DeserializeMerkleProof(merkleProofRaw struct{ Siblings []interface{} }) common.MerkleProof {
 	n := len(merkleProofRaw.Siblings)
 	var mp common.MerkleProof
-	mp.Siblings = make([]poseidon.Hash, n)
+	mp.Siblings = make([]poseidon.PoseidonBN128HashOut, n)
 	for i := 0; i < n; i++ {
 		element := merkleProofRaw.Siblings[i].(struct{ Elements []uint64 })
-		copy(mp.Siblings[i][:], utils.Uint64ArrayToFArray(element.Elements))
+		mp.Siblings[i] = utils.Uint64ArrayToFArray(element.Elements)
 	}
 	return mp
 }
@@ -212,15 +188,29 @@ func DeserializeOpeningSet(openingSetRaw struct {
 	}
 }
 
+func StringArrayToHashBN128Array(rawHashes []string) []poseidon.PoseidonBN128HashOut {
+	hashes := []poseidon.PoseidonBN128HashOut{}
+
+	for i := 0; i < len(rawHashes); i++ {
+		hashBigInt, _ := new(big.Int).SetString(rawHashes[i], 10)
+		hashVar := frontend.Variable(hashBigInt)
+		hashes = append(hashes, poseidon.PoseidonBN128HashOut(hashVar))
+	}
+
+	return hashes
+}
+
 func DeserializeFriProof(openingProofRaw struct {
-	CommitPhaseMerkleCaps []MerkleCapsRaw
+	CommitPhaseMerkleCaps [][]string
 	QueryRoundProofs      []struct {
 		InitialTreesProof struct {
 			EvalsProofs []EvalProofRaw
 		}
 		Steps []struct {
 			Evals       [][]uint64
-			MerkleProof MerkleProofRaw
+			MerkleProof struct {
+				Siblings []string
+			}
 		}
 	}
 	FinalPoly struct {
@@ -234,7 +224,7 @@ func DeserializeFriProof(openingProofRaw struct {
 
 	openingProof.CommitPhaseMerkleCaps = make([]common.MerkleCap, len(openingProofRaw.CommitPhaseMerkleCaps))
 	for i := 0; i < len(openingProofRaw.CommitPhaseMerkleCaps); i++ {
-		openingProof.CommitPhaseMerkleCaps[i] = poseidon.Uint64ArrayToHashArray(openingProofRaw.CommitPhaseMerkleCaps[i].hashes)
+		openingProof.CommitPhaseMerkleCaps[i] = StringArrayToHashBN128Array(openingProofRaw.CommitPhaseMerkleCaps[i])
 	}
 
 	numQueryRoundProofs := len(openingProofRaw.QueryRoundProofs)
@@ -244,15 +234,15 @@ func DeserializeFriProof(openingProofRaw struct {
 		numEvalProofs := len(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs)
 		openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs = make([]common.EvalProof, numEvalProofs)
 		for j := 0; j < numEvalProofs; j++ {
-			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].Elements = utils.Uint64ArrayToFArray(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].leafElements)
-			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Siblings = poseidon.Uint64ArrayToHashArray(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].merkleProof.hash)
+			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].Elements = utils.Uint64ArrayToFArray(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].LeafElements)
+			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Siblings = StringArrayToHashBN128Array(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Hash)
 		}
 
 		numSteps := len(openingProofRaw.QueryRoundProofs[i].Steps)
 		openingProof.QueryRoundProofs[i].Steps = make([]common.FriQueryStep, numSteps)
 		for j := 0; j < numSteps; j++ {
 			openingProof.QueryRoundProofs[i].Steps[j].Evals = utils.Uint64ArrayToQuadraticExtensionArray(openingProofRaw.QueryRoundProofs[i].Steps[j].Evals)
-			openingProof.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings = poseidon.Uint64ArrayToHashArray(openingProofRaw.QueryRoundProofs[i].Steps[j].MerkleProof.hash)
+			openingProof.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings = StringArrayToHashBN128Array(openingProofRaw.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings)
 		}
 	}
 
@@ -275,9 +265,9 @@ func DeserializeProofWithPublicInputs(path string) common.ProofWithPublicInputs 
 	}
 
 	var proofWithPis common.ProofWithPublicInputs
-	proofWithPis.Proof.WiresCap = DeserializeMerkleCap([]struct{ Elements []uint64 }(raw.Proof.WiresCap))
-	proofWithPis.Proof.PlonkZsPartialProductsCap = DeserializeMerkleCap([]struct{ Elements []uint64 }(raw.Proof.PlonkZsPartialProductsCap))
-	proofWithPis.Proof.QuotientPolysCap = DeserializeMerkleCap([]struct{ Elements []uint64 }(raw.Proof.QuotientPolysCap))
+	proofWithPis.Proof.WiresCap = DeserializeMerkleCap(raw.Proof.WiresCap)
+	proofWithPis.Proof.PlonkZsPartialProductsCap = DeserializeMerkleCap(raw.Proof.PlonkZsPartialProductsCap)
+	proofWithPis.Proof.QuotientPolysCap = DeserializeMerkleCap(raw.Proof.QuotientPolysCap)
 	proofWithPis.Proof.Openings = DeserializeOpeningSet(struct {
 		Constants       [][]uint64
 		PlonkSigmas     [][]uint64
@@ -288,14 +278,16 @@ func DeserializeProofWithPublicInputs(path string) common.ProofWithPublicInputs 
 		QuotientPolys   [][]uint64
 	}(raw.Proof.Openings))
 	proofWithPis.Proof.OpeningProof = DeserializeFriProof(struct {
-		CommitPhaseMerkleCaps []MerkleCapsRaw
+		CommitPhaseMerkleCaps [][]string
 		QueryRoundProofs      []struct {
 			InitialTreesProof struct {
 				EvalsProofs []EvalProofRaw
 			}
 			Steps []struct {
 				Evals       [][]uint64
-				MerkleProof MerkleProofRaw
+				MerkleProof struct {
+					Siblings []string
+				}
 			}
 		}
 		FinalPoly  struct{ Coeffs [][]uint64 }
@@ -436,8 +428,9 @@ func DeserializeVerifierOnlyCircuitData(path string) common.VerifierOnlyCircuitD
 	}
 
 	var verifierOnlyCircuitData common.VerifierOnlyCircuitData
-	verifierOnlyCircuitData.ConstantSigmasCap = DeserializeMerkleCap([]struct{ Elements []uint64 }(raw.ConstantsSigmasCap))
-	copy(verifierOnlyCircuitData.CircuitDigest[:], utils.Uint64ArrayToFArray(raw.CircuitDigest.Elements))
-
+	verifierOnlyCircuitData.ConstantSigmasCap = DeserializeMerkleCap(raw.ConstantsSigmasCap)
+	circuitDigestBigInt, _ := new(big.Int).SetString(raw.CircuitDigest, 10)
+	circuitDigestVar := frontend.Variable(circuitDigestBigInt)
+	verifierOnlyCircuitData.CircuitDigest = poseidon.PoseidonBN128HashOut(circuitDigestVar)
 	return verifierOnlyCircuitData
 }

@@ -38,31 +38,14 @@ func (circuit *TestPlonkCircuit) Define(api frontend.API) error {
 	return nil
 }
 
-func TestPlonkFibonacci(t *testing.T) {
+func TestPlonkDecodeBlock(t *testing.T) {
 	assert := test.NewAssert(t)
 
 	testCase := func() {
 		circuit := TestPlonkCircuit{
-			proofWithPIsFilename:            "./data/fibonacci/proof_with_public_inputs.json",
-			commonCircuitDataFilename:       "./data/fibonacci/common_circuit_data.json",
-			verifierOnlyCircuitDataFilename: "./data/fibonacci/verifier_only_circuit_data.json",
-		}
-		witness := TestPlonkCircuit{}
-		err := test.IsSolved(&circuit, &witness, field.TEST_CURVE.ScalarField())
-		assert.NoError(err)
-	}
-
-	testCase()
-}
-
-func TestPlonkDummy(t *testing.T) {
-	assert := test.NewAssert(t)
-
-	testCase := func() {
-		circuit := TestPlonkCircuit{
-			proofWithPIsFilename:            "./data/dummy_2^14_gates/proof_with_public_inputs.json",
-			commonCircuitDataFilename:       "./data/dummy_2^14_gates/common_circuit_data.json",
-			verifierOnlyCircuitDataFilename: "./data/dummy_2^14_gates/verifier_only_circuit_data.json",
+			proofWithPIsFilename:            "../../data/decode_block/proof_with_public_inputs.json",
+			commonCircuitDataFilename:       "../../data/decode_block/common_circuit_data.json",
+			verifierOnlyCircuitDataFilename: "../../data/decode_block/verifier_only_circuit_data.json",
 		}
 		witness := TestPlonkCircuit{}
 		err := test.IsSolved(&circuit, &witness, field.TEST_CURVE.ScalarField())
