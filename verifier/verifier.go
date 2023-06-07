@@ -159,7 +159,7 @@ func (c *VerifierChip) Verify(proofWithPis common.ProofWithPublicInputs, verifie
 	publicInputsHash := c.GetPublicInputsHash(proofWithPis.PublicInputs)
 	proofChallenges := c.GetChallenges(proofWithPis, publicInputsHash, commonData, verifierData)
 
-	//c.plonkChip.Verify(proofChallenges, proofWithPis.Proof.Openings, publicInputsHash)
+	c.plonkChip.Verify(proofChallenges, proofWithPis.Proof.Openings, publicInputsHash)
 
 	initialMerkleCaps := []common.MerkleCap{
 		verifierData.ConstantSigmasCap,
