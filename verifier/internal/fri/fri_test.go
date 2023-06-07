@@ -25,7 +25,7 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	verifierOnlyCircuitData := utils.DeserializeVerifierOnlyCircuitData(circuit.verifierOnlyCircuitDataFilename)
 
 	fieldAPI := field.NewFieldAPI(api)
-	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI, commonCircuitData.DegreeBits)
+	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI)
 	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
 	poseidonBN128Chip := poseidon.NewPoseidonBN128Chip(api, fieldAPI)
 	friChip := fri.NewFriChip(api, fieldAPI, qeAPI, poseidonBN128Chip, &commonCircuitData.FriParams)

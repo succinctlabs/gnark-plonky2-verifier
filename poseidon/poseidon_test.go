@@ -18,7 +18,7 @@ type TestPoseidonCircuit struct {
 
 func (circuit *TestPoseidonCircuit) Define(api frontend.API) error {
 	goldilocksApi := field.NewFieldAPI(api)
-	qeAPI := field.NewQuadraticExtensionAPI(api, goldilocksApi, 3)
+	qeAPI := field.NewQuadraticExtensionAPI(api, goldilocksApi)
 
 	var input PoseidonState
 	for i := 0; i < 12; i++ {

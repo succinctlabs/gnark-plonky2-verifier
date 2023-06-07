@@ -25,9 +25,7 @@ type QuadraticExtensionAPI struct {
 	ZERO_QE_ALGEBRA QEAlgebra
 }
 
-func NewQuadraticExtensionAPI(api frontend.API, fieldAPI FieldAPI, degreeBits uint64) *QuadraticExtensionAPI {
-	// TODO:  Should degreeBits be verified that it fits within the field and that degree is within uint64?
-
+func NewQuadraticExtensionAPI(api frontend.API, fieldAPI FieldAPI) *QuadraticExtensionAPI {
 	var ZERO_QE = QuadraticExtension{ZERO_F, ZERO_F}
 
 	var ZERO_QE_ALGEBRA QEAlgebra
