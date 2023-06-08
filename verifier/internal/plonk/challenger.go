@@ -148,10 +148,10 @@ func (c *ChallengerChip) duplexing() {
 		panic("something went wrong")
 	}
 
-	c.inputBuffer = clearBuffer(c.inputBuffer)
 	for i := 0; i < len(c.inputBuffer); i++ {
 		c.spongeState[i] = c.field.Reduce(c.inputBuffer[i]).Limbs[0]
 	}
+	c.inputBuffer = clearBuffer(c.inputBuffer)
 	c.spongeState = c.poseidonChip.Poseidon(c.spongeState)
 	clearBuffer(c.outputBuffer)
 	for i := 0; i < poseidon.SPONGE_RATE; i++ {

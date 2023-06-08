@@ -2,7 +2,6 @@ package poseidon
 
 import (
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 )
 
 var ALL_ROUND_CONSTANTS = []frontend.Variable{
@@ -398,22 +397,22 @@ var MDS_MATRIX_CIRC_VARS = []frontend.Variable{
 	frontend.Variable(uint64(20)),
 }
 
+var ZERO_VAR = frontend.Variable(uint64(0))
+
 var MDS_MATRIX_DIAG = []frontend.Variable{
 	frontend.Variable(uint64(8)),
-	field.ZERO_F,
-	field.ZERO_F,
-	field.ZERO_F,
-	field.ZERO_F,
-	field.ZERO_F,
-	field.ZERO_F,
-	field.ZERO_F,
-	field.ZERO_F,
-	field.ZERO_F,
-	field.ZERO_F,
-	field.ZERO_F,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
+	ZERO_VAR,
 }
-
-var ZERO_VAR = frontend.Variable(uint64(0))
 
 var MDS_MATRIX_DIAG_VARS = []frontend.Variable{
 	frontend.Variable(uint64(8)),
