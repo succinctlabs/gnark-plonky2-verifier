@@ -95,8 +95,7 @@ func init() {
 
 func GoldilocksRangeCheck(api frontend.API, x frontend.Variable) {
 	// Goldilocks' modulus is "1111111111111111111111111111111100000000000000000000000000000001' in big endian binary
-	// We first check that all of the 64+ bits are zero
-	// We then check that if the 32rd bit to 63th bit are all 1, then the 0th bit to the 31st bit are all zero
+	// We check that if the 32nd to 63rd bits are all 1, then the 0th to 31st bits are all zero
 
 	// First decompose x into 64 bits.
 	bits, err := api.Compiler().NewHint(bits.NBits, 64, x)
