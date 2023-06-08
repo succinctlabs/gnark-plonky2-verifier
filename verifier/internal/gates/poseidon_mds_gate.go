@@ -47,11 +47,11 @@ func (g *PoseidonMdsGate) mdsRowShfAlgebra(r uint64, v [poseidon.SPONGE_WIDTH]fi
 
 	res := qeAPI.ZERO_QE_ALGEBRA
 	for i := uint64(0); i < poseidon.SPONGE_WIDTH; i++ {
-		coeff := qeAPI.FieldToQE(poseidon.MDS_MATRIX_CIRC[i])
+		coeff := qeAPI.VarToQE(poseidon.MDS_MATRIX_CIRC[i])
 		res = qeAPI.AddExtensionAlgebra(res, qeAPI.ScalarMulExtensionAlgebra(coeff, v[(i+r)%poseidon.SPONGE_WIDTH]))
 	}
 
-	coeff := qeAPI.FieldToQE(poseidon.MDS_MATRIX_DIAG[r])
+	coeff := qeAPI.VarToQE(poseidon.MDS_MATRIX_DIAG[r])
 	res = qeAPI.AddExtensionAlgebra(res, qeAPI.ScalarMulExtensionAlgebra(coeff, v[r]))
 
 	return res
