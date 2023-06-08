@@ -94,16 +94,18 @@ func init() {
 }
 
 func GoldilocksRangeCheck(api frontend.API, x frontend.Variable) {
-	// Goldilocks' modulus is "1111111111111111111111111111111100000000000000000000000000000001' in big endian binary
-	// We check that if the 32nd to 63rd bits are all 1, then the 0th to 31st bits are all zero
+	// Goldilocks' modulus is 2^64 - 2^32 + 1,
+	// which is "1111111111111111111111111111111100000000000000000000000000000001' in big endian binary
+	// This function will first verify that x is at most 64 bits wide.
+	// Then it checks that if the bits[0:31] (in big-endian) are all 1, then bits[32:64] are all zero
 
-	// First decompose x into 64 bits.
+	// First decompose x into 64 bits.  The bits will be in little-endian order.
 	bits, err := api.Compiler().NewHint(bits.NBits, 64, x)
 	if err != nil {
 		panic(err)
 	}
 
-	// All the remaining bits should compose back to x
+	// Those bits should compose back to x
 	reconstructedX := frontend.Variable(0)
 	c := uint64(1)
 	for i := 0; i < 64; i++ {
@@ -123,7 +125,9 @@ func GoldilocksRangeCheck(api frontend.API, x frontend.Variable) {
 		leastSigBits32Sum = api.Add(leastSigBits32Sum, bits[i])
 	}
 
-	// If mostSigBits32Sum == 32, then check that the least significant 32 bits are all zero
+	// If mostSigBits32Sum < 32, then we know that x < (2^63 + ... + 2^32 + 0 * 2^31 + ... + 0 * 2^0), which equals to 2^64 - 2^32
+	// So in that case, we don't need to do any more checks.
+	// If mostSigBits32Sum == 32, then we need to check that x == 2^64 - 2^32 (max GL value)
 	shouldCheck := api.IsZero(api.Sub(mostSigBits32Sum, 32))
 	api.AssertIsEqual(
 		api.Select(
@@ -160,8 +164,8 @@ func GoldilocksMulAdd(api frontend.API, operand1, operand2, operand3 frontend.Va
 }
 
 func GoldilocksMulAddHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
-	if len(inputs) < 3 {
-		return fmt.Errorf("GoldilocksMulAddHint expects at least 3 inputs")
+	if len(inputs) != 3 {
+		return fmt.Errorf("GoldilocksMulAddHint expects 3 input operands")
 	}
 
 	for _, operand := range inputs {
@@ -170,12 +174,8 @@ func GoldilocksMulAddHint(_ *big.Int, inputs []*big.Int, results []*big.Int) err
 		}
 	}
 
-	product := big.NewInt(1)
-	for i := 0; i < len(inputs)-1; i++ {
-		product = new(big.Int).Mul(product, inputs[i])
-	}
-
-	sum := new(big.Int).Add(product, inputs[len(inputs)-1])
+	product := new(big.Int).Mul(inputs[0], inputs[1])
+	sum := new(big.Int).Add(product, inputs[2])
 	quotient := new(big.Int).Div(sum, GOLDILOCKS_MODULUS)
 	remainder := new(big.Int).Rem(sum, GOLDILOCKS_MODULUS)
 

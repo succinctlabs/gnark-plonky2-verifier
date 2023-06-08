@@ -25,15 +25,20 @@ func NewPoseidonChip(api frontend.API, fieldAPI field.FieldAPI, qeAPI *field.Qua
 	return &PoseidonChip{api: api, fieldAPI: fieldAPI, qeAPI: qeAPI}
 }
 
+// The permutation function.
+// The input state MUST have all it's elements be within Goldilocks field (e.g. this function will not reduce the input elements).
+// The returned state's elements will all be within Goldilocks field.
 func (c *PoseidonChip) Poseidon(input PoseidonState) PoseidonState {
 	state := input
 	roundCounter := 0
-	state = c.FullRounds(state, &roundCounter)
-	state = c.PartialRounds(state, &roundCounter)
-	state = c.FullRounds(state, &roundCounter)
+	state = c.fullRounds(state, &roundCounter)
+	state = c.partialRounds(state, &roundCounter)
+	state = c.fullRounds(state, &roundCounter)
 	return state
 }
 
+// The input elements MUST have all it's elements be within Goldilocks field.
+// The returned slice's elements will all be within Goldilocks field.
 func (c *PoseidonChip) HashNToMNoPad(input []frontend.Variable, nbOutputs int) []frontend.Variable {
 	var state PoseidonState
 
@@ -63,6 +68,8 @@ func (c *PoseidonChip) HashNToMNoPad(input []frontend.Variable, nbOutputs int) [
 	}
 }
 
+// The input elements can be outside of the Goldilocks field.
+// The returned slice's elements will all be within Goldilocks field.
 func (c *PoseidonChip) HashNoPad(input []field.F) PoseidonHashOut {
 	var hash PoseidonHashOut
 	inputVars := []frontend.Variable{}
@@ -83,24 +90,24 @@ func (c *PoseidonChip) ToVec(hash PoseidonHashOut) []field.F {
 	return hash[:]
 }
 
-func (c *PoseidonChip) FullRounds(state PoseidonState, roundCounter *int) PoseidonState {
+func (c *PoseidonChip) fullRounds(state PoseidonState, roundCounter *int) PoseidonState {
 	for i := 0; i < HALF_N_FULL_ROUNDS; i++ {
-		state = c.ConstantLayer(state, roundCounter)
-		state = c.SBoxLayer(state)
-		state = c.MdsLayer(state)
+		state = c.constantLayer(state, roundCounter)
+		state = c.sBoxLayer(state)
+		state = c.mdsLayer(state)
 		*roundCounter += 1
 	}
 	return state
 }
 
-func (c *PoseidonChip) PartialRounds(state PoseidonState, roundCounter *int) PoseidonState {
-	state = c.PartialFirstConstantLayer(state)
-	state = c.MdsPartialLayerInit(state)
+func (c *PoseidonChip) partialRounds(state PoseidonState, roundCounter *int) PoseidonState {
+	state = c.partialFirstConstantLayer(state)
+	state = c.mdsPartialLayerInit(state)
 
 	for i := 0; i < N_PARTIAL_ROUNDS; i++ {
-		state[0] = c.SBoxMonomial(state[0])
-		state[0] = field.GoldilocksMulAdd(c.api, frontend.Variable(1), state[0], FAST_PARTIAL_ROUND_CONSTANTS[i].Limbs[0])
-		state = c.MdsPartialLayerFast(state, i)
+		state[0] = c.sBoxMonomial(state[0])
+		state[0] = field.GoldilocksMulAdd(c.api, frontend.Variable(1), state[0], FAST_PARTIAL_ROUND_CONSTANTS[i])
+		state = c.mdsPartialLayerFast(state, i)
 	}
 
 	*roundCounter += N_PARTIAL_ROUNDS
@@ -108,10 +115,10 @@ func (c *PoseidonChip) PartialRounds(state PoseidonState, roundCounter *int) Pos
 	return state
 }
 
-func (c *PoseidonChip) ConstantLayer(state PoseidonState, roundCounter *int) PoseidonState {
+func (c *PoseidonChip) constantLayer(state PoseidonState, roundCounter *int) PoseidonState {
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
-			roundConstant := ALL_ROUND_CONSTANTS[i+SPONGE_WIDTH*(*roundCounter)].Limbs[0]
+			roundConstant := ALL_ROUND_CONSTANTS[i+SPONGE_WIDTH*(*roundCounter)]
 			state[i] = field.GoldilocksMulAdd(c.api, frontend.Variable(1), state[i], roundConstant)
 		}
 	}
@@ -121,14 +128,14 @@ func (c *PoseidonChip) ConstantLayer(state PoseidonState, roundCounter *int) Pos
 func (c *PoseidonChip) ConstantLayerExtension(state PoseidonStateExtension, roundCounter *int) PoseidonStateExtension {
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
-			roundConstant := c.qeAPI.FieldToQE(ALL_ROUND_CONSTANTS[i+SPONGE_WIDTH*(*roundCounter)])
+			roundConstant := c.qeAPI.FieldToQE(c.fieldAPI.NewElement(ALL_ROUND_CONSTANTS[i+SPONGE_WIDTH*(*roundCounter)]))
 			state[i] = c.qeAPI.AddExtension(state[i], roundConstant)
 		}
 	}
 	return state
 }
 
-func (c *PoseidonChip) SBoxMonomial(x frontend.Variable) frontend.Variable {
+func (c *PoseidonChip) sBoxMonomial(x frontend.Variable) frontend.Variable {
 	x2 := field.GoldilocksMulAdd(c.api, x, x, frontend.Variable(0))
 	x4 := field.GoldilocksMulAdd(c.api, x2, x2, frontend.Variable(0))
 	x6 := field.GoldilocksMulAdd(c.api, x4, x2, frontend.Variable(0))
@@ -142,10 +149,10 @@ func (c *PoseidonChip) SBoxMonomialExtension(x field.QuadraticExtension) field.Q
 	return c.qeAPI.MulExtension(x3, x4)
 }
 
-func (c *PoseidonChip) SBoxLayer(state PoseidonState) PoseidonState {
+func (c *PoseidonChip) sBoxLayer(state PoseidonState) PoseidonState {
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
-			state[i] = c.SBoxMonomial(state[i])
+			state[i] = c.sBoxMonomial(state[i])
 		}
 	}
 	return state
@@ -160,7 +167,7 @@ func (c *PoseidonChip) SBoxLayerExtension(state PoseidonStateExtension) Poseidon
 	return state
 }
 
-func (c *PoseidonChip) MdsRowShf(r int, v [SPONGE_WIDTH]frontend.Variable) frontend.Variable {
+func (c *PoseidonChip) mdsRowShf(r int, v [SPONGE_WIDTH]frontend.Variable) frontend.Variable {
 	res := ZERO_VAR
 
 	for i := 0; i < 12; i++ {
@@ -179,18 +186,18 @@ func (c *PoseidonChip) MdsRowShfExtension(r int, v [SPONGE_WIDTH]field.Quadratic
 
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
-			matrixVal := c.qeAPI.FieldToQE(MDS_MATRIX_CIRC[i])
+			matrixVal := c.qeAPI.FieldToQE(c.fieldAPI.NewElement(MDS_MATRIX_CIRC[i]))
 			res1 := c.qeAPI.MulExtension(v[(i+r)%SPONGE_WIDTH], matrixVal)
 			res = c.qeAPI.AddExtension(res, res1)
 		}
 	}
 
-	matrixVal := c.qeAPI.FieldToQE(MDS_MATRIX_DIAG[r])
+	matrixVal := c.qeAPI.FieldToQE(c.fieldAPI.NewElement(MDS_MATRIX_DIAG[r]))
 	res = c.qeAPI.AddExtension(res, c.qeAPI.MulExtension(v[r], matrixVal))
 	return res
 }
 
-func (c *PoseidonChip) MdsLayer(state_ PoseidonState) PoseidonState {
+func (c *PoseidonChip) mdsLayer(state_ PoseidonState) PoseidonState {
 	var result PoseidonState
 	for i := 0; i < SPONGE_WIDTH; i++ {
 		result[i] = frontend.Variable(0)
@@ -203,7 +210,7 @@ func (c *PoseidonChip) MdsLayer(state_ PoseidonState) PoseidonState {
 
 	for r := 0; r < 12; r++ {
 		if r < SPONGE_WIDTH {
-			sum := c.MdsRowShf(r, state)
+			sum := c.mdsRowShf(r, state)
 			result[r] = field.GoldilocksReduce(c.api, sum)
 		}
 	}
@@ -224,10 +231,10 @@ func (c *PoseidonChip) MdsLayerExtension(state_ PoseidonStateExtension) Poseidon
 	return result
 }
 
-func (c *PoseidonChip) PartialFirstConstantLayer(state PoseidonState) PoseidonState {
+func (c *PoseidonChip) partialFirstConstantLayer(state PoseidonState) PoseidonState {
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
-			state[i] = field.GoldilocksMulAdd(c.api, frontend.Variable(1), state[i], FAST_PARTIAL_FIRST_ROUND_CONSTANT[i].Limbs[0])
+			state[i] = field.GoldilocksMulAdd(c.api, frontend.Variable(1), state[i], FAST_PARTIAL_FIRST_ROUND_CONSTANT[i])
 		}
 	}
 	return state
@@ -236,13 +243,13 @@ func (c *PoseidonChip) PartialFirstConstantLayer(state PoseidonState) PoseidonSt
 func (c *PoseidonChip) PartialFirstConstantLayerExtension(state PoseidonStateExtension) PoseidonStateExtension {
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
-			state[i] = c.qeAPI.AddExtension(state[i], c.qeAPI.FieldToQE(FAST_PARTIAL_FIRST_ROUND_CONSTANT[i]))
+			state[i] = c.qeAPI.AddExtension(state[i], c.qeAPI.FieldToQE(c.fieldAPI.NewElement((FAST_PARTIAL_FIRST_ROUND_CONSTANT[i]))))
 		}
 	}
 	return state
 }
 
-func (c *PoseidonChip) MdsPartialLayerInit(state PoseidonState) PoseidonState {
+func (c *PoseidonChip) mdsPartialLayerInit(state PoseidonState) PoseidonState {
 	var result PoseidonState
 	for i := 0; i < 12; i++ {
 		result[i] = frontend.Variable(0)
@@ -254,7 +261,7 @@ func (c *PoseidonChip) MdsPartialLayerInit(state PoseidonState) PoseidonState {
 		if r < SPONGE_WIDTH {
 			for d := 1; d < 12; d++ {
 				if d < SPONGE_WIDTH {
-					t := FAST_PARTIAL_ROUND_INITIAL_MATRIX[r-1][d-1].Limbs[0]
+					t := FAST_PARTIAL_ROUND_INITIAL_MATRIX[r-1][d-1]
 					result[d] = field.GoldilocksMulAdd(c.api, state[r], t, result[d])
 				}
 			}
@@ -276,7 +283,7 @@ func (c *PoseidonChip) MdsPartialLayerInitExtension(state PoseidonStateExtension
 		if r < SPONGE_WIDTH {
 			for d := 1; d < 12; d++ {
 				if d < SPONGE_WIDTH {
-					t := c.qeAPI.FieldToQE(FAST_PARTIAL_ROUND_INITIAL_MATRIX[r-1][d-1])
+					t := c.qeAPI.FieldToQE(c.fieldAPI.NewElement(FAST_PARTIAL_ROUND_INITIAL_MATRIX[r-1][d-1]))
 					result[d] = c.qeAPI.AddExtension(result[d], c.qeAPI.MulExtension(state[r], t))
 				}
 			}
@@ -286,7 +293,7 @@ func (c *PoseidonChip) MdsPartialLayerInitExtension(state PoseidonStateExtension
 	return result
 }
 
-func (c *PoseidonChip) MdsPartialLayerFast(state PoseidonState, r int) PoseidonState {
+func (c *PoseidonChip) mdsPartialLayerFast(state PoseidonState, r int) PoseidonState {
 	dSum := ZERO_VAR
 	for i := 1; i < 12; i++ {
 		if i < SPONGE_WIDTH {
@@ -309,7 +316,7 @@ func (c *PoseidonChip) MdsPartialLayerFast(state PoseidonState, r int) PoseidonS
 
 	for i := 1; i < 12; i++ {
 		if i < SPONGE_WIDTH {
-			t := FAST_PARTIAL_ROUND_VS[r][i-1].Limbs[0]
+			t := FAST_PARTIAL_ROUND_VS[r][i-1]
 			result[i] = field.GoldilocksMulAdd(c.api, state[0], t, state[i])
 		}
 	}
@@ -319,11 +326,11 @@ func (c *PoseidonChip) MdsPartialLayerFast(state PoseidonState, r int) PoseidonS
 
 func (c *PoseidonChip) MdsPartialLayerFastExtension(state PoseidonStateExtension, r int) PoseidonStateExtension {
 	s0 := state[0]
-	mds0to0 := c.qeAPI.FieldToQE(MDS0TO0)
+	mds0to0 := c.qeAPI.FieldToQE(c.fieldAPI.NewElement(MDS0TO0))
 	d := c.qeAPI.MulExtension(s0, mds0to0)
 	for i := 1; i < 12; i++ {
 		if i < SPONGE_WIDTH {
-			t := c.qeAPI.FieldToQE(FAST_PARTIAL_ROUND_W_HATS[r][i-1])
+			t := c.qeAPI.FieldToQE(c.fieldAPI.NewElement(FAST_PARTIAL_ROUND_W_HATS[r][i-1]))
 			d = c.qeAPI.AddExtension(d, c.qeAPI.MulExtension(state[i], t))
 		}
 	}
@@ -332,7 +339,7 @@ func (c *PoseidonChip) MdsPartialLayerFastExtension(state PoseidonStateExtension
 	result[0] = d
 	for i := 1; i < 12; i++ {
 		if i < SPONGE_WIDTH {
-			t := c.qeAPI.FieldToQE(FAST_PARTIAL_ROUND_VS[r][i-1])
+			t := c.qeAPI.FieldToQE(c.fieldAPI.NewElement(FAST_PARTIAL_ROUND_VS[r][i-1]))
 			result[i] = c.qeAPI.AddExtension(c.qeAPI.MulExtension(state[0], t), state[i])
 		}
 	}
