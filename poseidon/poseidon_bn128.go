@@ -20,6 +20,8 @@ type PoseidonBN128Chip struct {
 type PoseidonBN128State = [spongeWidth]frontend.Variable
 type PoseidonBN128HashOut = frontend.Variable
 
+// This implementation is based on the following implementation:
+// https://github.com/iden3/go-iden3-crypto/blob/e5cf066b8be3da9a3df9544c65818df189fdbebe/poseidon/poseidon.go
 func NewPoseidonBN128Chip(api frontend.API, fieldAPI field.FieldAPI) *PoseidonBN128Chip {
 	return &PoseidonBN128Chip{api: api, fieldAPI: fieldAPI}
 }

@@ -15,18 +15,18 @@ type ChallengerChip struct {
 	field             field.FieldAPI `gnark:"-"`
 	poseidonChip      *poseidon.PoseidonChip
 	poseidonBN128Chip *poseidon.PoseidonBN128Chip
-	spongeState       [poseidon.SPONGE_WIDTH]field.F
+	spongeState       [poseidon.SPONGE_WIDTH]frontend.Variable
 	inputBuffer       []field.F
 	outputBuffer      []field.F
 }
 
 func NewChallengerChip(api frontend.API, fieldAPI field.FieldAPI, poseidonChip *poseidon.PoseidonChip, poseidonBN128Chip *poseidon.PoseidonBN128Chip) *ChallengerChip {
-	var spongeState [poseidon.SPONGE_WIDTH]field.F
+	var spongeState [poseidon.SPONGE_WIDTH]frontend.Variable
 	var inputBuffer []field.F
 	var outputBuffer []field.F
 
 	for i := 0; i < poseidon.SPONGE_WIDTH; i++ {
-		spongeState[i] = field.ZERO_F
+		spongeState[i] = frontend.Variable(0)
 	}
 
 	return &ChallengerChip{
@@ -148,12 +148,13 @@ func (c *ChallengerChip) duplexing() {
 		panic("something went wrong")
 	}
 
-	copy(c.spongeState[:], c.inputBuffer)
+	for i := 0; i < len(c.inputBuffer); i++ {
+		c.spongeState[i] = c.field.Reduce(c.inputBuffer[i]).Limbs[0]
+	}
 	c.inputBuffer = clearBuffer(c.inputBuffer)
 	c.spongeState = c.poseidonChip.Poseidon(c.spongeState)
 	clearBuffer(c.outputBuffer)
 	for i := 0; i < poseidon.SPONGE_RATE; i++ {
-		c.outputBuffer = append(c.outputBuffer, c.spongeState[i])
-		// c.outputBuffer[i] = c.spongeState[i]
+		c.outputBuffer = append(c.outputBuffer, c.field.NewElement(c.spongeState[i]))
 	}
 }

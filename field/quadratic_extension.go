@@ -97,6 +97,10 @@ func (c *QuadraticExtensionAPI) ScalarMulExtension(a QuadraticExtension, scalar 
 	return QuadraticExtension{c.fieldAPI.Mul(a[0], scalar), c.fieldAPI.Mul(a[1], scalar)}
 }
 
+func (c *QuadraticExtensionAPI) VarToQE(a frontend.Variable) QuadraticExtension {
+	return c.FieldToQE(c.fieldAPI.NewElement(a))
+}
+
 func (c *QuadraticExtensionAPI) FieldToQE(a F) QuadraticExtension {
 	return QuadraticExtension{a, ZERO_F}
 }
