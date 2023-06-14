@@ -24,7 +24,7 @@ func (circuit *TestPlonkCircuit) Define(api frontend.API) error {
 
 	verifierChip := verifier.NewVerifierChip(api, commonCircuitData)
 	publicInputsHash := verifierChip.GetPublicInputsHash(proofWithPis.PublicInputs)
-	proofChallenges := verifierChip.GetChallenges(proofWithPis, publicInputsHash, commonCircuitData, verifierOnlyCircuitData)
+	proofChallenges := verifierChip.GetChallenges(proofWithPis.Proof, publicInputsHash, commonCircuitData, verifierOnlyCircuitData)
 
 	fieldAPI := field.NewFieldAPI(api)
 	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI)

@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/utils"
@@ -18,7 +19,8 @@ import (
 )
 
 type BenchmarkPlonky2VerifierCircuit struct {
-	ProofWithPis common.ProofWithPublicInputs `gnark:",public"`
+	Proof        common.Proof
+	PublicInputs []field.F `gnark:",public"`
 
 	verifierChip       *verifier.VerifierChip
 	plonky2CircuitName string
@@ -31,7 +33,7 @@ func (circuit *BenchmarkPlonky2VerifierCircuit) Define(api frontend.API) error {
 
 	circuit.verifierChip = verifier.NewVerifierChip(api, commonCircuitData)
 
-	circuit.verifierChip.Verify(circuit.ProofWithPis, verifierOnlyCircuitData, commonCircuitData)
+	circuit.verifierChip.Verify(circuit.Proof, circuit.PublicInputs, verifierOnlyCircuitData, commonCircuitData)
 
 	return nil
 }
@@ -41,7 +43,8 @@ func compileCircuit(plonky2Circuit string, doProfiling bool) {
 		plonky2CircuitName: plonky2Circuit,
 	}
 	proofWithPis := utils.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
-	circuit.ProofWithPis = proofWithPis
+	circuit.Proof = proofWithPis.Proof
+	circuit.PublicInputs = proofWithPis.PublicInputs
 
 	var p *profile.Profile
 	if doProfiling {
@@ -88,7 +91,8 @@ func createProof(plonky2Circuit string) groth16.Proof {
 
 	// Witness
 	assignment := &BenchmarkPlonky2VerifierCircuit{
-		ProofWithPis: proofWithPis,
+		Proof:        proofWithPis.Proof,
+		PublicInputs: proofWithPis.PublicInputs,
 	}
 
 	fmt.Println("Generating witness", time.Now())
