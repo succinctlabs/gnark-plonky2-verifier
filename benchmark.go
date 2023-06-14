@@ -123,6 +123,9 @@ func createProof(plonky2Circuit string) groth16.Proof {
 		os.Exit(1)
 	}
 
+	fSolidity, _ := os.Create("proof.sol")
+	err = vk.ExportSolidity(fSolidity)
+
 	return proof
 }
 

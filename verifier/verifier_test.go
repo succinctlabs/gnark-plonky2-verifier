@@ -26,14 +26,14 @@ func (c *TestVerifierCircuit) Define(api frontend.API) error {
 	return nil
 }
 
-func TestDecodeBlockVerifier(t *testing.T) {
+func TestStepVerifier(t *testing.T) {
 	assert := test.NewAssert(t)
 
 	testCase := func() {
 		circuit := TestVerifierCircuit{
-			proofWithPIsFilename:            "./data/decode_block/proof_with_public_inputs.json",
-			commonCircuitDataFilename:       "./data/decode_block/common_circuit_data.json",
-			verifierOnlyCircuitDataFilename: "./data/decode_block/verifier_only_circuit_data.json",
+			proofWithPIsFilename:            "./data/step/proof_with_public_inputs.json",
+			commonCircuitDataFilename:       "./data/step/common_circuit_data.json",
+			verifierOnlyCircuitDataFilename: "./data/step/verifier_only_circuit_data.json",
 		}
 
 		witness := TestVerifierCircuit{}
