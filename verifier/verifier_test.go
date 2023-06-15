@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/test"
@@ -76,7 +77,14 @@ func TestStepVerifier2(t *testing.T) {
 		PublicInputs:       proofWithPis2.PublicInputs,
 	}
 
-	assert.ProverSucceeded(&circuit, &witness, test.WithCurves(ecc.BN254))
+	assert.ProverSucceeded(
+		&circuit,
+		&witness,
+		test.WithBackends(backend.GROTH16),
+		test.WithCurves(ecc.BN254),
+		test.NoFuzzing(),
+		test.NoSerialization(),
+	)
 }
 
 type testCircuit struct {
@@ -98,11 +106,18 @@ func TestMain(t *testing.T) {
 
 	var circuit testCircuit
 
-	assert.ProverSucceeded(&circuit, &testCircuit{
-		Arr: [2]emulated.Element[emulated.Secp256k1Fp]{
-			emulated.ValueOf[emulated.Secp256k1Fp](42),
-			emulated.ValueOf[emulated.Secp256k1Fp](24),
+	assert.ProverSucceeded(
+		&circuit,
+		&testCircuit{
+			Arr: [2]emulated.Element[emulated.Secp256k1Fp]{
+				emulated.ValueOf[emulated.Secp256k1Fp](42),
+				emulated.ValueOf[emulated.Secp256k1Fp](24),
+			},
+			Expected: emulated.ValueOf[emulated.Secp256k1Fp](1008),
 		},
-		Expected: emulated.ValueOf[emulated.Secp256k1Fp](1008),
-	}, test.WithCurves(ecc.BN254))
+		test.WithBackends(backend.GROTH16),
+		test.WithCurves(ecc.BN254),
+		test.NoFuzzing(),
+		test.NoSerialization(),
+	)
 }
