@@ -155,6 +155,13 @@ func GoldilocksMulAdd(api frontend.API, operand1, operand2, operand3 frontend.Va
 	lhs := api.Mul(operand1, operand2)
 	lhs = api.Add(lhs, operand3)
 	rhs := api.Add(api.Mul(quotient, GOLDILOCKS_MODULUS), remainder)
+
+	api.Println("GoldilocksMulAdd: operand1", operand1)
+	api.Println("GoldilocksMulAdd: operand2", operand2)
+	api.Println("GoldilocksMulAdd: operand3", operand3)
+	api.Println("GoldilocksMulAdd: lhs", quotient)
+	api.Println("GoldilocksMulAdd: rhs", remainder)
+
 	api.AssertIsEqual(lhs, rhs)
 
 	GoldilocksRangeCheck(api, quotient)
