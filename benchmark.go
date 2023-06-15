@@ -23,8 +23,8 @@ type BenchmarkPlonky2VerifierCircuit struct {
 	Proof        common.Proof
 	PublicInputs []field.F `gnark:",public"`
 
-	verifierChip       *verifier.VerifierChip
-	plonky2CircuitName string
+	verifierChip       *verifier.VerifierChip `gnark:"-"`
+	plonky2CircuitName string                 `gnark:"-"`
 }
 
 func (circuit *BenchmarkPlonky2VerifierCircuit) Define(api frontend.API) error {
