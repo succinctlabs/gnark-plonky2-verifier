@@ -39,7 +39,7 @@ func (circuit *BenchmarkPlonky2VerifierCircuit) Define(api frontend.API) error {
 	return nil
 }
 
-func compileCircuit(plonky2Circuit string, doProfiling bool, doSerializing bool) (constraint.ConstraintSystem, groth16.ProvingKey, groth16.VerifyingKey) {
+func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, outputSolidity bool) (constraint.ConstraintSystem, groth16.ProvingKey, groth16.VerifyingKey) {
 	circuit := BenchmarkPlonky2VerifierCircuit{
 		plonky2CircuitName: plonky2Circuit,
 	}
@@ -48,7 +48,7 @@ func compileCircuit(plonky2Circuit string, doProfiling bool, doSerializing bool)
 	circuit.PublicInputs = proofWithPis.PublicInputs
 
 	var p *profile.Profile
-	if doProfiling {
+	if profileCircuit {
 		p = profile.Start()
 	}
 	r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &circuit)
@@ -57,7 +57,7 @@ func compileCircuit(plonky2Circuit string, doProfiling bool, doSerializing bool)
 		os.Exit(1)
 	}
 
-	if doProfiling {
+	if profileCircuit {
 		p.Stop()
 		p.Top()
 		println("r1cs.GetNbCoefficients(): ", r1cs.GetNbCoefficients())
@@ -67,7 +67,7 @@ func compileCircuit(plonky2Circuit string, doProfiling bool, doSerializing bool)
 		println("r1cs.GetNbInternalVariables(): ", r1cs.GetNbInternalVariables())
 	}
 
-	if doSerializing {
+	if serialize {
 		fR1CS, _ := os.Create("circuit")
 		r1cs.WriteTo(fR1CS)
 		fR1CS.Close()
@@ -80,7 +80,7 @@ func compileCircuit(plonky2Circuit string, doProfiling bool, doSerializing bool)
 		os.Exit(1)
 	}
 
-	if doSerializing {
+	if serialize {
 		fPK, _ := os.Create("proving.key")
 		pk.WriteTo(fPK)
 		fPK.Close()
@@ -88,6 +88,11 @@ func compileCircuit(plonky2Circuit string, doProfiling bool, doSerializing bool)
 		fVK, _ := os.Create("verifying.key")
 		vk.WriteTo(fVK)
 		fVK.Close()
+	}
+
+	if outputSolidity {
+		fSolidity, _ := os.Create("proof.sol")
+		err = vk.ExportSolidity(fSolidity)
 	}
 
 	return r1cs, pk, vk
@@ -119,16 +124,15 @@ func createProof(plonky2Circuit string, r1cs constraint.ConstraintSystem, pk gro
 		os.Exit(1)
 	}
 
-	fSolidity, _ := os.Create("proof.sol")
-	err = vk.ExportSolidity(fSolidity)
-
 	return proof
 }
 
 func main() {
 	plonky2Circuit := flag.String("plonky2-circuit", "", "plonky2 circuit to benchmark")
-	doProfile := flag.Bool("profile", false, "profile the circuit")
-	doSerializing := flag.Bool("serialize", false, "serialize the circuit")
+	profileCircuit := flag.Bool("profile", false, "profile the circuit")
+	serialize := flag.Bool("serialize", false, "serialize the circuit")
+	outputSolidity := flag.Bool("solidity", false, "output solidity code for the circuit")
+
 	flag.Parse()
 
 	if plonky2Circuit == nil || *plonky2Circuit == "" {
@@ -136,6 +140,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	r1cs, pk, vk := compileCircuit(*plonky2Circuit, *doProfile, *doSerializing)
+	r1cs, pk, vk := compileCircuit(*plonky2Circuit, *profileCircuit, *serialize, *outputSolidity)
 	createProof(*plonky2Circuit, r1cs, pk, vk)
 }
