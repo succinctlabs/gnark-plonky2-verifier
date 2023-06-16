@@ -31,10 +31,24 @@ func NewPoseidonChip(api frontend.API, fieldAPI field.FieldAPI, qeAPI *field.Qua
 func (c *PoseidonChip) Poseidon(input PoseidonState) PoseidonState {
 	state := input
 	roundCounter := 0
+	c.api.Println("Called Poseidon with input")
+	c.OutputState(state)
 	state = c.fullRounds(state, &roundCounter)
+	c.api.Println("After first full rounds, state is")
+	c.OutputState(state)
 	state = c.partialRounds(state, &roundCounter)
+	c.api.Println("After partial rounds, state is")
+	c.OutputState(state)
 	state = c.fullRounds(state, &roundCounter)
+	c.api.Println("After second full round, state is")
+	c.OutputState(state)
 	return state
+}
+
+func (c *PoseidonChip) OutputState(state PoseidonState) {
+	for i := 0; i < SPONGE_WIDTH; i++ {
+		c.api.Println("State[", i, "] is: ", state[i])
+	}
 }
 
 // The input elements MUST have all it's elements be within Goldilocks field.
@@ -45,6 +59,8 @@ func (c *PoseidonChip) HashNToMNoPad(input []frontend.Variable, nbOutputs int) [
 	for i := 0; i < SPONGE_WIDTH; i++ {
 		state[i] = frontend.Variable(0)
 	}
+	c.api.Println("HashNToMNoPad state is")
+	c.OutputState(state)
 
 	for i := 0; i < len(input); i += SPONGE_RATE {
 		for j := 0; j < SPONGE_RATE; j++ {
@@ -78,7 +94,12 @@ func (c *PoseidonChip) HashNoPad(input []field.F) PoseidonHashOut {
 		inputVars = append(inputVars, c.fieldAPI.Reduce(input[i]).Limbs[0])
 	}
 
+	c.api.Println("inputVars", inputVars)
+
 	outputVars := c.HashNToMNoPad(inputVars, 4)
+
+	c.api.Println("outputVars", outputVars)
+
 	for i := 0; i < 4; i++ {
 		hash[i] = c.fieldAPI.NewElement(outputVars[i])
 	}

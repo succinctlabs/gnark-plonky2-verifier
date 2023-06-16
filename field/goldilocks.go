@@ -143,6 +143,7 @@ func GoldilocksRangeCheck(api frontend.API, x frontend.Variable) {
 // This function assumes that all operands are within goldilocks, and will panic otherwise
 // It will ensure that the result is within goldilocks
 func GoldilocksMulAdd(api frontend.API, operand1, operand2, operand3 frontend.Variable) frontend.Variable {
+	api.Println("GDMulAdd operands are", operand1, operand2, operand3)
 	result, err := api.Compiler().NewHint(GoldilocksMulAddHint, 2, operand1, operand2, operand3)
 	if err != nil {
 		panic(err)
@@ -155,12 +156,6 @@ func GoldilocksMulAdd(api frontend.API, operand1, operand2, operand3 frontend.Va
 	lhs := api.Mul(operand1, operand2)
 	lhs = api.Add(lhs, operand3)
 	rhs := api.Add(api.Mul(quotient, GOLDILOCKS_MODULUS), remainder)
-
-	api.Println("GoldilocksMulAdd: operand1", operand1)
-	api.Println("GoldilocksMulAdd: operand2", operand2)
-	api.Println("GoldilocksMulAdd: operand3", operand3)
-	api.Println("GoldilocksMulAdd: lhs", quotient)
-	api.Println("GoldilocksMulAdd: rhs", remainder)
 
 	api.AssertIsEqual(lhs, rhs)
 
@@ -175,9 +170,13 @@ func GoldilocksMulAddHint(_ *big.Int, inputs []*big.Int, results []*big.Int) err
 		return fmt.Errorf("GoldilocksMulAddHint expects 3 input operands")
 	}
 
+	for i, operand := range inputs {
+		println("GoldilocksMulAddHint: operand[", i, "] is", operand.String())
+	}
+
 	for _, operand := range inputs {
 		if operand.Cmp(GOLDILOCKS_MODULUS) >= 0 {
-			return fmt.Errorf("%s is not in the field", operand.String())
+			panic(fmt.Sprintf("%s is not in the field", operand.String()))
 		}
 	}
 
