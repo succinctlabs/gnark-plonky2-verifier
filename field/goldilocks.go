@@ -155,7 +155,6 @@ func GoldilocksMulAdd(api frontend.API, operand1, operand2, operand3 frontend.Va
 	lhs := api.Mul(operand1, operand2)
 	lhs = api.Add(lhs, operand3)
 	rhs := api.Add(api.Mul(quotient, GOLDILOCKS_MODULUS), remainder)
-
 	api.AssertIsEqual(lhs, rhs)
 
 	GoldilocksRangeCheck(api, quotient)
@@ -167,10 +166,6 @@ func GoldilocksMulAdd(api frontend.API, operand1, operand2, operand3 frontend.Va
 func GoldilocksMulAddHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
 	if len(inputs) != 3 {
 		panic("GoldilocksMulAddHint expects 3 input operands")
-	}
-
-	for i, operand := range inputs {
-		println("GoldilocksMulAddHint: operand[", i, "] is", operand.String())
 	}
 
 	for _, operand := range inputs {

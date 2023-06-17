@@ -79,7 +79,6 @@ func (c *PoseidonChip) HashNoPad(input []field.F) PoseidonHashOut {
 	}
 
 	outputVars := c.HashNToMNoPad(inputVars, 4)
-
 	for i := 0; i < 4; i++ {
 		hash[i] = c.fieldAPI.NewElement(outputVars[i])
 	}
