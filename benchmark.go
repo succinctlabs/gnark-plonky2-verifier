@@ -67,11 +67,14 @@ func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, 
 		println("r1cs.GetNbInternalVariables(): ", r1cs.GetNbInternalVariables())
 	}
 
-	if serialize {
-		fR1CS, _ := os.Create("circuit")
-		r1cs.WriteTo(fR1CS)
-		fR1CS.Close()
-	}
+	// Don't serialize the circuit for now, since it takes up too much memory
+	/*
+		if serialize {
+			fR1CS, _ := os.Create("circuit")
+			r1cs.WriteTo(fR1CS)
+			fR1CS.Close()
+		}
+	*/
 
 	fmt.Println("Running circuit setup", time.Now())
 	pk, vk, err := groth16.Setup(r1cs)
@@ -98,7 +101,7 @@ func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, 
 	return r1cs, pk, vk
 }
 
-func createProof(plonky2Circuit string, r1cs constraint.ConstraintSystem, pk groth16.ProvingKey, vk groth16.VerifyingKey) groth16.Proof {
+func createProof(plonky2Circuit string, r1cs constraint.ConstraintSystem, pk groth16.ProvingKey, vk groth16.VerifyingKey, serialize bool) groth16.Proof {
 	proofWithPis := utils.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
 
 	// Witness
@@ -124,6 +127,11 @@ func createProof(plonky2Circuit string, r1cs constraint.ConstraintSystem, pk gro
 		os.Exit(1)
 	}
 
+	if serialize {
+		fProof, _ := os.Create("proof.proof")
+		proof.WriteTo(fProof)
+	}
+
 	return proof
 }
 
@@ -141,5 +149,5 @@ func main() {
 	}
 
 	r1cs, pk, vk := compileCircuit(*plonky2Circuit, *profileCircuit, *serialize, *outputSolidity)
-	createProof(*plonky2Circuit, r1cs, pk, vk)
+	createProof(*plonky2Circuit, r1cs, pk, vk, *serialize)
 }
