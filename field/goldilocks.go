@@ -165,12 +165,12 @@ func GoldilocksMulAdd(api frontend.API, operand1, operand2, operand3 frontend.Va
 
 func GoldilocksMulAddHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
 	if len(inputs) != 3 {
-		return fmt.Errorf("GoldilocksMulAddHint expects 3 input operands")
+		panic("GoldilocksMulAddHint expects 3 input operands")
 	}
 
 	for _, operand := range inputs {
 		if operand.Cmp(GOLDILOCKS_MODULUS) >= 0 {
-			return fmt.Errorf("%s is not in the field", operand.String())
+			panic(fmt.Sprintf("%s is not in the field", operand.String()))
 		}
 	}
 
