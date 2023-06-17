@@ -155,6 +155,8 @@ func (c *VerifierChip) generateProofInput(commonData common.CommonCircuitData) c
 */
 
 func (c *VerifierChip) Verify(proof common.Proof, publicInputs []field.F, verifierData common.VerifierOnlyCircuitData, commonData common.CommonCircuitData) {
+	// TODO: Need to range check all the proof and public input elements to make sure they are within goldilocks field
+
 	// Generate the parts of the witness that is for the plonky2 proof input
 	publicInputsHash := c.GetPublicInputsHash(publicInputs)
 	proofChallenges := c.GetChallenges(proof, publicInputsHash, commonData, verifierData)
