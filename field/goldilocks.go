@@ -143,7 +143,6 @@ func GoldilocksRangeCheck(api frontend.API, x frontend.Variable) {
 // This function assumes that all operands are within goldilocks, and will panic otherwise
 // It will ensure that the result is within goldilocks
 func GoldilocksMulAdd(api frontend.API, operand1, operand2, operand3 frontend.Variable) frontend.Variable {
-	api.Println("GDMulAdd operands are", operand1, operand2, operand3)
 	result, err := api.Compiler().NewHint(GoldilocksMulAddHint, 2, operand1, operand2, operand3)
 	if err != nil {
 		panic(err)
@@ -189,11 +188,4 @@ func GoldilocksMulAddHint(_ *big.Int, inputs []*big.Int, results []*big.Int) err
 	results[1] = remainder
 
 	return nil
-}
-
-func GoldilocksReduce(api frontend.API, x frontend.Variable) frontend.Variable {
-	// Use gnark's emulated field library.
-	fieldAPI := NewFieldAPI(api)
-	element := fieldAPI.NewElement(x)
-	return fieldAPI.Reduce(element).Limbs[0]
 }
