@@ -193,12 +193,11 @@ func (c *PoseidonChip) mdsRowShf(r int, v [SPONGE_WIDTH]frontend.Variable) front
 
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
-			res1 := c.api.Mul(v[(i+r)%SPONGE_WIDTH], MDS_MATRIX_CIRC_VARS[i])
-			res = c.api.Add(res, res1)
+			res = field.GoldilocksMulAdd(c.api, v[(i+r)%SPONGE_WIDTH], MDS_MATRIX_CIRC_VARS[i], res)
 		}
 	}
 
-	res = c.api.Add(res, c.api.Mul(v[r], MDS_MATRIX_DIAG_VARS[r]))
+	res = field.GoldilocksMulAdd(c.api, v[r], MDS_MATRIX_DIAG_VARS[r], res)
 	return res
 }
 
@@ -224,15 +223,9 @@ func (c *PoseidonChip) mdsLayer(state_ PoseidonState) PoseidonState {
 		result[i] = frontend.Variable(0)
 	}
 
-	var state [SPONGE_WIDTH]frontend.Variable
-	for i := 0; i < SPONGE_WIDTH; i++ {
-		state[i] = field.GoldilocksReduce(c.api, state_[i])
-	}
-
 	for r := 0; r < 12; r++ {
 		if r < SPONGE_WIDTH {
-			sum := c.mdsRowShf(r, state)
-			result[r] = field.GoldilocksReduce(c.api, sum)
+			result[r] = c.mdsRowShf(r, state_)
 		}
 	}
 
@@ -319,14 +312,11 @@ func (c *PoseidonChip) mdsPartialLayerFast(state PoseidonState, r int) PoseidonS
 	for i := 1; i < 12; i++ {
 		if i < SPONGE_WIDTH {
 			t := FAST_PARTIAL_ROUND_W_HATS_VARS[r][i-1]
-			reducedState := field.GoldilocksReduce(c.api, state[i])
-			dSum = c.api.Add(dSum, c.api.Mul(reducedState, t))
+			dSum = field.GoldilocksMulAdd(c.api, state[i], t, dSum)
 		}
 	}
 
-	s0 := field.GoldilocksReduce(c.api, state[0])
-	dSum = c.api.Add(dSum, c.api.Mul(s0, MDS0TO0_VAR))
-	d := field.GoldilocksReduce(c.api, dSum)
+	d := field.GoldilocksMulAdd(c.api, state[0], MDS0TO0_VAR, dSum)
 
 	var result PoseidonState
 	for i := 0; i < SPONGE_WIDTH; i++ {
