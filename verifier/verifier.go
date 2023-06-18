@@ -47,7 +47,7 @@ func (c *VerifierChip) GetPublicInputsHash(publicInputs []field.F) poseidon.Pose
 }
 
 func (c *VerifierChip) GetChallenges(
-	proofWithPis common.ProofWithPublicInputs,
+	proof common.Proof,
 	publicInputsHash poseidon.PoseidonHashOut,
 	commonData common.CommonCircuitData,
 	verifierData common.VerifierOnlyCircuitData,
@@ -60,17 +60,17 @@ func (c *VerifierChip) GetChallenges(
 
 	challenger.ObserveBN128Hash(circuitDigest)
 	challenger.ObserveHash(publicInputsHash)
-	challenger.ObserveCap(proofWithPis.Proof.WiresCap)
+	challenger.ObserveCap(proof.WiresCap)
 	plonkBetas := challenger.GetNChallenges(numChallenges)
 	plonkGammas := challenger.GetNChallenges(numChallenges)
 
-	challenger.ObserveCap(proofWithPis.Proof.PlonkZsPartialProductsCap)
+	challenger.ObserveCap(proof.PlonkZsPartialProductsCap)
 	plonkAlphas := challenger.GetNChallenges(numChallenges)
 
-	challenger.ObserveCap(proofWithPis.Proof.QuotientPolysCap)
+	challenger.ObserveCap(proof.QuotientPolysCap)
 	plonkZeta := challenger.GetExtensionChallenge()
 
-	challenger.ObserveOpenings(fri.ToFriOpenings(proofWithPis.Proof.Openings))
+	challenger.ObserveOpenings(fri.ToFriOpenings(proof.Openings))
 
 	return common.ProofChallenges{
 		PlonkBetas:  plonkBetas,
@@ -78,9 +78,9 @@ func (c *VerifierChip) GetChallenges(
 		PlonkAlphas: plonkAlphas,
 		PlonkZeta:   plonkZeta,
 		FriChallenges: challenger.GetFriChallenges(
-			proofWithPis.Proof.OpeningProof.CommitPhaseMerkleCaps,
-			proofWithPis.Proof.OpeningProof.FinalPoly,
-			proofWithPis.Proof.OpeningProof.PowWitness,
+			proof.OpeningProof.CommitPhaseMerkleCaps,
+			proof.OpeningProof.FinalPoly,
+			proof.OpeningProof.PowWitness,
 			commonData.DegreeBits,
 			config.FriConfig,
 		),
@@ -154,18 +154,20 @@ func (c *VerifierChip) generateProofInput(commonData common.CommonCircuitData) c
 }
 */
 
-func (c *VerifierChip) Verify(proofWithPis common.ProofWithPublicInputs, verifierData common.VerifierOnlyCircuitData, commonData common.CommonCircuitData) {
-	// Generate the parts of the witness that is for the plonky2 proof input
-	publicInputsHash := c.GetPublicInputsHash(proofWithPis.PublicInputs)
-	proofChallenges := c.GetChallenges(proofWithPis, publicInputsHash, commonData, verifierData)
+func (c *VerifierChip) Verify(proof common.Proof, publicInputs []field.F, verifierData common.VerifierOnlyCircuitData, commonData common.CommonCircuitData) {
+	// TODO: Need to range check all the proof and public input elements to make sure they are within goldilocks field
 
-	c.plonkChip.Verify(proofChallenges, proofWithPis.Proof.Openings, publicInputsHash)
+	// Generate the parts of the witness that is for the plonky2 proof input
+	publicInputsHash := c.GetPublicInputsHash(publicInputs)
+	proofChallenges := c.GetChallenges(proof, publicInputsHash, commonData, verifierData)
+
+	c.plonkChip.Verify(proofChallenges, proof.Openings, publicInputsHash)
 
 	initialMerkleCaps := []common.MerkleCap{
 		verifierData.ConstantSigmasCap,
-		proofWithPis.Proof.WiresCap,
-		proofWithPis.Proof.PlonkZsPartialProductsCap,
-		proofWithPis.Proof.QuotientPolysCap,
+		proof.WiresCap,
+		proof.PlonkZsPartialProductsCap,
+		proof.QuotientPolysCap,
 	}
 
 	// Seems like there is a bug in the emulated field code.
@@ -189,9 +191,9 @@ func (c *VerifierChip) Verify(proofWithPis common.ProofWithPublicInputs, verifie
 
 	c.friChip.VerifyFriProof(
 		fri.GetFriInstance(&commonData, c.qeAPI, proofChallenges.PlonkZeta, commonData.DegreeBits),
-		fri.ToFriOpenings(proofWithPis.Proof.Openings),
+		fri.ToFriOpenings(proof.Openings),
 		&proofChallenges.FriChallenges,
 		initialMerkleCaps,
-		&proofWithPis.Proof.OpeningProof,
+		&proof.OpeningProof,
 	)
 }

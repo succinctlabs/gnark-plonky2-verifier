@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
@@ -57,4 +58,27 @@ func TestPublicInputsHashWitness(t *testing.T) {
 	copy(in[:], utils.StrArrayToFrontendVariableArray(inStr))
 	copy(out[:], utils.StrArrayToFrontendVariableArray(outStr))
 	testCase(in, out)
+}
+
+func TestPublicInputsHashWitness2(t *testing.T) {
+	assert := test.NewAssert(t)
+
+	inStr := []string{"0", "1", "3736710860384812976"}
+	outStr := []string{"8416658900775745054", "12574228347150446423", "9629056739760131473", "3119289788404190010"}
+	var in [3]frontend.Variable
+	var out [4]frontend.Variable
+	copy(in[:], utils.StrArrayToFrontendVariableArray(inStr))
+	copy(out[:], utils.StrArrayToFrontendVariableArray(outStr))
+
+	circuit := TestPublicInputsHashCircuit{In: in, Out: out}
+	witness := TestPublicInputsHashCircuit{In: in, Out: out}
+
+	assert.ProverSucceeded(
+		&circuit,
+		&witness,
+		test.WithBackends(backend.GROTH16),
+		test.WithCurves(ecc.BN254),
+		test.NoFuzzing(),
+		test.NoSerialization(),
+	)
 }
