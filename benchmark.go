@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"math/big"
 	"os"
 	"time"
 
@@ -127,10 +129,37 @@ func createProof(plonky2Circuit string, r1cs constraint.ConstraintSystem, pk gro
 		os.Exit(1)
 	}
 
-	if serialize {
-		fProof, _ := os.Create("proof.proof")
-		proof.WriteTo(fProof)
-	}
+	const fpSize = 4 * 8
+	var buf bytes.Buffer
+	proof.WriteRawTo(&buf)
+	proofBytes := buf.Bytes()
+
+	var (
+		a [2]*big.Int
+		b [2][2]*big.Int
+		c [2]*big.Int
+	)
+
+	// proof.Ar, proof.Bs, proof.Krs
+	a[0] = new(big.Int).SetBytes(proofBytes[fpSize*0 : fpSize*1])
+	a[1] = new(big.Int).SetBytes(proofBytes[fpSize*1 : fpSize*2])
+	b[0][0] = new(big.Int).SetBytes(proofBytes[fpSize*2 : fpSize*3])
+	b[0][1] = new(big.Int).SetBytes(proofBytes[fpSize*3 : fpSize*4])
+	b[1][0] = new(big.Int).SetBytes(proofBytes[fpSize*4 : fpSize*5])
+	b[1][1] = new(big.Int).SetBytes(proofBytes[fpSize*5 : fpSize*6])
+	c[0] = new(big.Int).SetBytes(proofBytes[fpSize*6 : fpSize*7])
+	c[1] = new(big.Int).SetBytes(proofBytes[fpSize*7 : fpSize*8])
+
+	println("a[0] is ", a[0].String())
+	println("a[1] is ", a[1].String())
+
+	println("b[0][0] is ", b[0][0].String())
+	println("b[0][1] is ", b[0][1].String())
+	println("b[1][0] is ", b[1][0].String())
+	println("b[1][1] is ", b[1][1].String())
+
+	println("c[0] is ", c[0].String())
+	println("c[1] is ", c[1].String())
 
 	return proof
 }
