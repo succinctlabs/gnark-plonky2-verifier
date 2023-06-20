@@ -6,7 +6,7 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/field/goldilocks"
-	"github.com/consensys/gnark/backend/hint"
+	"github.com/consensys/gnark/constraint/solver"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/bits"
 	"github.com/consensys/gnark/std/math/emulated"
@@ -90,7 +90,7 @@ func IsZero(api frontend.API, fieldAPI *emulated.Field[emulated.Goldilocks], x F
 
 func init() {
 	// register hints
-	hint.Register(GoldilocksMulAddHint)
+	solver.RegisterHint(GoldilocksMulAddHint)
 }
 
 func GoldilocksRangeCheck(api frontend.API, x frontend.Variable) {
@@ -100,10 +100,7 @@ func GoldilocksRangeCheck(api frontend.API, x frontend.Variable) {
 	// Then it checks that if the bits[0:31] (in big-endian) are all 1, then bits[32:64] are all zero
 
 	// First decompose x into 64 bits.  The bits will be in little-endian order.
-	bits, err := api.Compiler().NewHint(bits.NBits, 64, x)
-	if err != nil {
-		panic(err)
-	}
+	bits := bits.ToBinary(api, x, bits.WithNbDigits(64))
 
 	// Those bits should compose back to x
 	reconstructedX := frontend.Variable(0)
