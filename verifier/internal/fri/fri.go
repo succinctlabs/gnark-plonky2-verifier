@@ -9,6 +9,7 @@ import (
 	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 )
@@ -17,6 +18,7 @@ type FriChip struct {
 	api      frontend.API                 `gnark:"-"`
 	fieldAPI field.FieldAPI               `gnark:"-"`
 	qeAPI    *field.QuadraticExtensionAPI `gnark:"-"`
+	gl       gl.Chip                      `gnark:"-"`
 
 	poseidonBN128Chip *poseidon.PoseidonBN128Chip
 
@@ -36,16 +38,17 @@ func NewFriChip(
 		qeAPI:             qeAPI,
 		poseidonBN128Chip: poseidonBN128Chip,
 		friParams:         friParams,
+		gl:                *gl.NewChip(api),
 	}
 }
 
-func (f *FriChip) assertLeadingZeros(powWitness field.F, friConfig common.FriConfig) {
+func (f *FriChip) assertLeadingZeros(powWitness gl.Variable, friConfig common.FriConfig) {
 	// Asserts that powWitness'es big-endian bit representation has at least `leading_zeros` leading zeros.
 	// Note that this is assuming that the Goldilocks field is being used.  Specfically that the
 	// field is 64 bits long
 	maxPowWitness := uint64(math.Pow(2, float64(64-friConfig.ProofOfWorkBits))) - 1
-	reducedPOWWitness := f.fieldAPI.Reduce(powWitness)
-	f.fieldAPI.AssertIsLessOrEqual(reducedPOWWitness, field.NewFieldConst(maxPowWitness))
+	reducedPowWitness := f.gl.Reduce(powWitness)
+	f.api.AssertIsLessOrEqual(reducedPowWitness.Value(), frontend.Variable(maxPowWitness))
 }
 
 func (f *FriChip) fromOpeningsAndAlpha(openings *FriOpenings, alpha field.QuadraticExtension) []field.QuadraticExtension {
@@ -136,41 +139,40 @@ func (f *FriChip) assertNoncanonicalIndicesOK() {
 func (f *FriChip) expFromBitsConstBase(
 	base goldilocks.Element,
 	exponentBits []frontend.Variable,
-) field.F {
-	product := field.ONE_F
+) gl.Variable {
+	product := gl.NewVariableFromConst(1)
 	for i, bit := range exponentBits {
-		pow := int64(1 << i)
 		// If the bit is on, we multiply product by base^pow.
 		// We can arithmetize this as:
 		//     product *= 1 + bit (base^pow - 1)
 		//     product = (base^pow - 1) product bit + product
+		pow := int64(1 << i)
 		basePow := goldilocks.NewElement(0)
 		basePow.Exp(base, big.NewInt(pow))
-
-		basePowElement := field.NewFieldConst(basePow.Uint64() - 1)
-
-		product = f.fieldAPI.Add(
-			f.fieldAPI.Mul(
-				f.fieldAPI.Mul(
-					basePowElement,
-					product),
-				f.fieldAPI.NewElement(bit)),
+		basePowVariable := gl.NewVariableFromConst(basePow.Uint64() - 1)
+		product = f.gl.Add(
+			f.gl.Mul(
+				f.gl.Mul(
+					basePowVariable,
+					product,
+				),
+				gl.NewVariable(bit),
+			),
 			product,
 		)
 	}
-
 	return product
 }
 
 func (f *FriChip) calculateSubgroupX(
 	xIndexBits []frontend.Variable,
 	nLog uint64,
-) field.F {
+) gl.Variable {
 	// Compute x from its index
 	// `subgroup_x` is `subgroup[x_index]`, i.e., the actual field element in the domain.
 	// TODO - Make these as global values
-	g := field.NewFieldConst(field.GOLDILOCKS_MULTIPLICATIVE_GROUP_GENERATOR.Uint64())
-	base := field.GoldilocksPrimitiveRootOfUnity(nLog)
+	g := gl.NewVariableFromConst(gl.MULTIPLICATIVE_GROUP_GENERATOR.Uint64())
+	base := gl.PrimitiveRootOfUnity(nLog)
 
 	// Create a reverse list of xIndexBits
 	xIndexBitsRev := make([]frontend.Variable, 0)
@@ -180,7 +182,7 @@ func (f *FriChip) calculateSubgroupX(
 
 	product := f.expFromBitsConstBase(base, xIndexBitsRev)
 
-	return f.fieldAPI.Mul(g, product)
+	return f.gl.Mul(g, product)
 }
 
 func (f *FriChip) friCombineInitial(
@@ -288,7 +290,7 @@ func (f *FriChip) interpolate(x field.QuadraticExtension, xPoints []field.Quadra
 }
 
 func (f *FriChip) computeEvaluation(
-	x field.F,
+	x gl.Variable,
 	xIndexWithinCosetBits []frontend.Variable,
 	arityBits uint64,
 	evals []field.QuadraticExtension,
@@ -323,14 +325,20 @@ func (f *FriChip) computeEvaluation(
 		revXIndexWithinCosetBits[len(xIndexWithinCosetBits)-1-i] = xIndexWithinCosetBits[i]
 	}
 	start := f.expFromBitsConstBase(gInv, revXIndexWithinCosetBits)
-	cosetStart := f.fieldAPI.Mul(start, x)
+	cosetStart := f.gl.Mul(start, x)
 
 	xPoints := make([]field.QuadraticExtension, len(evals))
 	yPoints := permutedEvals
 
 	// TODO: Make g_F a constant
 	g_F := f.qeAPI.FieldToQE(field.NewFieldConst(g.Uint64()))
-	xPoints[0] = f.qeAPI.FieldToQE(cosetStart)
+	cosetStart.Value()
+
+	// TODO: This is a hack to convert gl.Variable -> field.F
+	cosetStart2 := field.NewFieldConst(0)
+	cosetStart2.Limbs[0] = cosetStart.Value()
+
+	xPoints[0] = f.qeAPI.FieldToQE(cosetStart2)
 	for i := 1; i < len(evals); i++ {
 		xPoints[i] = f.qeAPI.MulExtension(xPoints[i-1], g_F)
 	}
@@ -379,7 +387,10 @@ func (f *FriChip) verifyQueryRound(
 		nLog,
 	)
 
-	subgroupX_QE := field.QuadraticExtension{subgroupX, field.ZERO_F}
+	// TODO: FIX
+	subgroupX2 := field.NewFieldConst(0)
+	subgroupX2.Limbs[0] = subgroupX.Value()
+	subgroupX_QE := field.QuadraticExtension{subgroupX2, field.ZERO_F}
 
 	oldEval := f.friCombineInitial(
 		instance,
@@ -454,13 +465,16 @@ func (f *FriChip) verifyQueryRound(
 
 		// Update the point x to x^arity.
 		for j := uint64(0); j < arityBits; j++ {
-			subgroupX = f.fieldAPI.Mul(subgroupX, subgroupX)
+			subgroupX = f.gl.Mul(subgroupX, subgroupX)
 		}
 
 		xIndexBits = cosetIndexBits
 	}
 
-	subgroupX_QE = f.qeAPI.FieldToQE(subgroupX)
+	// TODO: FIX
+	subgroupX3 := field.NewFieldConst(0)
+	subgroupX3.Limbs[0] = subgroupX.Value()
+	subgroupX_QE = f.qeAPI.FieldToQE(subgroupX3)
 	finalPolyEval := f.finalPolyEval(proof.FinalPoly, subgroupX_QE)
 
 	f.qeAPI.AssertIsEqual(oldEval, finalPolyEval)
@@ -485,7 +499,8 @@ func (f *FriChip) VerifyFriProof(
 	); */
 
 	// Check POW
-	f.assertLeadingZeros(friChallenges.FriPowResponse, f.friParams.Config)
+
+	f.assertLeadingZeros(gl.NewVariable(friChallenges.FriPowResponse.Limbs[0]), f.friParams.Config)
 
 	precomputedReducedEvals := f.fromOpeningsAndAlpha(&openings, friChallenges.FriAlpha)
 

@@ -16,7 +16,7 @@ type TestGoldilocksRangeCheckCircuit struct {
 
 func (c *TestGoldilocksRangeCheckCircuit) Define(api frontend.API) error {
 	chip := NewChip(api)
-	chip.RangeCheck(c.X)
+	chip.RangeCheck(NewVariable(c.X))
 	return nil
 }
 func TestGoldilocksRangeCheck(t *testing.T) {
@@ -46,8 +46,8 @@ type TestGoldilocksMulAddCircuit struct {
 
 func (c *TestGoldilocksMulAddCircuit) Define(api frontend.API) error {
 	chip := NewChip(api)
-	calculateValue := chip.MulAdd(c.X, c.Y, c.Z)
-	api.AssertIsEqual(calculateValue, c.ExpectedResult)
+	calculateValue := chip.MulAdd(NewVariable(c.X), NewVariable(c.Y), NewVariable(c.Z))
+	api.AssertIsEqual(calculateValue.value, c.ExpectedResult)
 	return nil
 }
 
