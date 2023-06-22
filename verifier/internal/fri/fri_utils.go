@@ -2,11 +2,12 @@ package fri
 
 import (
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 )
 
 type FriOpeningBatch struct {
-	Values []field.QuadraticExtension
+	Values []gl.QuadraticExtensionVariable
 }
 
 type FriOpenings struct {
@@ -36,7 +37,7 @@ type FriOracleInfo struct {
 }
 
 type FriBatchInfo struct {
-	Point       field.QuadraticExtension
+	Point       gl.QuadraticExtensionVariable
 	Polynomials []FriPolynomialInfo
 }
 
@@ -178,14 +179,17 @@ func friAllPolys(c *common.CommonCircuitData) []FriPolynomialInfo {
 	return returnArr
 }
 
-func GetFriInstance(c *common.CommonCircuitData, qeAPI *field.QuadraticExtensionAPI, zeta field.QuadraticExtension, degreeBits uint64) FriInstanceInfo {
+func GetFriInstance(c *common.CommonCircuitData, glApi *gl.Chip, zeta gl.QuadraticExtensionVariable, degreeBits uint64) FriInstanceInfo {
 	zetaBatch := FriBatchInfo{
 		Point:       zeta,
 		Polynomials: friAllPolys(c),
 	}
 
 	g := field.GoldilocksPrimitiveRootOfUnity(degreeBits)
-	zetaNext := qeAPI.MulExtension(qeAPI.FieldToQE(field.NewFieldConst(g.Uint64())), zeta)
+	zetaNext := glApi.MulExtension(
+		gl.QuadraticExtensionVariable{gl.NewVariableFromConst(g.Uint64()), gl.NewVariableFromConst(0)},
+		zeta,
+	)
 
 	zetaNextBath := FriBatchInfo{
 		Point:       zetaNext,

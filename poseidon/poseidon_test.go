@@ -8,6 +8,7 @@ import (
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/consensys/gnark/test"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/utils"
 )
 
@@ -22,14 +23,16 @@ func (circuit *TestPoseidonCircuit) Define(api frontend.API) error {
 
 	var input PoseidonState
 	for i := 0; i < 12; i++ {
-		input[i] = circuit.In[i]
+		input[i] = gl.NewVariable(circuit.In[i])
 	}
 
 	poseidonChip := NewPoseidonChip(api, goldilocksApi, qeAPI)
 	output := poseidonChip.Poseidon(input)
 
+	glApi := gl.NewChip(api)
+
 	for i := 0; i < 12; i++ {
-		api.AssertIsEqual(output[i], circuit.Out[i])
+		glApi.AssertIsEqual(output[i], gl.NewVariable(circuit.Out[i]))
 	}
 
 	return nil

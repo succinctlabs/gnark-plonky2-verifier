@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/fri"
@@ -16,14 +17,14 @@ type ChallengerChip struct {
 	poseidonChip      *poseidon.PoseidonChip
 	poseidonBN128Chip *poseidon.PoseidonBN128Chip
 	spongeState       [poseidon.SPONGE_WIDTH]frontend.Variable
-	inputBuffer       []field.F
-	outputBuffer      []field.F
+	inputBuffer       []gl.Variable
+	outputBuffer      []gl.Variable
 }
 
 func NewChallengerChip(api frontend.API, fieldAPI field.FieldAPI, poseidonChip *poseidon.PoseidonChip, poseidonBN128Chip *poseidon.PoseidonBN128Chip) *ChallengerChip {
 	var spongeState [poseidon.SPONGE_WIDTH]frontend.Variable
-	var inputBuffer []field.F
-	var outputBuffer []field.F
+	var inputBuffer []gl.Variable
+	var outputBuffer []gl.Variable
 
 	for i := 0; i < poseidon.SPONGE_WIDTH; i++ {
 		spongeState[i] = frontend.Variable(0)
@@ -40,7 +41,7 @@ func NewChallengerChip(api frontend.API, fieldAPI field.FieldAPI, poseidonChip *
 	}
 }
 
-func (c *ChallengerChip) ObserveElement(element field.F) {
+func (c *ChallengerChip) ObserveElement(element gl.Variable) {
 	c.outputBuffer = clearBuffer(c.outputBuffer)
 	c.inputBuffer = append(c.inputBuffer, element)
 	if len(c.inputBuffer) == poseidon.SPONGE_RATE {
@@ -48,7 +49,7 @@ func (c *ChallengerChip) ObserveElement(element field.F) {
 	}
 }
 
-func (c *ChallengerChip) ObserveElements(elements []field.F) {
+func (c *ChallengerChip) ObserveElements(elements []gl.Variable) {
 	for i := 0; i < len(elements); i++ {
 		c.ObserveElement(elements[i])
 	}
@@ -70,11 +71,11 @@ func (c *ChallengerChip) ObserveCap(cap []poseidon.PoseidonBN128HashOut) {
 	}
 }
 
-func (c *ChallengerChip) ObserveExtensionElement(element field.QuadraticExtension) {
+func (c *ChallengerChip) ObserveExtensionElement(element gl.QuadraticExtensionVariable) {
 	c.ObserveElements(element[:])
 }
 
-func (c *ChallengerChip) ObserveExtensionElements(elements []field.QuadraticExtension) {
+func (c *ChallengerChip) ObserveExtensionElements(elements []gl.QuadraticExtensionVariable) {
 	for i := 0; i < len(elements); i++ {
 		c.ObserveExtensionElement(elements[i])
 	}
@@ -138,8 +139,8 @@ func (c *ChallengerChip) GetFriChallenges(commitPhaseMerkleCaps []common.MerkleC
 	}
 }
 
-func clearBuffer(buffer []field.F) []field.F {
-	return make([]field.F, 0)
+func clearBuffer(buffer []gl.Variable) []gl.Variable {
+	return make([]gl.Variable, 0)
 }
 
 func (c *ChallengerChip) duplexing() {

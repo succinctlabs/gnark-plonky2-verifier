@@ -8,6 +8,7 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/utils"
 )
 
@@ -20,21 +21,22 @@ type TestPublicInputsHashCircuit struct {
 
 func (circuit *TestPublicInputsHashCircuit) Define(api frontend.API) error {
 	fieldAPI := field.NewFieldAPI(api)
+	glAPI := gl.NewChip(api)
 
 	// BN254 -> Binary(64) -> F
-	var input [3]field.F
+	var input [3]gl.Variable
 	for i := 0; i < 3; i++ {
-		input[i] = fieldAPI.FromBits(api.ToBinary(circuit.In[i], 64)...)
+		input[i] = gl.NewVariable(api.FromBinary(api.ToBinary(circuit.In[i], 64)...))
 	}
 
-	poseidonChip := &PoseidonChip{api: api, fieldAPI: fieldAPI}
+	poseidonChip := &PoseidonChip{api: api, fieldAPI: fieldAPI, gl: *glAPI}
 	output := poseidonChip.HashNoPad(input[:])
 
 	// Check that output is correct
 	for i := 0; i < 4; i++ {
-		fieldAPI.AssertIsEqual(
+		glAPI.AssertIsEqual(
 			output[i],
-			fieldAPI.FromBits(api.ToBinary(circuit.Out[i])...),
+			gl.NewVariable(api.FromBinary(api.ToBinary(circuit.Out[i])...)),
 		)
 	}
 

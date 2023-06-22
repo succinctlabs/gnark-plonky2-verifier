@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/frontend"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
 const D = 2
@@ -103,6 +104,12 @@ func (c *QuadraticExtensionAPI) VarToQE(a frontend.Variable) QuadraticExtension 
 
 func (c *QuadraticExtensionAPI) FieldToQE(a F) QuadraticExtension {
 	return QuadraticExtension{a, ZERO_F}
+}
+
+func ToQuadraticExtension(x gl.Variable) QuadraticExtension {
+	y := NewFieldConst(0)
+	y.Limbs[0] = x.Value()
+	return QuadraticExtension{y, ZERO_F}
 }
 
 // / Exponentiate `base` to the power of a known `exponent`.

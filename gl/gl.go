@@ -53,6 +53,16 @@ func NewVariableFromConst(x uint64) Variable {
 	return Variable{value: frontend.Variable(x)}
 }
 
+// The zero element in the Golidlocks field.
+func Zero() Variable {
+	return NewVariableFromConst(0)
+}
+
+// The one element in the Goldilocks field.
+func One() Variable {
+	return NewVariableFromConst(1)
+}
+
 // The chip used for Goldilocks field operations.
 type Chip struct {
 	api      frontend.API
@@ -73,9 +83,14 @@ func (p *Chip) Add(a Variable, b Variable) Variable {
 	return p.MulAdd(a, NewVariableFromConst(1), b)
 }
 
+// Adds two field elements such that x + y = z within the Golidlocks field.
+func (p *Chip) Sub(a Variable, b Variable) Variable {
+	return p.MulAdd(b, NewVariableFromConst(MODULUS.Uint64()-1), a)
+}
+
 // Multiplies two field elements such that x * y = z within the Golidlocks field.
 func (p *Chip) Mul(a Variable, b Variable) Variable {
-	return p.MulAdd(a, b, NewVariableFromConst(0))
+	return p.MulAdd(a, b, Zero())
 }
 
 // Multiplies two field elements and adds a field element such that x * y + z = c within the
@@ -143,10 +158,40 @@ func ReduceHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
 	return nil
 }
 
+// Computes the inverse of a field element x such that x * x^-1 = 1.
+func (p *Chip) Inverse(x Variable) Variable {
+	result, err := p.api.Compiler().NewHint(InverseHint, 1, x.value)
+	if err != nil {
+		panic(err)
+	}
+
+	inverse := NewVariable(result[0])
+	product := p.Mul(inverse, x)
+	p.api.AssertIsEqual(product, frontend.Variable(1))
+	return inverse
+}
+
+// The hint used to compute Inverse.
+func InverseHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
+	if len(inputs) != 1 {
+		panic("InverseHint expects 1 input operand")
+	}
+
+	input := inputs[0]
+	inputGl := goldilocks.NewElement(input.Uint64())
+	resultGl := goldilocks.NewElement(0)
+	resultGl.Inverse(&inputGl)
+
+	result := big.NewInt(0)
+	results[0] = resultGl.BigInt(result)
+
+	return nil
+}
+
 // Computes a field element raised to some power.
 func (p *Chip) Exp(x Variable, k *big.Int) Variable {
 	if k.IsUint64() && k.Uint64() == 0 {
-		return NewVariableFromConst(1)
+		return One()
 	}
 
 	e := k
@@ -212,6 +257,10 @@ func (p *Chip) RangeCheck(x Variable) {
 		),
 		frontend.Variable(0),
 	)
+}
+
+func (p *Chip) AssertIsEqual(x, y Variable) {
+	p.api.AssertIsEqual(x.value, y.value)
 }
 
 // Computes the n'th primitive root of unity for the Goldilocks field.

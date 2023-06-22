@@ -51,19 +51,28 @@ func (f *FriChip) assertLeadingZeros(powWitness gl.Variable, friConfig common.Fr
 	f.api.AssertIsLessOrEqual(reducedPowWitness.Value(), frontend.Variable(maxPowWitness))
 }
 
-func (f *FriChip) fromOpeningsAndAlpha(openings *FriOpenings, alpha field.QuadraticExtension) []field.QuadraticExtension {
+func (f *FriChip) fromOpeningsAndAlpha(
+	openings *FriOpenings,
+	alpha gl.QuadraticExtensionVariable,
+) []gl.QuadraticExtensionVariable {
 	// One reduced opening for all openings evaluated at point Zeta.
 	// Another one for all openings evaluated at point Zeta * Omega (which is only PlonkZsNext polynomial)
 
-	reducedOpenings := make([]field.QuadraticExtension, 0, 2)
+	reducedOpenings := make([]gl.QuadraticExtensionVariable, 0, 2)
 	for _, batch := range openings.Batches {
-		reducedOpenings = append(reducedOpenings, f.qeAPI.ReduceWithPowers(batch.Values, alpha))
+		reducedOpenings = append(reducedOpenings, f.gl.ReduceWithPowers(batch.Values, alpha))
 	}
 
 	return reducedOpenings
 }
 
-func (f *FriChip) verifyMerkleProofToCapWithCapIndex(leafData []field.F, leafIndexBits []frontend.Variable, capIndexBits []frontend.Variable, merkleCap common.MerkleCap, proof *common.MerkleProof) {
+func (f *FriChip) verifyMerkleProofToCapWithCapIndex(
+	leafData []gl.Variable,
+	leafIndexBits []frontend.Variable,
+	capIndexBits []frontend.Variable,
+	merkleCap common.MerkleCap,
+	proof *common.MerkleProof,
+) {
 	currentDigest := f.poseidonBN128Chip.HashOrNoop(leafData)
 	for i, sibling := range proof.Siblings {
 		bit := leafIndexBits[i]
@@ -188,11 +197,11 @@ func (f *FriChip) calculateSubgroupX(
 func (f *FriChip) friCombineInitial(
 	instance FriInstanceInfo,
 	proof common.FriInitialTreeProof,
-	friAlpha field.QuadraticExtension,
-	subgroupX_QE field.QuadraticExtension,
-	precomputedReducedEval []field.QuadraticExtension,
-) field.QuadraticExtension {
-	sum := f.qeAPI.ZERO_QE
+	friAlpha gl.QuadraticExtensionVariable,
+	subgroupX_QE gl.QuadraticExtensionVariable,
+	precomputedReducedEval []gl.QuadraticExtensionVariable,
+) gl.QuadraticExtensionVariable {
+	sum := gl.QuadraticExtensionVariable{gl.NewVariableFromConst(0), gl.NewVariableFromConst(0)}
 
 	if len(instance.Batches) != len(precomputedReducedEval) {
 		panic("len(openings) != len(precomputedReducedEval)")
@@ -203,20 +212,23 @@ func (f *FriChip) friCombineInitial(
 		reducedOpenings := precomputedReducedEval[i]
 
 		point := batch.Point
-		evals := make([]field.QuadraticExtension, 0)
+		evals := make([]gl.QuadraticExtensionVariable, 0)
 		for _, polynomial := range batch.Polynomials {
 			evals = append(
 				evals,
-				field.QuadraticExtension{proof.EvalsProofs[polynomial.OracleIndex].Elements[polynomial.PolynomialInfo], field.ZERO_F},
+				gl.QuadraticExtensionVariable{
+					proof.EvalsProofs[polynomial.OracleIndex].Elements[polynomial.PolynomialInfo],
+					gl.NewVariableFromConst(0),
+				},
 			)
 		}
 
-		reducedEvals := f.qeAPI.ReduceWithPowers(evals, friAlpha)
-		numerator := f.qeAPI.SubExtension(reducedEvals, reducedOpenings)
-		denominator := f.qeAPI.SubExtension(subgroupX_QE, point)
-		sum = f.qeAPI.MulExtension(f.qeAPI.ExpU64Extension(friAlpha, uint64(len(evals))), sum)
-		sum = f.qeAPI.AddExtension(
-			f.qeAPI.DivExtension(
+		reducedEvals := f.gl.ReduceWithPowers(evals, friAlpha)
+		numerator := f.gl.SubExtension(reducedEvals, reducedOpenings)
+		denominator := f.gl.SubExtension(subgroupX_QE, point)
+		sum = f.gl.MulExtension(f.gl.ExpU64Extension(friAlpha, uint64(len(evals))), sum)
+		sum = f.gl.AddExtension(
+			f.gl.DivExtension(
 				numerator,
 				denominator,
 			),
@@ -227,11 +239,11 @@ func (f *FriChip) friCombineInitial(
 	return sum
 }
 
-func (f *FriChip) finalPolyEval(finalPoly common.PolynomialCoeffs, point field.QuadraticExtension) field.QuadraticExtension {
-	ret := f.qeAPI.ZERO_QE
+func (f *FriChip) finalPolyEval(finalPoly common.PolynomialCoeffs, point gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
+	ret := gl.QuadraticExtensionVariable{gl.NewVariableFromConst(0), gl.NewVariableFromConst(0)}
 	for i := len(finalPoly.Coeffs) - 1; i >= 0; i-- {
-		ret = f.qeAPI.AddExtension(
-			f.qeAPI.MulExtension(
+		ret = f.gl.AddExtension(
+			f.gl.MulExtension(
 				ret,
 				point,
 			),
@@ -241,29 +253,34 @@ func (f *FriChip) finalPolyEval(finalPoly common.PolynomialCoeffs, point field.Q
 	return ret
 }
 
-func (f *FriChip) interpolate(x field.QuadraticExtension, xPoints []field.QuadraticExtension, yPoints []field.QuadraticExtension, barycentricWeights []field.QuadraticExtension) field.QuadraticExtension {
+func (f *FriChip) interpolate(
+	x gl.QuadraticExtensionVariable,
+	xPoints []gl.QuadraticExtensionVariable,
+	yPoints []gl.QuadraticExtensionVariable,
+	barycentricWeights []gl.QuadraticExtensionVariable,
+) gl.QuadraticExtensionVariable {
 	if len(xPoints) != len(yPoints) || len(xPoints) != len(barycentricWeights) {
 		panic("length of xPoints, yPoints, and barycentricWeights are inconsistent")
 	}
 
-	lX := f.qeAPI.ONE_QE
+	lX := gl.QuadraticExtensionVariable{gl.NewVariableFromConst(1), gl.NewVariableFromConst(0)}
 	for i := 0; i < len(xPoints); i++ {
-		lX = f.qeAPI.MulExtension(
+		lX = f.gl.MulExtension(
 			lX,
-			f.qeAPI.SubExtension(
+			f.gl.SubExtension(
 				x,
 				xPoints[i],
 			),
 		)
 	}
 
-	sum := f.qeAPI.ZERO_QE
+	sum := gl.QuadraticExtensionVariable{gl.NewVariableFromConst(0), gl.NewVariableFromConst(0)}
 	for i := 0; i < len(xPoints); i++ {
-		sum = f.qeAPI.AddExtension(
-			f.qeAPI.MulExtension(
-				f.qeAPI.DivExtension(
+		sum = f.gl.AddExtension(
+			f.gl.MulExtension(
+				f.gl.DivExtension(
 					barycentricWeights[i],
-					f.qeAPI.SubExtension(
+					f.gl.SubExtension(
 						x,
 						xPoints[i],
 					),
@@ -274,13 +291,13 @@ func (f *FriChip) interpolate(x field.QuadraticExtension, xPoints []field.Quadra
 		)
 	}
 
-	interpolation := f.qeAPI.MulExtension(lX, sum)
+	interpolation := f.gl.MulExtension(lX, sum)
 
 	returnField := interpolation
 	// Now check if x is already within the xPoints
 	for i := 0; i < len(xPoints); i++ {
-		returnField = f.qeAPI.Select(
-			f.qeAPI.IsZero(f.qeAPI.SubExtension(x, xPoints[i])),
+		returnField = f.gl.Lookup(
+			f.gl.IsZero(f.gl.SubExtension(x, xPoints[i])),
 			yPoints[i],
 			returnField,
 		)
@@ -293,9 +310,9 @@ func (f *FriChip) computeEvaluation(
 	x gl.Variable,
 	xIndexWithinCosetBits []frontend.Variable,
 	arityBits uint64,
-	evals []field.QuadraticExtension,
-	beta field.QuadraticExtension,
-) field.QuadraticExtension {
+	evals []gl.QuadraticExtensionVariable,
+	beta gl.QuadraticExtensionVariable,
+) gl.QuadraticExtensionVariable {
 	arity := 1 << arityBits
 	if (len(evals)) != arity {
 		panic("len(evals) ! arity")
@@ -304,7 +321,7 @@ func (f *FriChip) computeEvaluation(
 		panic("currently assuming that arityBits is <= 8")
 	}
 
-	g := field.GoldilocksPrimitiveRootOfUnity(arityBits)
+	g := gl.PrimitiveRootOfUnity(arityBits)
 	gInv := goldilocks.NewElement(0)
 	gInv.Exp(g, big.NewInt(int64(arity-1)))
 
@@ -312,7 +329,7 @@ func (f *FriChip) computeEvaluation(
 	// element's new index is the bit reverse of it's original index.
 	// TODO:  Optimization - Since the size of the evals array should be constant (e.g. 2^arityBits),
 	//        we can just hard code the permutation.
-	permutedEvals := make([]field.QuadraticExtension, len(evals))
+	permutedEvals := make([]gl.QuadraticExtensionVariable, len(evals))
 	for i := uint8(0); i < uint8(len(evals)); i++ {
 		newIndex := bits.Reverse8(i) >> arityBits
 		permutedEvals[newIndex] = evals[i]
@@ -327,38 +344,32 @@ func (f *FriChip) computeEvaluation(
 	start := f.expFromBitsConstBase(gInv, revXIndexWithinCosetBits)
 	cosetStart := f.gl.Mul(start, x)
 
-	xPoints := make([]field.QuadraticExtension, len(evals))
+	xPoints := make([]gl.QuadraticExtensionVariable, len(evals))
 	yPoints := permutedEvals
 
 	// TODO: Make g_F a constant
-	g_F := f.qeAPI.FieldToQE(field.NewFieldConst(g.Uint64()))
-	cosetStart.Value()
-
-	// TODO: This is a hack to convert gl.Variable -> field.F
-	cosetStart2 := field.NewFieldConst(0)
-	cosetStart2.Limbs[0] = cosetStart.Value()
-
-	xPoints[0] = f.qeAPI.FieldToQE(cosetStart2)
+	g_F := gl.QuadraticExtensionVariable{gl.NewVariableFromConst(g.Uint64()), gl.NewVariableFromConst(0)}
+	xPoints[0] = gl.QuadraticExtensionVariable{cosetStart, gl.NewVariableFromConst(0)}
 	for i := 1; i < len(evals); i++ {
-		xPoints[i] = f.qeAPI.MulExtension(xPoints[i-1], g_F)
+		xPoints[i] = f.gl.MulExtension(xPoints[i-1], g_F)
 	}
 
 	// TODO:  This is n^2.  Is there a way to do this better?
 	// Compute the barycentric weights
-	barycentricWeights := make([]field.QuadraticExtension, len(xPoints))
+	barycentricWeights := make([]gl.QuadraticExtensionVariable, len(xPoints))
 	for i := 0; i < len(xPoints); i++ {
-		barycentricWeights[i] = f.qeAPI.ONE_QE
+		barycentricWeights[i] = gl.QuadraticExtensionVariable{gl.NewVariableFromConst(1), gl.NewVariableFromConst(0)}
 		for j := 0; j < len(xPoints); j++ {
 			if i != j {
-				barycentricWeights[i] = f.qeAPI.MulExtension(
-					f.qeAPI.SubExtension(xPoints[i], xPoints[j]),
+				barycentricWeights[i] = f.gl.MulExtension(
+					f.gl.SubExtension(xPoints[i], xPoints[j]),
 					barycentricWeights[i],
 				)
 			}
 		}
 		// Take the inverse of the barycentric weights
 		// TODO: Can provide a witness to this value
-		barycentricWeights[i] = f.qeAPI.InverseExtension(barycentricWeights[i])
+		barycentricWeights[i] = f.gl.InverseExtension(barycentricWeights[i])
 	}
 
 	return f.interpolate(beta, xPoints, yPoints, barycentricWeights)
@@ -367,17 +378,17 @@ func (f *FriChip) computeEvaluation(
 func (f *FriChip) verifyQueryRound(
 	instance FriInstanceInfo,
 	challenges *common.FriChallenges,
-	precomputedReducedEval []field.QuadraticExtension,
+	precomputedReducedEval []gl.QuadraticExtensionVariable,
 	initialMerkleCaps []common.MerkleCap,
 	proof *common.FriProof,
-	xIndex field.F,
+	xIndex gl.Variable,
 	n uint64,
 	nLog uint64,
 	roundProof *common.FriQueryRound,
 ) {
 	f.assertNoncanonicalIndicesOK()
-	xIndex = f.fieldAPI.Reduce(xIndex)
-	xIndexBits := f.fieldAPI.ToBits(xIndex)[0 : f.friParams.DegreeBits+f.friParams.Config.RateBits]
+	xIndex = f.gl.Reduce(xIndex)
+	xIndexBits := f.api.ToBinary(xIndex, 64)[0 : f.friParams.DegreeBits+f.friParams.Config.RateBits]
 	capIndexBits := xIndexBits[len(xIndexBits)-int(f.friParams.Config.CapHeight):]
 
 	f.verifyInitialProof(xIndexBits, &roundProof.InitialTreesProof, initialMerkleCaps, capIndexBits)
@@ -387,10 +398,7 @@ func (f *FriChip) verifyQueryRound(
 		nLog,
 	)
 
-	// TODO: FIX
-	subgroupX2 := field.NewFieldConst(0)
-	subgroupX2.Limbs[0] = subgroupX.Value()
-	subgroupX_QE := field.QuadraticExtension{subgroupX2, field.ZERO_F}
+	subgroupX_QE := gl.QuadraticExtensionVariable{subgroupX, gl.NewVariableFromConst(0)}
 
 	oldEval := f.friCombineInitial(
 		instance,
@@ -415,11 +423,11 @@ func (f *FriChip) verifyQueryRound(
 		}
 
 		const NUM_LEAF_LOOKUPS = 4
-		var leafLookups [NUM_LEAF_LOOKUPS]field.QuadraticExtension
+		var leafLookups [NUM_LEAF_LOOKUPS]gl.QuadraticExtensionVariable
 		// First create the "leaf" lookup2 circuits
 		// The will use the least significant bits of the xIndexWithCosetBits array
 		for i := 0; i < NUM_LEAF_LOOKUPS; i++ {
-			leafLookups[i] = f.qeAPI.Lookup2(
+			leafLookups[i] = f.gl.Lookup2(
 				xIndexWithinCosetBits[0],
 				xIndexWithinCosetBits[1],
 				evals[i*NUM_LEAF_LOOKUPS],
@@ -430,7 +438,7 @@ func (f *FriChip) verifyQueryRound(
 		}
 
 		// Use the most 2 significant bits of the xIndexWithCosetBits array for the "root" lookup
-		newEval := f.qeAPI.Lookup2(
+		newEval := f.gl.Lookup2(
 			xIndexWithinCosetBits[2],
 			xIndexWithinCosetBits[3],
 			leafLookups[0],
@@ -439,7 +447,8 @@ func (f *FriChip) verifyQueryRound(
 			leafLookups[3],
 		)
 
-		f.qeAPI.AssertIsEqual(newEval, oldEval)
+		f.api.AssertIsEqual(newEval[0], oldEval[0])
+		f.api.AssertIsEqual(newEval[1], oldEval[1])
 
 		oldEval = f.computeEvaluation(
 			subgroupX,
@@ -450,7 +459,7 @@ func (f *FriChip) verifyQueryRound(
 		)
 
 		// Convert evals (array of QE) to fields by taking their 0th degree coefficients
-		fieldEvals := make([]field.F, 0, 2*len(evals))
+		fieldEvals := make([]gl.Variable, 0, 2*len(evals))
 		for j := 0; j < len(evals); j++ {
 			fieldEvals = append(fieldEvals, evals[j][0])
 			fieldEvals = append(fieldEvals, evals[j][1])
@@ -471,13 +480,11 @@ func (f *FriChip) verifyQueryRound(
 		xIndexBits = cosetIndexBits
 	}
 
-	// TODO: FIX
-	subgroupX3 := field.NewFieldConst(0)
-	subgroupX3.Limbs[0] = subgroupX.Value()
-	subgroupX_QE = f.qeAPI.FieldToQE(subgroupX3)
+	subgroupX_QE = gl.QuadraticExtensionVariable{subgroupX, gl.NewVariableFromConst(0)}
 	finalPolyEval := f.finalPolyEval(proof.FinalPoly, subgroupX_QE)
 
-	f.qeAPI.AssertIsEqual(oldEval, finalPolyEval)
+	f.api.AssertIsEqual(oldEval[0], finalPolyEval[0])
+	f.api.AssertIsEqual(oldEval[1], finalPolyEval[1])
 }
 
 func (f *FriChip) VerifyFriProof(
@@ -500,7 +507,7 @@ func (f *FriChip) VerifyFriProof(
 
 	// Check POW
 
-	f.assertLeadingZeros(gl.NewVariable(friChallenges.FriPowResponse.Limbs[0]), f.friParams.Config)
+	f.assertLeadingZeros(friChallenges.FriPowResponse, f.friParams.Config)
 
 	precomputedReducedEvals := f.fromOpeningsAndAlpha(&openings, friChallenges.FriAlpha)
 

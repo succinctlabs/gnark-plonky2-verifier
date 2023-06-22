@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
 const fullRounds = 8
@@ -15,6 +16,7 @@ const spongeRate = 3
 type PoseidonBN128Chip struct {
 	api      frontend.API   `gnark:"-"`
 	fieldAPI field.FieldAPI `gnark:"-"`
+	gl       gl.Chip        `gnark:"-"`
 }
 
 type PoseidonBN128State = [spongeWidth]frontend.Variable
@@ -34,7 +36,7 @@ func (c *PoseidonBN128Chip) Poseidon(state PoseidonBN128State) PoseidonBN128Stat
 	return state
 }
 
-func (c *PoseidonBN128Chip) HashNoPad(input []field.F) PoseidonBN128HashOut {
+func (c *PoseidonBN128Chip) HashNoPad(input []gl.Variable) PoseidonBN128HashOut {
 	state := PoseidonBN128State{
 		frontend.Variable(0),
 		frontend.Variable(0),
@@ -51,8 +53,8 @@ func (c *PoseidonBN128Chip) HashNoPad(input []field.F) PoseidonBN128HashOut {
 
 			bits := []frontend.Variable{}
 			for k := 0; k < len(bn128Chunk); k++ {
-				bn128Chunk[k] = c.fieldAPI.Reduce(bn128Chunk[k])
-				bits = append(bits, c.fieldAPI.ToBits(bn128Chunk[k])...)
+				bn128Chunk[k] = c.gl.Reduce(bn128Chunk[k])
+				bits = append(bits, c.api.ToBinary(bn128Chunk[k], 64)...)
 			}
 
 			state[stateIdx+1] = c.api.FromBinary(bits...)
@@ -64,7 +66,7 @@ func (c *PoseidonBN128Chip) HashNoPad(input []field.F) PoseidonBN128HashOut {
 	return PoseidonBN128HashOut(state[0])
 }
 
-func (c *PoseidonBN128Chip) HashOrNoop(input []field.F) PoseidonBN128HashOut {
+func (c *PoseidonBN128Chip) HashOrNoop(input []gl.Variable) PoseidonBN128HashOut {
 	if len(input) <= 3 {
 		returnVal := frontend.Variable(0)
 
