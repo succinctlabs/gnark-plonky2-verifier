@@ -41,7 +41,7 @@ func (c *PoseidonChip) Poseidon(input PoseidonState) PoseidonState {
 
 // The input elements MUST have all it's elements be within Goldilocks field.
 // The returned slice's elements will all be within Goldilocks field.
-func (c *PoseidonChip) HashNToMNoPad(input []gl.Variable, nbOutputs int) []frontend.Variable {
+func (c *PoseidonChip) HashNToMNoPad(input []gl.Variable, nbOutputs int) []gl.Variable {
 	var state PoseidonState
 
 	for i := 0; i < SPONGE_WIDTH; i++ {
@@ -57,7 +57,7 @@ func (c *PoseidonChip) HashNToMNoPad(input []gl.Variable, nbOutputs int) []front
 		state = c.Poseidon(state)
 	}
 
-	var outputs []frontend.Variable
+	var outputs []gl.Variable
 
 	for {
 		for i := 0; i < SPONGE_RATE; i++ {
@@ -82,7 +82,7 @@ func (c *PoseidonChip) HashNoPad(input []gl.Variable) PoseidonHashOut {
 
 	outputVars := c.HashNToMNoPad(inputVars, 4)
 	for i := 0; i < 4; i++ {
-		hash[i] = gl.NewVariable(outputVars[i])
+		hash[i] = outputVars[i]
 	}
 
 	return hash
