@@ -2,7 +2,6 @@ package poseidon
 
 import (
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
@@ -17,14 +16,12 @@ type PoseidonStateExtension = [SPONGE_WIDTH]gl.QuadraticExtensionVariable
 type PoseidonHashOut = [4]gl.Variable
 
 type PoseidonChip struct {
-	api      frontend.API                 `gnark:"-"`
-	fieldAPI field.FieldAPI               `gnark:"-"`
-	qeAPI    *field.QuadraticExtensionAPI `gnark:"-"`
-	gl       gl.Chip                      `gnark:"-"`
+	api frontend.API `gnark:"-"`
+	gl  gl.Chip      `gnark:"-"`
 }
 
-func NewPoseidonChip(api frontend.API, fieldAPI field.FieldAPI) *PoseidonChip {
-	return &PoseidonChip{api: api, fieldAPI: fieldAPI, gl: *gl.NewChip(api)}
+func NewPoseidonChip(api frontend.API) *PoseidonChip {
+	return &PoseidonChip{api: api, gl: *gl.NewChip(api)}
 }
 
 // The permutation function.

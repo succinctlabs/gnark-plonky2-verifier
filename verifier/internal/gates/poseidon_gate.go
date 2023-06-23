@@ -4,7 +4,6 @@ import (
 	"regexp"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 )
@@ -97,7 +96,7 @@ func (g *PoseidonGate) EvalUnfiltered(
 	glApi := gl.NewChip(api)
 	constraints := []gl.QuadraticExtensionVariable{}
 
-	poseidonChip := poseidon.NewPoseidonChip(api, field.NewFieldAPI(api))
+	poseidonChip := poseidon.NewPoseidonChip(api)
 
 	// Assert that `swap` is binary.
 	swap := vars.localWires[g.WireSwap()]

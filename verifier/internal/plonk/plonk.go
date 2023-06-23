@@ -3,6 +3,7 @@ package plonk
 import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/gates"
@@ -14,9 +15,9 @@ type PlonkChip struct {
 
 	commonData common.CommonCircuitData `gnark:"-"`
 
-	DEGREE        field.F                  `gnark:"-"`
-	DEGREE_BITS_F field.F                  `gnark:"-"`
-	DEGREE_QE     field.QuadraticExtension `gnark:"-"`
+	DEGREE        gl.Variable                   `gnark:"-"`
+	DEGREE_BITS_F gl.Variable                   `gnark:"-"`
+	DEGREE_QE     gl.QuadraticExtensionVariable `gnark:"-"`
 
 	evaluateGatesChip *gates.EvaluateGatesChip
 }
@@ -38,66 +39,68 @@ func NewPlonkChip(api frontend.API, qeAPI *field.QuadraticExtensionAPI, commonDa
 
 		commonData: commonData,
 
-		DEGREE:        field.NewFieldConst(1 << commonData.DegreeBits),
-		DEGREE_BITS_F: field.NewFieldConst(commonData.DegreeBits),
-		DEGREE_QE:     field.QuadraticExtension{field.NewFieldConst(1 << commonData.DegreeBits), field.ZERO_F},
+		DEGREE:        gl.NewVariableFromConst(1 << commonData.DegreeBits),
+		DEGREE_BITS_F: gl.NewVariableFromConst(commonData.DegreeBits),
+		DEGREE_QE:     gl.QuadraticExtensionVariable{gl.NewVariableFromConst(1 << commonData.DegreeBits), gl.Zero()},
 
 		evaluateGatesChip: evaluateGatesChip,
 	}
 }
 
-func (p *PlonkChip) expPowerOf2Extension(x field.QuadraticExtension) field.QuadraticExtension {
+func (p *PlonkChip) expPowerOf2Extension(x gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
+	glApi := gl.NewChip(p.api)
 	for i := uint64(0); i < p.commonData.DegreeBits; i++ {
-		x = p.qeAPI.SquareExtension(x)
+		x = glApi.MulExtension(x, x)
 	}
-
 	return x
 }
 
-func (p *PlonkChip) evalL0(x field.QuadraticExtension, xPowN field.QuadraticExtension) field.QuadraticExtension {
+func (p *PlonkChip) evalL0(x gl.QuadraticExtensionVariable, xPowN gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
 	// L_0(x) = (x^n - 1) / (n * (x - 1))
-	evalZeroPoly := p.qeAPI.SubExtension(
+	glApi := gl.NewChip(p.api)
+	evalZeroPoly := glApi.SubExtension(
 		xPowN,
-		p.qeAPI.ONE_QE,
+		gl.OneExtension(),
 	)
-	denominator := p.qeAPI.SubExtension(
-		p.qeAPI.ScalarMulExtension(x, p.DEGREE),
+	denominator := glApi.SubExtension(
+		glApi.ScalarMulExtension(x, p.DEGREE),
 		p.DEGREE_QE,
 	)
-	return p.qeAPI.DivExtension(
+	return glApi.DivExtension(
 		evalZeroPoly,
 		denominator,
 	)
 }
 
 func (p *PlonkChip) checkPartialProducts(
-	numerators []field.QuadraticExtension,
-	denominators []field.QuadraticExtension,
+	numerators []gl.QuadraticExtensionVariable,
+	denominators []gl.QuadraticExtensionVariable,
 	challengeNum uint64,
 	openings common.OpeningSet,
-) []field.QuadraticExtension {
+) []gl.QuadraticExtensionVariable {
+	glApi := gl.NewChip(p.api)
 	numPartProds := p.commonData.NumPartialProducts
 	quotDegreeFactor := p.commonData.QuotientDegreeFactor
 
-	productAccs := make([]field.QuadraticExtension, 0, numPartProds+2)
+	productAccs := make([]gl.QuadraticExtensionVariable, 0, numPartProds+2)
 	productAccs = append(productAccs, openings.PlonkZs[challengeNum])
 	productAccs = append(productAccs, openings.PartialProducts[challengeNum*numPartProds:(challengeNum+1)*numPartProds]...)
 	productAccs = append(productAccs, openings.PlonkZsNext[challengeNum])
 
-	partialProductChecks := make([]field.QuadraticExtension, 0, numPartProds)
+	partialProductChecks := make([]gl.QuadraticExtensionVariable, 0, numPartProds)
 
 	for i := uint64(0); i <= numPartProds; i += 1 {
 		ppStartIdx := i * quotDegreeFactor
 		numeProduct := numerators[ppStartIdx]
 		denoProduct := denominators[ppStartIdx]
 		for j := uint64(1); j < quotDegreeFactor; j++ {
-			numeProduct = p.qeAPI.MulExtension(numeProduct, numerators[ppStartIdx+j])
-			denoProduct = p.qeAPI.MulExtension(denoProduct, denominators[ppStartIdx+j])
+			numeProduct = glApi.MulExtension(numeProduct, numerators[ppStartIdx+j])
+			denoProduct = glApi.MulExtension(denoProduct, denominators[ppStartIdx+j])
 		}
 
-		partialProductCheck := p.qeAPI.SubExtension(
-			p.qeAPI.MulExtension(productAccs[i], numeProduct),
-			p.qeAPI.MulExtension(productAccs[i+1], denoProduct),
+		partialProductCheck := glApi.SubExtension(
+			glApi.MulExtension(productAccs[i], numeProduct),
+			glApi.MulExtension(productAccs[i+1], denoProduct),
 		)
 
 		partialProductChecks = append(partialProductChecks, partialProductCheck)
@@ -105,49 +108,55 @@ func (p *PlonkChip) checkPartialProducts(
 	return partialProductChecks
 }
 
-func (p *PlonkChip) evalVanishingPoly(vars gates.EvaluationVars, proofChallenges common.ProofChallenges, openings common.OpeningSet, zetaPowN field.QuadraticExtension) []field.QuadraticExtension {
+func (p *PlonkChip) evalVanishingPoly(
+	vars gates.EvaluationVars,
+	proofChallenges common.ProofChallenges,
+	openings common.OpeningSet,
+	zetaPowN gl.QuadraticExtensionVariable,
+) []gl.QuadraticExtensionVariable {
+	glApi := gl.NewChip(p.api)
 	constraintTerms := p.evaluateGatesChip.EvaluateGateConstraints(vars)
 
 	// Calculate the k[i] * x
-	sIDs := make([]field.QuadraticExtension, p.commonData.Config.NumRoutedWires)
+	sIDs := make([]gl.QuadraticExtensionVariable, p.commonData.Config.NumRoutedWires)
 
 	for i := uint64(0); i < p.commonData.Config.NumRoutedWires; i++ {
-		sIDs[i] = p.qeAPI.ScalarMulExtension(proofChallenges.PlonkZeta, p.commonData.KIs[i])
+		sIDs[i] = glApi.ScalarMulExtension(proofChallenges.PlonkZeta, p.commonData.KIs[i])
 	}
 
 	// Calculate L_0(zeta)
 	l0Zeta := p.evalL0(proofChallenges.PlonkZeta, zetaPowN)
 
-	vanishingZ1Terms := make([]field.QuadraticExtension, 0, p.commonData.Config.NumChallenges)
-	vanishingPartialProductsTerms := make([]field.QuadraticExtension, 0, p.commonData.Config.NumChallenges*p.commonData.NumPartialProducts)
+	vanishingZ1Terms := make([]gl.QuadraticExtensionVariable, 0, p.commonData.Config.NumChallenges)
+	vanishingPartialProductsTerms := make([]gl.QuadraticExtensionVariable, 0, p.commonData.Config.NumChallenges*p.commonData.NumPartialProducts)
 	for i := uint64(0); i < p.commonData.Config.NumChallenges; i++ {
 		// L_0(zeta) (Z(zeta) - 1) = 0
-		z1_term := p.qeAPI.MulExtension(
+		z1_term := glApi.MulExtension(
 			l0Zeta,
-			p.qeAPI.SubExtension(openings.PlonkZs[i], p.qeAPI.ONE_QE))
+			glApi.SubExtension(openings.PlonkZs[i], gl.OneExtension()))
 		vanishingZ1Terms = append(vanishingZ1Terms, z1_term)
 
-		numeratorValues := make([]field.QuadraticExtension, 0, p.commonData.Config.NumRoutedWires)
-		denominatorValues := make([]field.QuadraticExtension, 0, p.commonData.Config.NumRoutedWires)
+		numeratorValues := make([]gl.QuadraticExtensionVariable, 0, p.commonData.Config.NumRoutedWires)
+		denominatorValues := make([]gl.QuadraticExtensionVariable, 0, p.commonData.Config.NumRoutedWires)
 		for j := uint64(0); j < p.commonData.Config.NumRoutedWires; j++ {
 			// The numerator is `beta * s_id + wire_value + gamma`, and the denominator is
 			// `beta * s_sigma + wire_value + gamma`.
-			wireValuePlusGamma := p.qeAPI.AddExtension(
+			wireValuePlusGamma := glApi.AddExtension(
 				openings.Wires[j],
-				p.qeAPI.FieldToQE(proofChallenges.PlonkGammas[i]),
+				gl.NewQuadraticExtensionVariable(proofChallenges.PlonkGammas[i], gl.Zero()),
 			)
 
-			numerator := p.qeAPI.AddExtension(
-				p.qeAPI.MulExtension(
-					p.qeAPI.FieldToQE(proofChallenges.PlonkBetas[i]),
+			numerator := glApi.AddExtension(
+				glApi.MulExtension(
+					gl.NewQuadraticExtensionVariable(proofChallenges.PlonkBetas[i], gl.Zero()),
 					sIDs[j],
 				),
 				wireValuePlusGamma,
 			)
 
-			denominator := p.qeAPI.AddExtension(
-				p.qeAPI.MulExtension(
-					p.qeAPI.FieldToQE(proofChallenges.PlonkBetas[i]),
+			denominator := glApi.AddExtension(
+				glApi.MulExtension(
+					gl.NewQuadraticExtensionVariable(proofChallenges.PlonkBetas[i], gl.Zero()),
 					openings.PlonkSigmas[j],
 				),
 				wireValuePlusGamma,
@@ -166,17 +175,17 @@ func (p *PlonkChip) evalVanishingPoly(vars gates.EvaluationVars, proofChallenges
 	vanishingTerms := append(vanishingZ1Terms, vanishingPartialProductsTerms...)
 	vanishingTerms = append(vanishingTerms, constraintTerms...)
 
-	reducedValues := make([]field.QuadraticExtension, p.commonData.Config.NumChallenges)
+	reducedValues := make([]gl.QuadraticExtensionVariable, p.commonData.Config.NumChallenges)
 	for i := uint64(0); i < p.commonData.Config.NumChallenges; i++ {
-		reducedValues[i] = p.qeAPI.ZERO_QE
+		reducedValues[i] = gl.ZeroExtension()
 	}
 
 	// reverse iterate the vanishingPartialProductsTerms array
 	for i := len(vanishingTerms) - 1; i >= 0; i-- {
 		for j := uint64(0); j < p.commonData.Config.NumChallenges; j++ {
-			reducedValues[j] = p.qeAPI.AddExtension(
+			reducedValues[j] = glApi.AddExtension(
 				vanishingTerms[i],
-				p.qeAPI.ScalarMulExtension(
+				glApi.ScalarMulExtension(
 					reducedValues[j],
 					proofChallenges.PlonkAlphas[j],
 				),
@@ -187,7 +196,13 @@ func (p *PlonkChip) evalVanishingPoly(vars gates.EvaluationVars, proofChallenges
 	return reducedValues
 }
 
-func (p *PlonkChip) Verify(proofChallenges common.ProofChallenges, openings common.OpeningSet, publicInputsHash poseidon.PoseidonHashOut) {
+func (p *PlonkChip) Verify(
+	proofChallenges common.ProofChallenges,
+	openings common.OpeningSet,
+	publicInputsHash poseidon.PoseidonHashOut,
+) {
+	glApi := gl.NewChip(p.api)
+
 	// Calculate zeta^n
 	zetaPowN := p.expPowerOf2Extension(proofChallenges.PlonkZeta)
 
@@ -202,7 +217,7 @@ func (p *PlonkChip) Verify(proofChallenges common.ProofChallenges, openings comm
 	vanishingPolysZeta := p.evalVanishingPoly(*vars, proofChallenges, openings, zetaPowN)
 
 	// Calculate Z(H)
-	zHZeta := p.qeAPI.SubExtension(zetaPowN, p.qeAPI.ONE_QE)
+	zHZeta := glApi.SubExtension(zetaPowN, gl.OneExtension())
 
 	// `quotient_polys_zeta` holds `num_challenges * quotient_degree_factor` evaluations.
 	// Each chunk of `quotient_degree_factor` holds the evaluations of `t_0(zeta),...,t_{quotient_degree_factor-1}(zeta)`
@@ -212,14 +227,14 @@ func (p *PlonkChip) Verify(proofChallenges common.ProofChallenges, openings comm
 	for i := 0; i < len(vanishingPolysZeta); i++ {
 		quotientPolysStartIdx := i * int(p.commonData.QuotientDegreeFactor)
 		quotientPolysEndIdx := quotientPolysStartIdx + int(p.commonData.QuotientDegreeFactor)
-		prod := p.qeAPI.MulExtension(
+		prod := glApi.MulExtension(
 			zHZeta,
-			p.qeAPI.ReduceWithPowers(
+			glApi.ReduceWithPowers(
 				openings.QuotientPolys[quotientPolysStartIdx:quotientPolysEndIdx],
 				zetaPowN,
 			),
 		)
 
-		p.qeAPI.AssertIsEqual(vanishingPolysZeta[i], prod)
+		glApi.AssertIsEqualExtension(vanishingPolysZeta[i], prod)
 	}
 }

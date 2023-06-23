@@ -16,18 +16,18 @@ type ChallengerChip struct {
 	field             field.FieldAPI `gnark:"-"`
 	poseidonChip      *poseidon.PoseidonChip
 	poseidonBN128Chip *poseidon.PoseidonBN128Chip
-	spongeState       [poseidon.SPONGE_WIDTH]frontend.Variable
+	spongeState       [poseidon.SPONGE_WIDTH]gl.Variable
 	inputBuffer       []gl.Variable
 	outputBuffer      []gl.Variable
 }
 
 func NewChallengerChip(api frontend.API, fieldAPI field.FieldAPI, poseidonChip *poseidon.PoseidonChip, poseidonBN128Chip *poseidon.PoseidonBN128Chip) *ChallengerChip {
-	var spongeState [poseidon.SPONGE_WIDTH]frontend.Variable
+	var spongeState [poseidon.SPONGE_WIDTH]gl.Variable
 	var inputBuffer []gl.Variable
 	var outputBuffer []gl.Variable
 
 	for i := 0; i < poseidon.SPONGE_WIDTH; i++ {
-		spongeState[i] = frontend.Variable(0)
+		spongeState[i] = gl.NewVariableFromConst(0)
 	}
 
 	return &ChallengerChip{
@@ -87,7 +87,7 @@ func (c *ChallengerChip) ObserveOpenings(openings fri.FriOpenings) {
 	}
 }
 
-func (c *ChallengerChip) GetChallenge() field.F {
+func (c *ChallengerChip) GetChallenge() gl.Variable {
 	if len(c.inputBuffer) != 0 || len(c.outputBuffer) == 0 {
 		c.duplexing()
 	}
@@ -98,21 +98,21 @@ func (c *ChallengerChip) GetChallenge() field.F {
 	return challenge
 }
 
-func (c *ChallengerChip) GetNChallenges(n uint64) []field.F {
-	challenges := make([]field.F, n)
+func (c *ChallengerChip) GetNChallenges(n uint64) []gl.Variable {
+	challenges := make([]gl.Variable, n)
 	for i := uint64(0); i < n; i++ {
 		challenges[i] = c.GetChallenge()
 	}
 	return challenges
 }
 
-func (c *ChallengerChip) GetExtensionChallenge() field.QuadraticExtension {
+func (c *ChallengerChip) GetExtensionChallenge() gl.QuadraticExtensionVariable {
 	values := c.GetNChallenges(2)
-	return field.QuadraticExtension{values[0], values[1]}
+	return gl.QuadraticExtensionVariable{values[0], values[1]}
 }
 
 func (c *ChallengerChip) GetHash() poseidon.PoseidonHashOut {
-	return [4]field.F{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
+	return [4]gl.Variable{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
 }
 
 func (c *ChallengerChip) GetFriChallenges(
@@ -125,7 +125,7 @@ func (c *ChallengerChip) GetFriChallenges(
 	numFriQueries := config.NumQueryRounds
 	friAlpha := c.GetExtensionChallenge()
 
-	var friBetas []field.QuadraticExtension
+	var friBetas []gl.QuadraticExtensionVariable
 	for i := 0; i < len(commitPhaseMerkleCaps); i++ {
 		c.ObserveCap(commitPhaseMerkleCaps[i])
 		friBetas = append(friBetas, c.GetExtensionChallenge())
@@ -155,13 +155,15 @@ func (c *ChallengerChip) duplexing() {
 		panic("something went wrong")
 	}
 
+	glApi := gl.NewChip(c.api)
+
 	for i := 0; i < len(c.inputBuffer); i++ {
-		c.spongeState[i] = c.field.Reduce(c.inputBuffer[i]).Limbs[0]
+		c.spongeState[i] = glApi.Reduce(c.inputBuffer[i])
 	}
 	c.inputBuffer = clearBuffer(c.inputBuffer)
 	c.spongeState = c.poseidonChip.Poseidon(c.spongeState)
 	clearBuffer(c.outputBuffer)
 	for i := 0; i < poseidon.SPONGE_RATE; i++ {
-		c.outputBuffer = append(c.outputBuffer, c.field.NewElement(c.spongeState[i]))
+		c.outputBuffer = append(c.outputBuffer, c.spongeState[i])
 	}
 }

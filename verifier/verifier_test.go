@@ -9,6 +9,7 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/test"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/utils"
@@ -16,7 +17,7 @@ import (
 
 type TestVerifierCircuit struct {
 	Proof        common.Proof
-	PublicInputs []field.F `gnark:",public"`
+	PublicInputs []gl.Variable `gnark:",public"`
 
 	verifierChip       *verifier.VerifierChip `gnark:"-"`
 	plonky2CircuitName string                 `gnark:"-"`

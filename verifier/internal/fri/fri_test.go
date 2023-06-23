@@ -6,6 +6,7 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/fri"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/plonk"
@@ -23,9 +24,9 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	commonCircuitData := utils.DeserializeCommonCircuitData(circuit.commonCircuitDataFilename)
 	verifierOnlyCircuitData := utils.DeserializeVerifierOnlyCircuitData(circuit.verifierOnlyCircuitDataFilename)
 
+	glApi := gl.NewChip(api)
 	fieldAPI := field.NewFieldAPI(api)
-	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI)
-	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
+	poseidonChip := poseidon.NewPoseidonChip(api)
 	poseidonBN128Chip := poseidon.NewPoseidonBN128Chip(api, fieldAPI)
 	// friChip := fri.NewFriChip(api, fieldAPI, qeAPI, poseidonBN128Chip, &commonCircuitData.FriParams)
 	challengerChip := plonk.NewChallengerChip(api, fieldAPI, poseidonChip, poseidonBN128Chip)
@@ -34,17 +35,17 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	challengerChip.ObserveHash(poseidonChip.HashNoPad(proofWithPis.PublicInputs))
 	challengerChip.ObserveCap(proofWithPis.Proof.WiresCap)
 	plonkBetas := challengerChip.GetNChallenges(commonCircuitData.Config.NumChallenges) // For plonk betas
-	fieldAPI.AssertIsEqual(plonkBetas[0], field.NewFieldConst(17615363392879944733))
+	glApi.AssertIsEqual(plonkBetas[0], gl.NewVariableFromConst(17615363392879944733))
 	plonkGammas := challengerChip.GetNChallenges(commonCircuitData.Config.NumChallenges) // For plonk gammas
-	fieldAPI.AssertIsEqual(plonkGammas[0], field.NewFieldConst(15174493176564484303))
+	glApi.AssertIsEqual(plonkGammas[0], gl.NewVariableFromConst(15174493176564484303))
 
 	challengerChip.ObserveCap(proofWithPis.Proof.PlonkZsPartialProductsCap)
 	plonkAlphas := challengerChip.GetNChallenges(commonCircuitData.Config.NumChallenges) // For plonk alphas
-	fieldAPI.AssertIsEqual(plonkAlphas[0], field.NewFieldConst(9276470834414745550))
+	glApi.AssertIsEqual(plonkAlphas[0], gl.NewVariableFromConst(9276470834414745550))
 
 	challengerChip.ObserveCap(proofWithPis.Proof.QuotientPolysCap)
 	plonkZeta := challengerChip.GetExtensionChallenge()
-	fieldAPI.AssertIsEqual(plonkZeta[0], field.NewFieldConst(3892795992421241388))
+	glApi.AssertIsEqual(plonkZeta[0], gl.NewVariableFromConst(3892795992421241388))
 
 	challengerChip.ObserveOpenings(fri.ToFriOpenings(proofWithPis.Proof.Openings))
 
@@ -62,7 +63,7 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 
 	api.AssertIsEqual(friChallenges.FriPowResponse.Limb, 70715523064019)
 
-	// fieldAPI.AssertIsEqual(friChallenges.FriQueryIndices[0], field.NewFieldConst(11890500485816111017))
+	// glApi.AssertIsEqual(friChallenges.FriQueryIndices[0], gl.NewVariableFromConst(11890500485816111017))
 	var x uint64
 	x = 11890500485816111017
 	api.AssertIsEqual(friChallenges.FriQueryIndices[0].Limb, x)

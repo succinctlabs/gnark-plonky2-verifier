@@ -18,15 +18,12 @@ type TestPoseidonCircuit struct {
 }
 
 func (circuit *TestPoseidonCircuit) Define(api frontend.API) error {
-	goldilocksApi := field.NewFieldAPI(api)
-	qeAPI := field.NewQuadraticExtensionAPI(api, goldilocksApi)
-
 	var input PoseidonState
 	for i := 0; i < 12; i++ {
 		input[i] = gl.NewVariable(circuit.In[i])
 	}
 
-	poseidonChip := NewPoseidonChip(api, goldilocksApi, qeAPI)
+	poseidonChip := NewPoseidonChip(api)
 	output := poseidonChip.Poseidon(input)
 
 	glApi := gl.NewChip(api)

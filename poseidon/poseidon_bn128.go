@@ -25,7 +25,7 @@ type PoseidonBN128HashOut = frontend.Variable
 // This implementation is based on the following implementation:
 // https://github.com/iden3/go-iden3-crypto/blob/e5cf066b8be3da9a3df9544c65818df189fdbebe/poseidon/poseidon.go
 func NewPoseidonBN128Chip(api frontend.API, fieldAPI field.FieldAPI) *PoseidonBN128Chip {
-	return &PoseidonBN128Chip{api: api, fieldAPI: fieldAPI}
+	return &PoseidonBN128Chip{api: api, fieldAPI: fieldAPI, gl: *gl.NewChip(api)}
 }
 
 func (c *PoseidonBN128Chip) Poseidon(state PoseidonBN128State) PoseidonBN128State {
@@ -54,7 +54,7 @@ func (c *PoseidonBN128Chip) HashNoPad(input []gl.Variable) PoseidonBN128HashOut 
 			bits := []frontend.Variable{}
 			for k := 0; k < len(bn128Chunk); k++ {
 				bn128Chunk[k] = c.gl.Reduce(bn128Chunk[k])
-				bits = append(bits, c.api.ToBinary(bn128Chunk[k], 64)...)
+				bits = append(bits, c.api.ToBinary(bn128Chunk[k].Limb, 64)...)
 			}
 
 			state[stateIdx+1] = c.api.FromBinary(bits...)
@@ -91,17 +91,17 @@ func (c *PoseidonBN128Chip) TwoToOne(left PoseidonBN128HashOut, right PoseidonBN
 	return state[0]
 }
 
-func (c *PoseidonBN128Chip) ToVec(hash PoseidonBN128HashOut) []field.F {
+func (c *PoseidonBN128Chip) ToVec(hash PoseidonBN128HashOut) []gl.Variable {
 	bits := c.api.ToBinary(hash)
 
-	returnElements := []field.F{}
+	returnElements := []gl.Variable{}
 
 	// Split into 7 byte chunks, since 8 byte chunks can result in collisions
 	chunkSize := 56
 	for i := 0; i < len(bits); i += chunkSize {
 		maxIdx := c.min(len(bits), i+chunkSize)
 		bitChunk := bits[i:maxIdx]
-		returnElements = append(returnElements, c.fieldAPI.FromBits(bitChunk...))
+		returnElements = append(returnElements, gl.NewVariable(c.api.FromBinary(bitChunk...)))
 	}
 
 	return returnElements

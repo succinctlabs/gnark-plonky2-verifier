@@ -388,7 +388,7 @@ func (f *FriChip) verifyQueryRound(
 ) {
 	f.assertNoncanonicalIndicesOK()
 	xIndex = f.gl.Reduce(xIndex)
-	xIndexBits := f.api.ToBinary(xIndex, 64)[0 : f.friParams.DegreeBits+f.friParams.Config.RateBits]
+	xIndexBits := f.api.ToBinary(xIndex.Limb, 64)[0 : f.friParams.DegreeBits+f.friParams.Config.RateBits]
 	capIndexBits := xIndexBits[len(xIndexBits)-int(f.friParams.Config.CapHeight):]
 
 	f.verifyInitialProof(xIndexBits, &roundProof.InitialTreesProof, initialMerkleCaps, capIndexBits)
@@ -447,8 +447,9 @@ func (f *FriChip) verifyQueryRound(
 			leafLookups[3],
 		)
 
-		f.api.AssertIsEqual(newEval[0], oldEval[0])
-		f.api.AssertIsEqual(newEval[1], oldEval[1])
+		glApi := gl.NewChip(f.api)
+		glApi.AssertIsEqual(newEval[0], oldEval[0])
+		glApi.AssertIsEqual(newEval[1], oldEval[1])
 
 		oldEval = f.computeEvaluation(
 			subgroupX,

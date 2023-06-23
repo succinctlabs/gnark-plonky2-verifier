@@ -3,6 +3,7 @@ package verifier
 import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/fri"
@@ -29,7 +30,7 @@ func NewVerifierChip(api frontend.API, commonCircuitData common.CommonCircuitDat
 	plonkChip := plonk.NewPlonkChip(api, qeAPI, commonCircuitData)
 
 	// We are using goldilocks poseidon for the challenge computation
-	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
+	poseidonChip := poseidon.NewPoseidonChip(api)
 
 	return &VerifierChip{
 		api:               api,
@@ -42,7 +43,7 @@ func NewVerifierChip(api frontend.API, commonCircuitData common.CommonCircuitDat
 	}
 }
 
-func (c *VerifierChip) GetPublicInputsHash(publicInputs []field.F) poseidon.PoseidonHashOut {
+func (c *VerifierChip) GetPublicInputsHash(publicInputs []gl.Variable) poseidon.PoseidonHashOut {
 	return c.poseidonChip.HashNoPad(publicInputs)
 }
 
@@ -154,7 +155,13 @@ func (c *VerifierChip) generateProofInput(commonData common.CommonCircuitData) c
 }
 */
 
-func (c *VerifierChip) Verify(proof common.Proof, publicInputs []field.F, verifierData common.VerifierOnlyCircuitData, commonData common.CommonCircuitData) {
+func (c *VerifierChip) Verify(
+	proof common.Proof,
+	publicInputs []gl.Variable,
+	verifierData common.VerifierOnlyCircuitData,
+	commonData common.CommonCircuitData,
+) {
+	glApi := gl.NewChip(c.api)
 	// TODO: Need to range check all the proof and public input elements to make sure they are within goldilocks field
 
 	// Generate the parts of the witness that is for the plonky2 proof input
@@ -172,25 +179,25 @@ func (c *VerifierChip) Verify(proof common.Proof, publicInputs []field.F, verifi
 
 	// Seems like there is a bug in the emulated field code.
 	// Add ZERO to all of the fri challenges values to reduce them.
-	proofChallenges.PlonkZeta[0] = c.fieldAPI.Add(proofChallenges.PlonkZeta[0], field.ZERO_F)
-	proofChallenges.PlonkZeta[1] = c.fieldAPI.Add(proofChallenges.PlonkZeta[1], field.ZERO_F)
+	proofChallenges.PlonkZeta[0] = glApi.Add(proofChallenges.PlonkZeta[0], gl.Zero())
+	proofChallenges.PlonkZeta[1] = glApi.Add(proofChallenges.PlonkZeta[1], gl.Zero())
 
-	proofChallenges.FriChallenges.FriAlpha[0] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriAlpha[0], field.ZERO_F)
-	proofChallenges.FriChallenges.FriAlpha[1] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriAlpha[1], field.ZERO_F)
+	proofChallenges.FriChallenges.FriAlpha[0] = glApi.Add(proofChallenges.FriChallenges.FriAlpha[0], gl.Zero())
+	proofChallenges.FriChallenges.FriAlpha[1] = glApi.Add(proofChallenges.FriChallenges.FriAlpha[1], gl.Zero())
 
 	for i := 0; i < len(proofChallenges.FriChallenges.FriBetas); i++ {
-		proofChallenges.FriChallenges.FriBetas[i][0] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriBetas[i][0], field.ZERO_F)
-		proofChallenges.FriChallenges.FriBetas[i][1] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriBetas[i][1], field.ZERO_F)
+		proofChallenges.FriChallenges.FriBetas[i][0] = glApi.Add(proofChallenges.FriChallenges.FriBetas[i][0], gl.Zero())
+		proofChallenges.FriChallenges.FriBetas[i][1] = glApi.Add(proofChallenges.FriChallenges.FriBetas[i][1], gl.Zero())
 	}
 
-	proofChallenges.FriChallenges.FriPowResponse = c.fieldAPI.Add(proofChallenges.FriChallenges.FriPowResponse, field.ZERO_F)
+	proofChallenges.FriChallenges.FriPowResponse = glApi.Add(proofChallenges.FriChallenges.FriPowResponse, gl.Zero())
 
 	for i := 0; i < len(proofChallenges.FriChallenges.FriQueryIndices); i++ {
-		proofChallenges.FriChallenges.FriQueryIndices[i] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriQueryIndices[i], field.ZERO_F)
+		proofChallenges.FriChallenges.FriQueryIndices[i] = glApi.Add(proofChallenges.FriChallenges.FriQueryIndices[i], gl.Zero())
 	}
 
 	c.friChip.VerifyFriProof(
-		fri.GetFriInstance(&commonData, c.qeAPI, proofChallenges.PlonkZeta, commonData.DegreeBits),
+		fri.GetFriInstance(&commonData, glApi, proofChallenges.PlonkZeta, commonData.DegreeBits),
 		fri.ToFriOpenings(proof.Openings),
 		&proofChallenges.FriChallenges,
 		initialMerkleCaps,
