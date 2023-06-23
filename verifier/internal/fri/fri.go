@@ -372,6 +372,12 @@ func (f *FriChip) computeEvaluation(
 		barycentricWeights[i] = f.gl.InverseExtension(barycentricWeights[i])
 	}
 
+	fmt.Println("beta", beta[0].Limb, beta[1].Limb)
+	for i := 0; i < len(xPoints); i++ {
+		fmt.Println("xPoints", i, xPoints[i][0].Limb, xPoints[i][1].Limb)
+		fmt.Println("yPoints", i, yPoints[i][0].Limb, yPoints[i][1].Limb)
+		fmt.Println("barycentricWeights", i, barycentricWeights[i][0].Limb, barycentricWeights[i][1].Limb)
+	}
 	return f.interpolate(beta, xPoints, yPoints, barycentricWeights)
 }
 
