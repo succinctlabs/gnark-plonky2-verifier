@@ -65,8 +65,8 @@ func (p *Chip) ScalarMulExtension(
 }
 
 func (p *Chip) IsZero(x QuadraticExtensionVariable) frontend.Variable {
-	x0IsZero := p.api.IsZero(x[0])
-	x1IsZero := p.api.IsZero(x[1])
+	x0IsZero := p.api.IsZero(x[0].Limb)
+	x1IsZero := p.api.IsZero(x[1].Limb)
 	return p.api.Mul(x0IsZero, x1IsZero)
 }
 
@@ -140,8 +140,8 @@ func (p *Chip) Lookup(
 	b frontend.Variable,
 	x, y QuadraticExtensionVariable,
 ) QuadraticExtensionVariable {
-	c0 := p.api.Select(b, x[0].Limb, y[0].Limb)
-	c1 := p.api.Select(b, x[1].Limb, y[1].Limb)
+	c0 := p.api.Select(b, y[0].Limb, x[0].Limb)
+	c1 := p.api.Select(b, y[1].Limb, x[1].Limb)
 	return QuadraticExtensionVariable{NewVariable(c0), NewVariable(c1)}
 }
 
