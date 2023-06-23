@@ -201,7 +201,7 @@ func (f *FriChip) friCombineInitial(
 	subgroupX_QE gl.QuadraticExtensionVariable,
 	precomputedReducedEval []gl.QuadraticExtensionVariable,
 ) gl.QuadraticExtensionVariable {
-	sum := gl.QuadraticExtensionVariable{gl.NewVariableFromConst(0), gl.NewVariableFromConst(0)}
+	sum := gl.ZeroExtension()
 
 	if len(instance.Batches) != len(precomputedReducedEval) {
 		panic("len(openings) != len(precomputedReducedEval)")
@@ -218,7 +218,7 @@ func (f *FriChip) friCombineInitial(
 				evals,
 				gl.QuadraticExtensionVariable{
 					proof.EvalsProofs[polynomial.OracleIndex].Elements[polynomial.PolynomialInfo],
-					gl.NewVariableFromConst(0),
+					gl.Zero(),
 				},
 			)
 		}
@@ -448,6 +448,7 @@ func (f *FriChip) verifyQueryRound(
 		)
 
 		glApi := gl.NewChip(f.api)
+		fmt.Println(newEval[0], oldEval[0])
 		glApi.AssertIsEqual(newEval[0], oldEval[0])
 		glApi.AssertIsEqual(newEval[1], oldEval[1])
 

@@ -8,6 +8,7 @@ import (
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
+	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/fri"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/plonk"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/utils"
@@ -26,9 +27,10 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 
 	glApi := gl.NewChip(api)
 	fieldAPI := field.NewFieldAPI(api)
+	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI)
 	poseidonChip := poseidon.NewPoseidonChip(api)
 	poseidonBN128Chip := poseidon.NewPoseidonBN128Chip(api, fieldAPI)
-	// friChip := fri.NewFriChip(api, fieldAPI, qeAPI, poseidonBN128Chip, &commonCircuitData.FriParams)
+	friChip := fri.NewFriChip(api, fieldAPI, qeAPI, poseidonBN128Chip, &commonCircuitData.FriParams)
 	challengerChip := plonk.NewChallengerChip(api, fieldAPI, poseidonChip, poseidonBN128Chip)
 
 	challengerChip.ObserveBN128Hash(verifierOnlyCircuitData.CircuitDigest)
@@ -68,39 +70,39 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	x = 11890500485816111017
 	api.AssertIsEqual(friChallenges.FriQueryIndices[0].Limb, x)
 
-	// initialMerkleCaps := []common.MerkleCap{
-	// 	verifierOnlyCircuitData.ConstantSigmasCap,
-	// 	proofWithPis.Proof.WiresCap,
-	// 	proofWithPis.Proof.PlonkZsPartialProductsCap,
-	// 	proofWithPis.Proof.QuotientPolysCap,
-	// }
+	initialMerkleCaps := []common.MerkleCap{
+		verifierOnlyCircuitData.ConstantSigmasCap,
+		proofWithPis.Proof.WiresCap,
+		proofWithPis.Proof.PlonkZsPartialProductsCap,
+		proofWithPis.Proof.QuotientPolysCap,
+	}
 
-	// // Seems like there is a bug in the emulated field code.
-	// // Add ZERO to all of the fri challenges values to reduce them.
-	// plonkZeta[0] = fieldAPI.Add(plonkZeta[0], field.ZERO_F)
-	// plonkZeta[1] = fieldAPI.Add(plonkZeta[1], field.ZERO_F)
+	// Seems like there is a bug in the emulated field code.
+	// Add ZERO to all of the fri challenges values to reduce them.
+	plonkZeta[0] = glApi.Add(plonkZeta[0], gl.Zero())
+	plonkZeta[1] = glApi.Add(plonkZeta[1], gl.Zero())
 
-	// friChallenges.FriAlpha[0] = fieldAPI.Add(friChallenges.FriAlpha[0], field.ZERO_F)
-	// friChallenges.FriAlpha[1] = fieldAPI.Add(friChallenges.FriAlpha[1], field.ZERO_F)
+	friChallenges.FriAlpha[0] = glApi.Add(friChallenges.FriAlpha[0], gl.Zero())
+	friChallenges.FriAlpha[1] = glApi.Add(friChallenges.FriAlpha[1], gl.Zero())
 
-	// for i := 0; i < len(friChallenges.FriBetas); i++ {
-	// 	friChallenges.FriBetas[i][0] = fieldAPI.Add(friChallenges.FriBetas[i][0], field.ZERO_F)
-	// 	friChallenges.FriBetas[i][1] = fieldAPI.Add(friChallenges.FriBetas[i][1], field.ZERO_F)
-	// }
+	for i := 0; i < len(friChallenges.FriBetas); i++ {
+		friChallenges.FriBetas[i][0] = glApi.Add(friChallenges.FriBetas[i][0], gl.Zero())
+		friChallenges.FriBetas[i][1] = glApi.Add(friChallenges.FriBetas[i][1], gl.Zero())
+	}
 
-	// friChallenges.FriPowResponse = fieldAPI.Add(friChallenges.FriPowResponse, field.ZERO_F)
+	friChallenges.FriPowResponse = glApi.Add(friChallenges.FriPowResponse, gl.Zero())
 
-	// for i := 0; i < len(friChallenges.FriQueryIndices); i++ {
-	// 	friChallenges.FriQueryIndices[i] = fieldAPI.Add(friChallenges.FriQueryIndices[i], field.ZERO_F)
-	// }
+	for i := 0; i < len(friChallenges.FriQueryIndices); i++ {
+		friChallenges.FriQueryIndices[i] = glApi.Add(friChallenges.FriQueryIndices[i], gl.Zero())
+	}
 
-	// friChip.VerifyFriProof(
-	// 	fri.GetFriInstance(&commonCircuitData, qeAPI, plonkZeta, commonCircuitData.DegreeBits),
-	// 	fri.ToFriOpenings(proofWithPis.Proof.Openings),
-	// 	&friChallenges,
-	// 	initialMerkleCaps,
-	// 	&proofWithPis.Proof.OpeningProof,
-	// )
+	friChip.VerifyFriProof(
+		fri.GetFriInstance(&commonCircuitData, glApi, plonkZeta, commonCircuitData.DegreeBits),
+		fri.ToFriOpenings(proofWithPis.Proof.Openings),
+		&friChallenges,
+		initialMerkleCaps,
+		&proofWithPis.Proof.OpeningProof,
+	)
 
 	return nil
 }
