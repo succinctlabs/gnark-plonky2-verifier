@@ -158,11 +158,46 @@ func MulAddHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
 
 // Reduces a field element x such that x % MODULUS = y.
 func (p *Chip) Reduce(x Variable) Variable {
-	result, err := p.api.Compiler().NewHint(ReduceHint, 1, x.Limb)
+	// Witness a `carry` and `offset` such that:
+	//
+	// 		MODULUS * carry + offset = x
+	//
+	// Must check that offset \in [0, MODULUS) and carry \in [0, 2^170] to ensure that this
+	// computation does not overflow.
+
+	result, err := p.api.Compiler().NewHint(ReduceHint, 2, x.Limb)
 	if err != nil {
 		panic(err)
 	}
-	return NewVariable(result[0])
+
+	quotient := result[0]
+	p.api.ToBinary(quotient, 170)
+
+	remainder := NewVariable(result[1])
+	p.RangeCheck(remainder)
+	return remainder
+}
+
+// Reduces a field element x such that x % MODULUS = y.
+func (p *Chip) ReduceWithMaxBits(x Variable, maxNbBits uint64) Variable {
+	// Witness a `carry` and `offset` such that:
+	//
+	// 		MODULUS * carry + offset = x
+	//
+	// Must check that offset \in [0, MODULUS) and carry \in [0, 2^170] to ensure that this
+	// computation does not overflow.
+
+	result, err := p.api.Compiler().NewHint(ReduceHint, 2, x.Limb)
+	if err != nil {
+		panic(err)
+	}
+
+	quotient := result[0]
+	p.api.ToBinary(quotient, int(maxNbBits))
+
+	remainder := NewVariable(result[1])
+	p.RangeCheck(remainder)
+	return remainder
 }
 
 // The hint used to compute Reduce.
@@ -170,10 +205,11 @@ func ReduceHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
 	if len(inputs) != 1 {
 		panic("ReduceHint expects 1 input operand")
 	}
-	reduced := big.NewInt(0)
-	reduced.Mod(inputs[0], MODULUS)
-	results[0] = reduced
-
+	input := inputs[0]
+	quotient := new(big.Int).Div(input, MODULUS)
+	remainder := new(big.Int).Rem(input, MODULUS)
+	results[0] = quotient
+	results[1] = remainder
 	return nil
 }
 

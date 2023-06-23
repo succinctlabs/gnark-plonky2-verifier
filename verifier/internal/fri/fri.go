@@ -226,7 +226,7 @@ func (f *FriChip) friCombineInitial(
 		reducedEvals := f.gl.ReduceWithPowers(evals, friAlpha)
 		numerator := f.gl.SubExtension(reducedEvals, reducedOpenings)
 		denominator := f.gl.SubExtension(subgroupX_QE, point)
-		sum = f.gl.MulExtension(f.gl.ExpU64Extension(friAlpha, uint64(len(evals))), sum)
+		sum = f.gl.MulExtension(f.gl.ExpExtension(friAlpha, uint64(len(evals))), sum)
 		sum = f.gl.AddExtension(
 			f.gl.DivExtension(
 				numerator,
