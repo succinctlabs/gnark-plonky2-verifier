@@ -263,7 +263,7 @@ func (f *FriChip) interpolate(
 		panic("length of xPoints, yPoints, and barycentricWeights are inconsistent")
 	}
 
-	lX := gl.QuadraticExtensionVariable{gl.NewVariableFromConst(1), gl.NewVariableFromConst(0)}
+	lX := gl.OneExtension()
 	for i := 0; i < len(xPoints); i++ {
 		lX = f.gl.MulExtension(
 			lX,
@@ -274,7 +274,7 @@ func (f *FriChip) interpolate(
 		)
 	}
 
-	sum := gl.QuadraticExtensionVariable{gl.NewVariableFromConst(0), gl.NewVariableFromConst(0)}
+	sum := gl.ZeroExtension()
 	for i := 0; i < len(xPoints); i++ {
 		sum = f.gl.AddExtension(
 			f.gl.MulExtension(
@@ -298,8 +298,8 @@ func (f *FriChip) interpolate(
 	for i := 0; i < len(xPoints); i++ {
 		returnField = f.gl.Lookup(
 			f.gl.IsZero(f.gl.SubExtension(x, xPoints[i])),
-			yPoints[i],
 			returnField,
+			yPoints[i],
 		)
 	}
 
@@ -372,12 +372,6 @@ func (f *FriChip) computeEvaluation(
 		barycentricWeights[i] = f.gl.InverseExtension(barycentricWeights[i])
 	}
 
-	fmt.Println("beta", beta[0].Limb, beta[1].Limb)
-	for i := 0; i < len(xPoints); i++ {
-		fmt.Println("xPoints", i, xPoints[i][0].Limb, xPoints[i][1].Limb)
-		fmt.Println("yPoints", i, yPoints[i][0].Limb, yPoints[i][1].Limb)
-		fmt.Println("barycentricWeights", i, barycentricWeights[i][0].Limb, barycentricWeights[i][1].Limb)
-	}
 	return f.interpolate(beta, xPoints, yPoints, barycentricWeights)
 }
 
@@ -463,9 +457,6 @@ func (f *FriChip) verifyQueryRound(
 			leafLookups[3],
 		)
 
-		fmt.Println("yo")
-		fmt.Println("New Eval:", newEval[0].Limb, newEval[1].Limb)
-		fmt.Println("Old Eval:", oldEval[0].Limb, oldEval[1].Limb)
 		glApi := gl.NewChip(f.api)
 		glApi.AssertIsEqual(newEval[0], oldEval[0])
 		glApi.AssertIsEqual(newEval[1], oldEval[1])
@@ -503,8 +494,9 @@ func (f *FriChip) verifyQueryRound(
 	subgroupX_QE = gl.QuadraticExtensionVariable{subgroupX, gl.NewVariableFromConst(0)}
 	finalPolyEval := f.finalPolyEval(proof.FinalPoly, subgroupX_QE)
 
-	f.api.AssertIsEqual(oldEval[0], finalPolyEval[0])
-	f.api.AssertIsEqual(oldEval[1], finalPolyEval[1])
+	glApi := gl.NewChip(f.api)
+	glApi.AssertIsEqual(oldEval[0], finalPolyEval[0])
+	glApi.AssertIsEqual(oldEval[1], finalPolyEval[1])
 }
 
 func (f *FriChip) VerifyFriProof(
