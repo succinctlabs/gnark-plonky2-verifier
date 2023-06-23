@@ -7,6 +7,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
 var constantGateRegex = regexp.MustCompile("ConstantGate { num_consts: (?P<numConsts>[0-9]+) }")
@@ -54,11 +55,16 @@ func (g *ConstantGate) WireOutput(i uint64) uint64 {
 	return i
 }
 
-func (g *ConstantGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticExtensionAPI, vars EvaluationVars) []field.QuadraticExtension {
-	constraints := []field.QuadraticExtension{}
+func (g *ConstantGate) EvalUnfiltered(
+	api frontend.API,
+	qeAPI *field.QuadraticExtensionAPI,
+	vars EvaluationVars,
+) []gl.QuadraticExtensionVariable {
+	glApi := gl.NewChip(api)
+	constraints := []gl.QuadraticExtensionVariable{}
 
 	for i := uint64(0); i < g.numConsts; i++ {
-		constraints = append(constraints, qeAPI.SubExtension(vars.localConstants[g.ConstInput(i)], vars.localWires[g.WireOutput(i)]))
+		constraints = append(constraints, glApi.SubExtension(vars.localConstants[g.ConstInput(i)], vars.localWires[g.WireOutput(i)]))
 	}
 
 	return constraints

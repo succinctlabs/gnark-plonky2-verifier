@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
 var publicInputGateRegex = regexp.MustCompile("PublicInputGate")
@@ -29,8 +30,13 @@ func (g *PublicInputGate) WiresPublicInputsHash() []uint64 {
 	return []uint64{0, 1, 2, 3}
 }
 
-func (g *PublicInputGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticExtensionAPI, vars EvaluationVars) []field.QuadraticExtension {
-	constraints := []field.QuadraticExtension{}
+func (g *PublicInputGate) EvalUnfiltered(
+	api frontend.API,
+	qeAPI *field.QuadraticExtensionAPI,
+	vars EvaluationVars,
+) []gl.QuadraticExtensionVariable {
+	glApi := gl.NewChip(api)
+	constraints := []gl.QuadraticExtensionVariable{}
 
 	wires := g.WiresPublicInputsHash()
 	hash_parts := vars.publicInputsHash
@@ -38,7 +44,8 @@ func (g *PublicInputGate) EvalUnfiltered(api frontend.API, qeAPI *field.Quadrati
 		wire := wires[i]
 		hash_part := hash_parts[i]
 
-		diff := qeAPI.SubExtension(vars.localWires[wire], qeAPI.FieldToQE(hash_part))
+		tmp := gl.NewQuadraticExtensionVariable(hash_part, gl.Zero())
+		diff := glApi.SubExtension(vars.localWires[wire], tmp)
 		constraints = append(constraints, diff)
 	}
 

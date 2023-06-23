@@ -7,6 +7,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
 var randomAccessGateRegex = regexp.MustCompile("RandomAccessGate { bits: (?P<bits>[0-9]+), num_copies: (?P<numCopies>[0-9]+), num_extra_constants: (?P<numExtraConstants>[0-9]+), _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=(?P<base>[0-9]+)>")
@@ -114,45 +115,50 @@ func (g *RandomAccessGate) WireBit(i uint64, copy uint64) uint64 {
 	return g.NumRoutedWires() + copy*g.bits + i
 }
 
-func (g *RandomAccessGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticExtensionAPI, vars EvaluationVars) []field.QuadraticExtension {
-	two := field.QuadraticExtension{field.NewFieldConst(2), field.NewFieldConst(0)}
-	constraints := []field.QuadraticExtension{}
+func (g *RandomAccessGate) EvalUnfiltered(
+	api frontend.API,
+	qeAPI *field.QuadraticExtensionAPI,
+	vars EvaluationVars,
+) []gl.QuadraticExtensionVariable {
+	glApi := gl.NewChip(api)
+	two := gl.NewQuadraticExtensionVariable(gl.NewVariableFromConst(2), gl.NewVariable(0))
+	constraints := []gl.QuadraticExtensionVariable{}
 
 	for copy := uint64(0); copy < g.numCopies; copy++ {
 		accessIndex := vars.localWires[g.WireAccessIndex(copy)]
-		listItems := []field.QuadraticExtension{}
+		listItems := []gl.QuadraticExtensionVariable{}
 		for i := uint64(0); i < g.vecSize(); i++ {
 			listItems = append(listItems, vars.localWires[g.WireListItem(i, copy)])
 		}
 		claimedElement := vars.localWires[g.WireClaimedElement(copy)]
-		bits := []field.QuadraticExtension{}
+		bits := []gl.QuadraticExtensionVariable{}
 		for i := uint64(0); i < g.bits; i++ {
 			bits = append(bits, vars.localWires[g.WireBit(i, copy)])
 		}
 
 		// Assert that each bit wire value is indeed boolean.
 		for _, b := range bits {
-			bSquared := qeAPI.MulExtension(b, b)
-			constraints = append(constraints, qeAPI.SubExtension(bSquared, b))
+			bSquared := glApi.MulExtension(b, b)
+			constraints = append(constraints, glApi.SubExtension(bSquared, b))
 		}
 
 		// Assert that the binary decomposition was correct.
-		reconstructedIndex := qeAPI.ReduceWithPowers(bits, two)
-		constraints = append(constraints, qeAPI.SubExtension(reconstructedIndex, accessIndex))
+		reconstructedIndex := glApi.ReduceWithPowers(bits, two)
+		constraints = append(constraints, glApi.SubExtension(reconstructedIndex, accessIndex))
 
 		for _, b := range bits {
-			listItemsTmp := []field.QuadraticExtension{}
+			listItemsTmp := []gl.QuadraticExtensionVariable{}
 			for i := 0; i < len(listItems); i += 2 {
 				x := listItems[i]
 				y := listItems[i+1]
 
 				// This is computing `if b { x } else { y }`
 				// i.e. `bx - (by-y)`.
-				mul1 := qeAPI.MulExtension(b, x)
-				sub1 := qeAPI.SubExtension(mul1, x)
+				mul1 := glApi.MulExtension(b, x)
+				sub1 := glApi.SubExtension(mul1, x)
 
-				mul2 := qeAPI.MulExtension(b, y)
-				sub2 := qeAPI.SubExtension(mul2, sub1)
+				mul2 := glApi.MulExtension(b, y)
+				sub2 := glApi.SubExtension(mul2, sub1)
 
 				listItemsTmp = append(listItemsTmp, sub2)
 			}
@@ -163,11 +169,11 @@ func (g *RandomAccessGate) EvalUnfiltered(api frontend.API, qeAPI *field.Quadrat
 			panic("listItems(len) != 1")
 		}
 
-		constraints = append(constraints, qeAPI.SubExtension(listItems[0], claimedElement))
+		constraints = append(constraints, glApi.SubExtension(listItems[0], claimedElement))
 	}
 
 	for i := uint64(0); i < g.numExtraConstants; i++ {
-		constraints = append(constraints, qeAPI.SubExtension(vars.localConstants[i], vars.localWires[g.wireExtraConstant(i)]))
+		constraints = append(constraints, glApi.SubExtension(vars.localConstants[i], vars.localWires[g.wireExtraConstant(i)]))
 	}
 
 	return constraints

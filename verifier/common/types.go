@@ -1,7 +1,6 @@
 package common
 
 import (
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 )
@@ -69,14 +68,14 @@ type Proof struct {
 
 type ProofWithPublicInputs struct {
 	Proof        Proof
-	PublicInputs []field.F // Length = CommonCircuitData.NumPublicInputs
+	PublicInputs []gl.Variable // Length = CommonCircuitData.NumPublicInputs
 }
 
 type ProofChallenges struct {
-	PlonkBetas    []field.F
-	PlonkGammas   []field.F
-	PlonkAlphas   []field.F
-	PlonkZeta     field.QuadraticExtension
+	PlonkBetas    []gl.Variable
+	PlonkGammas   []gl.Variable
+	PlonkAlphas   []gl.Variable
+	PlonkZeta     gl.QuadraticExtensionVariable
 	FriChallenges FriChallenges
 }
 
@@ -113,7 +112,7 @@ type FriProof struct {
 	CommitPhaseMerkleCaps []MerkleCap     // Length = Len(CommonCircuitData.FriParams.ReductionArityBits)
 	QueryRoundProofs      []FriQueryRound // Length = CommonCircuitData.FriConfig.FriParams.NumQueryRounds
 	FinalPoly             PolynomialCoeffs
-	PowWitness            field.F
+	PowWitness            gl.Variable
 }
 
 type FriChallenges struct {

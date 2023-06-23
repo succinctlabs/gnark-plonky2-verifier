@@ -121,7 +121,7 @@ func (c *PoseidonChip) constantLayer(state PoseidonState, roundCounter *int) Pos
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
 			roundConstant := ALL_ROUND_CONSTANTS[i+SPONGE_WIDTH*(*roundCounter)]
-			state[i] = c.gl.MulAdd(state[i], gl.NewVariable(frontend.Variable(1)), gl.NewVariable(frontend.Variable(roundConstant)))
+			state[i] = c.gl.MulAdd(state[i], gl.NewVariable(1), gl.NewVariable(roundConstant))
 		}
 	}
 	return state

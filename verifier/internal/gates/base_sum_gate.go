@@ -7,6 +7,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
 var baseSumGateRegex = regexp.MustCompile(`BaseSumGate { num_limbs: (?P<numLimbs>[0-9]+) } \+ Base: (?P<base>[0-9]+)`)
@@ -63,27 +64,32 @@ func (g *BaseSumGate) limbs() []uint64 {
 	return limbIndices
 }
 
-func (g *BaseSumGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticExtensionAPI, vars EvaluationVars) []field.QuadraticExtension {
+func (g *BaseSumGate) EvalUnfiltered(
+	api frontend.API,
+	qeAPI *field.QuadraticExtensionAPI,
+	vars EvaluationVars,
+) []gl.QuadraticExtensionVariable {
+	glApi := gl.NewChip(api)
 	sum := vars.localWires[BASESUM_GATE_WIRE_SUM]
-	limbs := make([]field.QuadraticExtension, g.numLimbs)
+	limbs := make([]gl.QuadraticExtensionVariable, g.numLimbs)
 	limbIndices := g.limbs()
 	for i, limbIdx := range limbIndices {
 		limbs[i] = vars.localWires[limbIdx]
 	}
 
-	base_qe := qeAPI.FieldToQE(field.NewFieldConst(g.base))
-	computedSum := qeAPI.ReduceWithPowers(
+	baseQe := gl.NewQuadraticExtensionVariable(gl.NewVariable(g.base), gl.Zero())
+	computedSum := glApi.ReduceWithPowers(
 		limbs,
-		base_qe,
+		baseQe,
 	)
 
-	var constraints []field.QuadraticExtension
-	constraints = append(constraints, qeAPI.SubExtension(computedSum, sum))
+	var constraints []gl.QuadraticExtensionVariable
+	constraints = append(constraints, glApi.SubExtension(computedSum, sum))
 	for _, limb := range limbs {
-		acc := qeAPI.ONE_QE
+		acc := gl.OneExtension()
 		for i := uint64(0); i < g.base; i++ {
-			difference := qeAPI.SubExtension(limb, qeAPI.FieldToQE(field.NewFieldConst(i)))
-			acc = qeAPI.MulExtension(acc, difference)
+			difference := glApi.SubExtension(limb, gl.NewQuadraticExtensionVariable(gl.NewVariable(i), gl.Zero()))
+			acc = glApi.MulExtension(acc, difference)
 		}
 		constraints = append(constraints, acc)
 	}

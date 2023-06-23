@@ -108,7 +108,7 @@ func (c *QuadraticExtensionAPI) FieldToQE(a F) QuadraticExtension {
 
 func ToQuadraticExtension(x gl.Variable) QuadraticExtension {
 	y := NewFieldConst(0)
-	y.Limbs[0] = x.Value()
+	y.Limbs[0] = x.Limb
 	return QuadraticExtension{y, ZERO_F}
 }
 

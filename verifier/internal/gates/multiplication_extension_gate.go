@@ -7,6 +7,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
 var mulExtensionGateRegex = regexp.MustCompile("MulExtensionGate { num_ops: (?P<numOps>[0-9]+) }")
@@ -52,23 +53,26 @@ func (g *MultiplicationExtensionGate) wiresIthOutput(i uint64) Range {
 	return Range{3*field.D*i + 2*field.D, 3*field.D*i + 3*field.D}
 }
 
-func (g *MultiplicationExtensionGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticExtensionAPI, vars EvaluationVars) []field.QuadraticExtension {
+func (g *MultiplicationExtensionGate) EvalUnfiltered(
+	api frontend.API,
+	qeAPI *field.QuadraticExtensionAPI,
+	vars EvaluationVars,
+) []gl.QuadraticExtensionVariable {
+	glApi := gl.NewChip(api)
 	const0 := vars.localConstants[0]
-
-	constraints := []field.QuadraticExtension{}
+	constraints := []gl.QuadraticExtensionVariable{}
 	for i := uint64(0); i < g.numOps; i++ {
 		multiplicand0 := vars.GetLocalExtAlgebra(g.wiresIthMultiplicand0(i))
 		multiplicand1 := vars.GetLocalExtAlgebra(g.wiresIthMultiplicand1(i))
 		output := vars.GetLocalExtAlgebra(g.wiresIthOutput(i))
 
-		mul := qeAPI.MulExtensionAlgebra(multiplicand0, multiplicand1)
-		computed_output := qeAPI.ScalarMulExtensionAlgebra(const0, mul)
+		mul := glApi.MulExtensionAlgebra(multiplicand0, multiplicand1)
+		computed_output := glApi.ScalarMulExtensionAlgebra(const0, mul)
 
-		diff := qeAPI.SubExtensionAlgebra(output, computed_output)
+		diff := glApi.SubExtensionAlgebra(output, computed_output)
 		for j := 0; j < field.D; j++ {
 			constraints = append(constraints, diff[j])
 		}
 	}
-
 	return constraints
 }

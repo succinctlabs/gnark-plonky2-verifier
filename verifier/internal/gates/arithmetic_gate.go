@@ -7,6 +7,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
 var aritheticGateRegex = regexp.MustCompile("ArithmeticGate { num_ops: (?P<numOps>[0-9]+) }")
@@ -57,23 +58,28 @@ func (g *ArithmeticGate) WireIthOutput(i uint64) uint64 {
 	return 4*i + 3
 }
 
-func (g *ArithmeticGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticExtensionAPI, vars EvaluationVars) []field.QuadraticExtension {
+func (g *ArithmeticGate) EvalUnfiltered(
+	api frontend.API,
+	qeAPI *field.QuadraticExtensionAPI,
+	vars EvaluationVars,
+) []gl.QuadraticExtensionVariable {
+	glApi := gl.NewChip(api)
 	const0 := vars.localConstants[0]
 	const1 := vars.localConstants[1]
 
-	constraints := []field.QuadraticExtension{}
+	constraints := []gl.QuadraticExtensionVariable{}
 	for i := uint64(0); i < g.numOps; i++ {
 		multiplicand0 := vars.localWires[g.WireIthMultiplicand0(i)]
 		multiplicand1 := vars.localWires[g.WireIthMultiplicand1(i)]
 		addend := vars.localWires[g.WireIthAddend(i)]
 		output := vars.localWires[g.WireIthOutput(i)]
 
-		computedOutput := qeAPI.AddExtension(
-			qeAPI.MulExtension(qeAPI.MulExtension(multiplicand0, multiplicand1), const0),
-			qeAPI.MulExtension(addend, const1),
+		computedOutput := glApi.AddExtension(
+			glApi.MulExtension(glApi.MulExtension(multiplicand0, multiplicand1), const0),
+			glApi.MulExtension(addend, const1),
 		)
 
-		constraints = append(constraints, qeAPI.SubExtension(output, computedOutput))
+		constraints = append(constraints, glApi.SubExtension(output, computedOutput))
 	}
 
 	return constraints

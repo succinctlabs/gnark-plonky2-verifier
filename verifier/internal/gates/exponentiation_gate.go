@@ -7,6 +7,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
 var exponentiationGateRegex = regexp.MustCompile("ExponentiationGate { num_power_bits: (?P<numPowerBits>[0-9]+), _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=(?P<base>[0-9]+)>")
@@ -63,29 +64,34 @@ func (g *ExponentiationGate) wireIntermediateValue(i uint64) uint64 {
 	return 2 + g.numPowerBits + i
 }
 
-func (g *ExponentiationGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticExtensionAPI, vars EvaluationVars) []field.QuadraticExtension {
+func (g *ExponentiationGate) EvalUnfiltered(
+	api frontend.API,
+	qeAPI *field.QuadraticExtensionAPI,
+	vars EvaluationVars,
+) []gl.QuadraticExtensionVariable {
+	glApi := gl.NewChip(api)
 	base := vars.localWires[g.wireBase()]
 
-	var powerBits []field.QuadraticExtension
+	var powerBits []gl.QuadraticExtensionVariable
 	for i := uint64(0); i < g.numPowerBits; i++ {
 		powerBits = append(powerBits, vars.localWires[g.wirePowerBit(i)])
 	}
 
-	var intermediateValues []field.QuadraticExtension
+	var intermediateValues []gl.QuadraticExtensionVariable
 	for i := uint64(0); i < g.numPowerBits; i++ {
 		intermediateValues = append(intermediateValues, vars.localWires[g.wireIntermediateValue(i)])
 	}
 
 	output := vars.localWires[g.wireOutput()]
 
-	var constraints []field.QuadraticExtension
+	var constraints []gl.QuadraticExtensionVariable
 
 	for i := uint64(0); i < g.numPowerBits; i++ {
-		var prevIntermediateValue field.QuadraticExtension
+		var prevIntermediateValue gl.QuadraticExtensionVariable
 		if i == 0 {
-			prevIntermediateValue = qeAPI.ONE_QE
+			prevIntermediateValue = gl.OneExtension()
 		} else {
-			prevIntermediateValue = qeAPI.SquareExtension(intermediateValues[i-1])
+			prevIntermediateValue = glApi.MulExtension(intermediateValues[i-1], intermediateValues[i-1])
 		}
 
 		// powerBits is in LE order, but we accumulate in BE order.
@@ -94,16 +100,16 @@ func (g *ExponentiationGate) EvalUnfiltered(api frontend.API, qeAPI *field.Quadr
 		// Do a polynomial representation of generaized select (where the selector variable doesn't have to be binary)
 		// if b { x } else { y }
 		// i.e. `bx - (by-y)`.
-		tmp := qeAPI.MulExtension(curBit, qeAPI.ONE_QE)
-		tmp = qeAPI.SubExtension(tmp, qeAPI.ONE_QE)
-		mulBy := qeAPI.MulExtension(curBit, base)
-		mulBy = qeAPI.SubExtension(mulBy, tmp)
-		intermediateValueDiff := qeAPI.MulExtension(prevIntermediateValue, mulBy)
-		intermediateValueDiff = qeAPI.SubExtension(intermediateValueDiff, intermediateValues[i])
+		tmp := glApi.MulExtension(curBit, gl.OneExtension())
+		tmp = glApi.SubExtension(tmp, gl.OneExtension())
+		mulBy := glApi.MulExtension(curBit, base)
+		mulBy = glApi.SubExtension(mulBy, tmp)
+		intermediateValueDiff := glApi.MulExtension(prevIntermediateValue, mulBy)
+		intermediateValueDiff = glApi.SubExtension(intermediateValueDiff, intermediateValues[i])
 		constraints = append(constraints, intermediateValueDiff)
 	}
 
-	outputDiff := qeAPI.SubExtension(output, intermediateValues[g.numPowerBits-1])
+	outputDiff := glApi.SubExtension(output, intermediateValues[g.numPowerBits-1])
 	constraints = append(constraints, outputDiff)
 
 	return constraints

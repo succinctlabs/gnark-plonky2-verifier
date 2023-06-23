@@ -9,6 +9,7 @@ import (
 	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
 var cosetInterpolationGateRegex = regexp.MustCompile(`CosetInterpolationGate { subgroup_bits: (?P<subgroupBits>[0-9]+), degree: (?P<degree>[0-9]+), barycentric_weights: \[(?P<barycentricWeights>[0-9, ]+)\], _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>`)
@@ -145,32 +146,37 @@ func (g *CosetInterpolationGate) wiresShiftedEvaluationPoint() Range {
 	return Range{start, start + field.D}
 }
 
-func (g *CosetInterpolationGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticExtensionAPI, vars EvaluationVars) []field.QuadraticExtension {
-	constraints := []field.QuadraticExtension{}
+func (g *CosetInterpolationGate) EvalUnfiltered(
+	api frontend.API,
+	qeAPI *field.QuadraticExtensionAPI,
+	vars EvaluationVars,
+) []gl.QuadraticExtensionVariable {
+	glApi := gl.NewChip(api)
+	constraints := []gl.QuadraticExtensionVariable{}
 
 	shift := vars.localWires[g.wireShift()]
 	evaluationPoint := vars.GetLocalExtAlgebra(g.wiresEvaluationPoint())
 	shiftedEvaluationPoint := vars.GetLocalExtAlgebra(g.wiresShiftedEvaluationPoint())
 
-	negShift := qeAPI.ScalarMulExtension(shift, field.NEG_ONE_F)
+	negShift := glApi.ScalarMulExtension(shift, gl.NegOne())
 
-	tmp := qeAPI.ScalarMulExtensionAlgebra(negShift, shiftedEvaluationPoint)
-	tmp = qeAPI.AddExtensionAlgebra(tmp, evaluationPoint)
+	tmp := glApi.ScalarMulExtensionAlgebra(negShift, shiftedEvaluationPoint)
+	tmp = glApi.AddExtensionAlgebra(tmp, evaluationPoint)
 
 	for i := 0; i < field.D; i++ {
 		constraints = append(constraints, tmp[i])
 	}
 
 	domain := field.TwoAdicSubgroup(g.subgroupBits)
-	values := []field.QEAlgebra{}
+	values := []gl.QuadraticExtensionAlgebraVariable{}
 	for i := uint64(0); i < g.numPoints(); i++ {
 		values = append(values, vars.GetLocalExtAlgebra(g.wiresValue(i)))
 	}
 	weights := g.barycentricWeights
 
-	initialEval := qeAPI.ZERO_QE_ALGEBRA
-	initialProd := field.QEAlgebra{qeAPI.ONE_QE, qeAPI.ZERO_QE}
-	computedEval, computedProd := qeAPI.PartialInterpolateExtAlgebra(
+	initialEval := gl.ZeroExtensionAlgebra()
+	initialProd := gl.OneExtensionAlgebra()
+	computedEval, computedProd := glApi.PartialInterpolateExtAlgebra(
 		domain[:g.degree],
 		values[:g.degree],
 		weights[:g.degree],
@@ -183,19 +189,19 @@ func (g *CosetInterpolationGate) EvalUnfiltered(api frontend.API, qeAPI *field.Q
 		intermediateEval := vars.GetLocalExtAlgebra(g.wiresIntermediateEval(i))
 		intermediateProd := vars.GetLocalExtAlgebra(g.wiresIntermediateProd(i))
 
-		evalDiff := qeAPI.SubExtensionAlgebra(intermediateEval, computedEval)
+		evalDiff := glApi.SubExtensionAlgebra(intermediateEval, computedEval)
 		for j := 0; j < field.D; j++ {
 			constraints = append(constraints, evalDiff[j])
 		}
 
-		prodDiff := qeAPI.SubExtensionAlgebra(intermediateProd, computedProd)
+		prodDiff := glApi.SubExtensionAlgebra(intermediateProd, computedProd)
 		for j := 0; j < field.D; j++ {
 			constraints = append(constraints, prodDiff[j])
 		}
 
 		startIndex := 1 + (g.degree-1)*(i+1)
 		endIndex := startIndex + g.degree - 1
-		computedEval, computedProd = qeAPI.PartialInterpolateExtAlgebra(
+		computedEval, computedProd = glApi.PartialInterpolateExtAlgebra(
 			domain[startIndex:endIndex],
 			values[startIndex:endIndex],
 			weights[startIndex:endIndex],
@@ -206,7 +212,7 @@ func (g *CosetInterpolationGate) EvalUnfiltered(api frontend.API, qeAPI *field.Q
 	}
 
 	evaluationValue := vars.GetLocalExtAlgebra(g.wiresEvaluationValue())
-	evalDiff := qeAPI.SubExtensionAlgebra(evaluationValue, computedEval)
+	evalDiff := glApi.SubExtensionAlgebra(evaluationValue, computedEval)
 	for j := 0; j < field.D; j++ {
 		constraints = append(constraints, evalDiff[j])
 	}

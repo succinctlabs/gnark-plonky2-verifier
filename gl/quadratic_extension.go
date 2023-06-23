@@ -6,10 +6,10 @@ import (
 	"github.com/consensys/gnark/frontend"
 )
 
-type QuadraticExtensionVariable [2]Variable
-
 const W = 7
 const DTH_ROOT = 18446744069414584320
+
+type QuadraticExtensionVariable [2]Variable
 
 func NewQuadraticExtensionVariable(x Variable, y Variable) QuadraticExtensionVariable {
 	return QuadraticExtensionVariable{x, y}
@@ -72,8 +72,8 @@ func (p *Chip) IsZero(x QuadraticExtensionVariable) frontend.Variable {
 
 // Computes the inverse of a quadratic extension variable in the Goldilocks field.
 func (p *Chip) InverseExtension(a QuadraticExtensionVariable) QuadraticExtensionVariable {
-	a0IsZero := p.api.IsZero(a[0])
-	a1IsZero := p.api.IsZero(a[1])
+	a0IsZero := p.api.IsZero(a[0].Limb)
+	a1IsZero := p.api.IsZero(a[1].Limb)
 	p.api.AssertIsEqual(p.api.Mul(a0IsZero, a1IsZero), frontend.Variable(0))
 
 	aPowRMinus1 := QuadraticExtensionVariable{
@@ -140,8 +140,8 @@ func (p *Chip) Lookup(
 	b frontend.Variable,
 	x, y QuadraticExtensionVariable,
 ) QuadraticExtensionVariable {
-	c0 := p.api.Select(b, x[0].value, y[0].value)
-	c1 := p.api.Select(b, x[1].value, y[1].value)
+	c0 := p.api.Select(b, x[0].Limb, y[0].Limb)
+	c1 := p.api.Select(b, x[1].Limb, y[1].Limb)
 	return QuadraticExtensionVariable{NewVariable(c0), NewVariable(c1)}
 }
 
@@ -153,4 +153,28 @@ func (p *Chip) Lookup2(
 	c0 := p.Lookup(b0, qe0, qe1)
 	c1 := p.Lookup(b0, qe2, qe3)
 	return p.Lookup(b1, c0, c1)
+}
+
+func (p *Chip) InnerProductExtension(
+	constant Variable,
+	startingAcc QuadraticExtensionVariable,
+	pairs [][2]QuadraticExtensionVariable,
+) QuadraticExtensionVariable {
+	acc := startingAcc
+	for i := 0; i < len(pairs); i++ {
+		a := pairs[i][0]
+		b := pairs[i][1]
+		mul := p.ScalarMulExtension(a, constant)
+		mul = p.MulExtension(mul, b)
+		acc = p.AddExtension(acc, mul)
+	}
+	return acc
+}
+
+func (p *Chip) AssertIsEqualExtension(
+	a QuadraticExtensionVariable,
+	b QuadraticExtensionVariable,
+) {
+	p.AssertIsEqual(a[0], b[0])
+	p.AssertIsEqual(a[1], b[1])
 }

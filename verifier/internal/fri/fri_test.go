@@ -56,16 +56,16 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 		commonCircuitData.Config.FriConfig,
 	)
 
-	api.AssertIsEqual(friChallenges.FriAlpha[0].Value(), 885535811531859621)
+	api.AssertIsEqual(friChallenges.FriAlpha[0].Limb, 885535811531859621)
 
-	api.AssertIsEqual(friChallenges.FriBetas[0][0].Value(), 5231781384587895507)
+	api.AssertIsEqual(friChallenges.FriBetas[0][0].Limb, 5231781384587895507)
 
-	api.AssertIsEqual(friChallenges.FriPowResponse.Value(), 70715523064019)
+	api.AssertIsEqual(friChallenges.FriPowResponse.Limb, 70715523064019)
 
 	// fieldAPI.AssertIsEqual(friChallenges.FriQueryIndices[0], field.NewFieldConst(11890500485816111017))
 	var x uint64
 	x = 11890500485816111017
-	api.AssertIsEqual(friChallenges.FriQueryIndices[0].Value(), x)
+	api.AssertIsEqual(friChallenges.FriQueryIndices[0].Limb, x)
 
 	// initialMerkleCaps := []common.MerkleCap{
 	// 	verifierOnlyCircuitData.ConstantSigmasCap,

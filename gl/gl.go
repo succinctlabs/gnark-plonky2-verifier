@@ -16,16 +16,19 @@ import (
 )
 
 // The multiplicative group generator of the field.
-var MULTIPLICATIVE_GROUP_GENERATOR = goldilocks.NewElement(7)
+var MULTIPLICATIVE_GROUP_GENERATOR goldilocks.Element = goldilocks.NewElement(7)
 
 // The two adicity of the field.
-var TWO_ADICITY = uint64(32)
+var TWO_ADICITY uint64 = 32
 
 // The power of two generator of the field.
-var POWER_OF_TWO_GENERATOR = goldilocks.NewElement(1753635133440165772)
+var POWER_OF_TWO_GENERATOR goldilocks.Element = goldilocks.NewElement(1753635133440165772)
 
 // The modulus of the field.
-var MODULUS = emulated.Goldilocks{}.Modulus()
+var MODULUS *big.Int = emulated.Goldilocks{}.Modulus()
+
+// The threshold maximum number of bits at which we must reduce the element.
+var REDUCE_NB_BITS_THRESHOLD uint8 = 254 - 64
 
 // Registers the hint functions with the solver.
 func init() {
@@ -35,22 +38,18 @@ func init() {
 
 // A type alias used to represent Goldilocks field elements.
 type Variable struct {
-	value frontend.Variable
+	Limb frontend.Variable
 }
 
-// Returns the value of the Goldilocks field element.
-func (e *Variable) Value() frontend.Variable {
-	return e.value
-}
-
-// Creates a new Goldilocks field element from an existing variable.
+// Creates a new Goldilocks field element from an existing variable. Assumes that the element is
+// already reduced.
 func NewVariable(x frontend.Variable) Variable {
-	return Variable{value: x}
+	return Variable{Limb: x}
 }
 
 // Creates a new Goldilocks field element from a constant.
 func NewVariableFromConst(x uint64) Variable {
-	return Variable{value: frontend.Variable(x)}
+	return Variable{Limb: x}
 }
 
 // The zero element in the Golidlocks field.
@@ -61,6 +60,11 @@ func Zero() Variable {
 // The one element in the Goldilocks field.
 func One() Variable {
 	return NewVariableFromConst(1)
+}
+
+// The negative one element in the Goldilocks field.
+func NegOne() Variable {
+	return NewVariable(MODULUS.Uint64() - 1)
 }
 
 // The chip used for Goldilocks field operations.
@@ -83,9 +87,19 @@ func (p *Chip) Add(a Variable, b Variable) Variable {
 	return p.MulAdd(a, NewVariableFromConst(1), b)
 }
 
-// Adds two field elements such that x + y = z within the Golidlocks field.
+// Adds two field elements such that x + y = z within the Golidlocks field without reducing.
+func (p *Chip) AddNoReduce(a Variable, b Variable) Variable {
+	return NewVariable(p.api.Add(a.Limb, b.Limb))
+}
+
+// Subtracts two field elements such that x + y = z within the Golidlocks field.
 func (p *Chip) Sub(a Variable, b Variable) Variable {
 	return p.MulAdd(b, NewVariableFromConst(MODULUS.Uint64()-1), a)
+}
+
+// Subtracts two field elements such that x + y = z within the Golidlocks field without reducing.
+func (p *Chip) SubNoReduce(a Variable, b Variable) Variable {
+	return NewVariable(p.api.Add(a.Limb, p.api.Mul(b.Limb, MODULUS.Uint64()-1)))
 }
 
 // Multiplies two field elements such that x * y = z within the Golidlocks field.
@@ -93,10 +107,15 @@ func (p *Chip) Mul(a Variable, b Variable) Variable {
 	return p.MulAdd(a, b, Zero())
 }
 
+// Multiplies two field elements such that x * y = z within the Golidlocks field without reducing.
+func (p *Chip) MulNoReduce(a Variable, b Variable) Variable {
+	return NewVariable(p.api.Mul(a.Limb, b.Limb))
+}
+
 // Multiplies two field elements and adds a field element such that x * y + z = c within the
 // Golidlocks field.
 func (p *Chip) MulAdd(a Variable, b Variable, c Variable) Variable {
-	result, err := p.api.Compiler().NewHint(MulAddHint, 2, a.value, b.value, c.value)
+	result, err := p.api.Compiler().NewHint(MulAddHint, 2, a.Limb, b.Limb, c.Limb)
 	if err != nil {
 		panic(err)
 	}
@@ -104,9 +123,9 @@ func (p *Chip) MulAdd(a Variable, b Variable, c Variable) Variable {
 	quotient := NewVariable(result[0])
 	remainder := NewVariable(result[1])
 
-	lhs := p.api.Mul(a.value, b.value)
-	lhs = p.api.Add(lhs, c.value)
-	rhs := p.api.Add(p.api.Mul(quotient.value, MODULUS), remainder.value)
+	lhs := p.api.Mul(a.Limb, b.Limb)
+	lhs = p.api.Add(lhs, c.Limb)
+	rhs := p.api.Add(p.api.Mul(quotient.Limb, MODULUS), remainder.Limb)
 	p.api.AssertIsEqual(lhs, rhs)
 
 	p.RangeCheck(quotient)
@@ -139,7 +158,7 @@ func MulAddHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
 
 // Reduces a field element x such that x % MODULUS = y.
 func (p *Chip) Reduce(x Variable) Variable {
-	result, err := p.api.Compiler().NewHint(ReduceHint, 1, x.value)
+	result, err := p.api.Compiler().NewHint(ReduceHint, 1, x.Limb)
 	if err != nil {
 		panic(err)
 	}
@@ -160,14 +179,14 @@ func ReduceHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
 
 // Computes the inverse of a field element x such that x * x^-1 = 1.
 func (p *Chip) Inverse(x Variable) Variable {
-	result, err := p.api.Compiler().NewHint(InverseHint, 1, x.value)
+	result, err := p.api.Compiler().NewHint(InverseHint, 1, x.Limb)
 	if err != nil {
 		panic(err)
 	}
 
 	inverse := NewVariable(result[0])
 	product := p.Mul(inverse, x)
-	p.api.AssertIsEqual(product, frontend.Variable(1))
+	p.api.AssertIsEqual(product.Limb, frontend.Variable(1))
 	return inverse
 }
 
@@ -220,7 +239,7 @@ func (p *Chip) RangeCheck(x Variable) {
 	// checks that if the bits[0:31] (in big-endian) are all 1, then bits[32:64] are all zero.
 
 	// First decompose x into 64 bits.  The bits will be in little-endian order.
-	bits := bits.ToBinary(p.api, x.value, bits.WithNbDigits(64))
+	bits := bits.ToBinary(p.api, x.Limb, bits.WithNbDigits(64))
 
 	// Those bits should compose back to x.
 	reconstructedX := frontend.Variable(0)
@@ -230,7 +249,7 @@ func (p *Chip) RangeCheck(x Variable) {
 		c = c << 1
 		p.api.AssertIsBoolean(bits[i])
 	}
-	p.api.AssertIsEqual(x.value, reconstructedX)
+	p.api.AssertIsEqual(x.Limb, reconstructedX)
 
 	mostSigBits32Sum := frontend.Variable(0)
 	for i := 32; i < 64; i++ {
@@ -260,7 +279,7 @@ func (p *Chip) RangeCheck(x Variable) {
 }
 
 func (p *Chip) AssertIsEqual(x, y Variable) {
-	p.api.AssertIsEqual(x.value, y.value)
+	p.api.AssertIsEqual(x.Limb, y.Limb)
 }
 
 // Computes the n'th primitive root of unity for the Goldilocks field.

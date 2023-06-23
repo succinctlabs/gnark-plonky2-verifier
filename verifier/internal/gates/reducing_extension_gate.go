@@ -7,6 +7,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
 var reducingExtensionGateRegex = regexp.MustCompile("ReducingExtensionGate { num_coeffs: (?P<numCoeffs>[0-9]+) }")
@@ -74,7 +75,11 @@ func (g *ReducingExtensionGate) wiresAccs(i uint64) Range {
 	return Range{g.startAccs() + field.D*i, g.startAccs() + field.D*(i+1)}
 }
 
-func (g *ReducingExtensionGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticExtensionAPI, vars EvaluationVars) []field.QuadraticExtension {
+func (g *ReducingExtensionGate) EvalUnfiltered(
+	api frontend.API,
+	qeAPI *field.QuadraticExtensionAPI,
+	vars EvaluationVars,
+) []gl.QuadraticExtensionVariable {
 	alpha := vars.GetLocalExtAlgebra(g.wiresAlpha())
 	oldAcc := vars.GetLocalExtAlgebra(g.wiresOldAcc())
 

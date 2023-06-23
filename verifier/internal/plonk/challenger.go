@@ -115,7 +115,13 @@ func (c *ChallengerChip) GetHash() poseidon.PoseidonHashOut {
 	return [4]field.F{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
 }
 
-func (c *ChallengerChip) GetFriChallenges(commitPhaseMerkleCaps []common.MerkleCap, finalPoly common.PolynomialCoeffs, powWitness field.F, degreeBits uint64, config common.FriConfig) common.FriChallenges {
+func (c *ChallengerChip) GetFriChallenges(
+	commitPhaseMerkleCaps []common.MerkleCap,
+	finalPoly common.PolynomialCoeffs,
+	powWitness gl.Variable,
+	degreeBits uint64,
+	config common.FriConfig,
+) common.FriChallenges {
 	numFriQueries := config.NumQueryRounds
 	friAlpha := c.GetExtensionChallenge()
 

@@ -48,7 +48,7 @@ func (f *FriChip) assertLeadingZeros(powWitness gl.Variable, friConfig common.Fr
 	// field is 64 bits long
 	maxPowWitness := uint64(math.Pow(2, float64(64-friConfig.ProofOfWorkBits))) - 1
 	reducedPowWitness := f.gl.Reduce(powWitness)
-	f.api.AssertIsLessOrEqual(reducedPowWitness.Value(), frontend.Variable(maxPowWitness))
+	f.api.AssertIsLessOrEqual(reducedPowWitness.Limb, frontend.Variable(maxPowWitness))
 }
 
 func (f *FriChip) fromOpeningsAndAlpha(

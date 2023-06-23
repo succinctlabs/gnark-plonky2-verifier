@@ -47,7 +47,7 @@ type TestGoldilocksMulAddCircuit struct {
 func (c *TestGoldilocksMulAddCircuit) Define(api frontend.API) error {
 	chip := NewChip(api)
 	calculateValue := chip.MulAdd(NewVariable(c.X), NewVariable(c.Y), NewVariable(c.Z))
-	api.AssertIsEqual(calculateValue.value, c.ExpectedResult)
+	api.AssertIsEqual(calculateValue.Limb, c.ExpectedResult)
 	return nil
 }
 

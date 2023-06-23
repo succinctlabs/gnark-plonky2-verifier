@@ -3,6 +3,7 @@ package gates
 import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
 type EvaluateGatesChip struct {
@@ -36,20 +37,22 @@ func NewEvaluateGatesChip(
 func (g *EvaluateGatesChip) computeFilter(
 	row uint64,
 	groupRange Range,
-	s field.QuadraticExtension,
+	s gl.QuadraticExtensionVariable,
 	manySelector bool,
-) field.QuadraticExtension {
-	product := g.qeAPI.ONE_QE
+) gl.QuadraticExtensionVariable {
+	glApi := gl.NewChip(g.api)
+	product := gl.OneExtension()
 	for i := groupRange.start; i < groupRange.end; i++ {
 		if i == uint64(row) {
 			continue
 		}
-
-		product = g.qeAPI.MulExtension(product, g.qeAPI.SubExtension(g.qeAPI.FieldToQE(field.NewFieldConst(i)), s))
+		tmp := gl.NewQuadraticExtensionVariable(gl.NewVariable(i), gl.Zero())
+		product = glApi.MulExtension(product, glApi.SubExtension(tmp, s))
 	}
 
 	if manySelector {
-		product = g.qeAPI.MulExtension(product, g.qeAPI.SubExtension(g.qeAPI.FieldToQE(field.NewFieldConst(UNUSED_SELECTOR)), s))
+		tmp := gl.NewQuadraticExtensionVariable(gl.NewVariable(UNUSED_SELECTOR), gl.Zero())
+		product = glApi.MulExtension(product, glApi.SubExtension(tmp, s))
 	}
 
 	return product
@@ -62,22 +65,24 @@ func (g *EvaluateGatesChip) evalFiltered(
 	selectorIndex uint64,
 	groupRange Range,
 	numSelectors uint64,
-) []field.QuadraticExtension {
+) []gl.QuadraticExtensionVariable {
+	glApi := gl.NewChip(g.api)
 	filter := g.computeFilter(row, groupRange, vars.localConstants[selectorIndex], numSelectors > 1)
 
 	vars.RemovePrefix(numSelectors)
 
 	unfiltered := gate.EvalUnfiltered(g.api, g.qeAPI, vars)
 	for i := range unfiltered {
-		unfiltered[i] = g.qeAPI.MulExtension(unfiltered[i], filter)
+		unfiltered[i] = glApi.MulExtension(unfiltered[i], filter)
 	}
 	return unfiltered
 }
 
-func (g *EvaluateGatesChip) EvaluateGateConstraints(vars EvaluationVars) []field.QuadraticExtension {
-	constraints := make([]field.QuadraticExtension, g.numGateConstraints)
+func (g *EvaluateGatesChip) EvaluateGateConstraints(vars EvaluationVars) []gl.QuadraticExtensionVariable {
+	glApi := gl.NewChip(g.api)
+	constraints := make([]gl.QuadraticExtensionVariable, g.numGateConstraints)
 	for i := range constraints {
-		constraints[i] = g.qeAPI.ZERO_QE
+		constraints[i] = gl.ZeroExtension()
 	}
 
 	for i, gate := range g.gates {
@@ -96,7 +101,7 @@ func (g *EvaluateGatesChip) EvaluateGateConstraints(vars EvaluationVars) []field
 			if uint64(i) >= g.numGateConstraints {
 				panic("num_constraints() gave too low of a number")
 			}
-			constraints[i] = g.qeAPI.AddExtension(constraints[i], constraint)
+			constraints[i] = glApi.AddExtension(constraints[i], constraint)
 		}
 	}
 
