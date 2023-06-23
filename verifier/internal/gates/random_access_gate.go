@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
@@ -117,7 +116,6 @@ func (g *RandomAccessGate) WireBit(i uint64, copy uint64) uint64 {
 
 func (g *RandomAccessGate) EvalUnfiltered(
 	api frontend.API,
-	qeAPI *field.QuadraticExtensionAPI,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
 	glApi := gl.NewChip(api)

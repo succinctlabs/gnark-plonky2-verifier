@@ -5,13 +5,12 @@ import (
 	"regexp"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
 type Gate interface {
 	Id() string
-	EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticExtensionAPI, vars EvaluationVars) []gl.QuadraticExtensionVariable
+	EvalUnfiltered(api frontend.API, vars EvaluationVars) []gl.QuadraticExtensionVariable
 }
 
 var gateRegexHandlers = map[*regexp.Regexp]func(parameters map[string]string) Gate{

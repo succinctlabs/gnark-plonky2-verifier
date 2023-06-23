@@ -77,29 +77,29 @@ func (g *ReducingExtensionGate) wiresAccs(i uint64) Range {
 
 func (g *ReducingExtensionGate) EvalUnfiltered(
 	api frontend.API,
-	qeAPI *field.QuadraticExtensionAPI,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
+	glApi := gl.NewChip(api)
 	alpha := vars.GetLocalExtAlgebra(g.wiresAlpha())
 	oldAcc := vars.GetLocalExtAlgebra(g.wiresOldAcc())
 
-	coeffs := []field.QEAlgebra{}
+	coeffs := []gl.QuadraticExtensionAlgebraVariable{}
 	for i := uint64(0); i < g.numCoeffs; i++ {
 		coeffs = append(coeffs, vars.GetLocalExtAlgebra(g.wiresCoeff(i)))
 	}
 
-	accs := []field.QEAlgebra{}
+	accs := []gl.QuadraticExtensionAlgebraVariable{}
 	for i := uint64(0); i < g.numCoeffs; i++ {
 		accs = append(accs, vars.GetLocalExtAlgebra(g.wiresAccs(i)))
 	}
 
-	constraints := []field.QuadraticExtension{}
+	constraints := []gl.QuadraticExtensionVariable{}
 	acc := oldAcc
 	for i := uint64(0); i < g.numCoeffs; i++ {
 		coeff := coeffs[i]
-		tmp := qeAPI.MulExtensionAlgebra(acc, alpha)
-		tmp = qeAPI.AddExtensionAlgebra(tmp, coeff)
-		tmp = qeAPI.SubExtensionAlgebra(tmp, accs[i])
+		tmp := glApi.MulExtensionAlgebra(acc, alpha)
+		tmp = glApi.AddExtensionAlgebra(tmp, coeff)
+		tmp = glApi.SubExtensionAlgebra(tmp, accs[i])
 		for j := uint64(0); j < field.D; j++ {
 			constraints = append(constraints, tmp[j])
 		}

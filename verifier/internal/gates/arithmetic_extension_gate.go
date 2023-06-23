@@ -59,7 +59,6 @@ func (g *ArithmeticExtensionGate) wiresIthOutput(i uint64) Range {
 
 func (g *ArithmeticExtensionGate) EvalUnfiltered(
 	api frontend.API,
-	qeAPI *field.QuadraticExtensionAPI,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
 	glApi := gl.NewChip(api)

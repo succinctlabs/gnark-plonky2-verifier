@@ -4,7 +4,6 @@ import (
 	"regexp"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
@@ -28,7 +27,6 @@ func (g *NoopGate) Id() string {
 
 func (g *NoopGate) EvalUnfiltered(
 	api frontend.API,
-	qeAPI *field.QuadraticExtensionAPI,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
 	return []gl.QuadraticExtensionVariable{}

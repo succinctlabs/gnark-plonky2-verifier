@@ -1,7 +1,7 @@
 package common
 
 import (
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/gates"
 )
@@ -33,7 +33,7 @@ type CommonCircuitData struct {
 	NumGateConstraints   uint64
 	NumConstants         uint64
 	NumPublicInputs      uint64
-	KIs                  []field.F
+	KIs                  []gl.Variable
 	NumPartialProducts   uint64
 }
 

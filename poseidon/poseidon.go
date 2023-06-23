@@ -23,8 +23,8 @@ type PoseidonChip struct {
 	gl       gl.Chip                      `gnark:"-"`
 }
 
-func NewPoseidonChip(api frontend.API, fieldAPI field.FieldAPI, qeAPI *field.QuadraticExtensionAPI) *PoseidonChip {
-	return &PoseidonChip{api: api, fieldAPI: fieldAPI, qeAPI: qeAPI, gl: *gl.NewChip(api)}
+func NewPoseidonChip(api frontend.API, fieldAPI field.FieldAPI) *PoseidonChip {
+	return &PoseidonChip{api: api, fieldAPI: fieldAPI, gl: *gl.NewChip(api)}
 }
 
 // The permutation function.

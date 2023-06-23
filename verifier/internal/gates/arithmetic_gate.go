@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
@@ -60,7 +59,6 @@ func (g *ArithmeticGate) WireIthOutput(i uint64) uint64 {
 
 func (g *ArithmeticGate) EvalUnfiltered(
 	api frontend.API,
-	qeAPI *field.QuadraticExtensionAPI,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
 	glApi := gl.NewChip(api)

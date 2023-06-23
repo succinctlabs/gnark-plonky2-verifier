@@ -4,7 +4,7 @@ import (
 	"math/big"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
 func StrArrayToBigIntArray(input []string) []big.Int {
@@ -25,22 +25,22 @@ func StrArrayToFrontendVariableArray(input []string) []frontend.Variable {
 	return output
 }
 
-func Uint64ArrayToFArray(input []uint64) []field.F {
-	var output []field.F
+func Uint64ArrayToFArray(input []uint64) []gl.Variable {
+	var output []gl.Variable
 	for i := 0; i < len(input); i++ {
-		output = append(output, field.NewFieldConst(input[i]))
+		output = append(output, gl.NewVariableFromConst(input[i]))
 	}
 	return output
 }
 
-func Uint64ArrayToQuadraticExtension(input []uint64) field.QuadraticExtension {
-	return [2]field.F{field.NewFieldConst(input[0]), field.NewFieldConst(input[1])}
+func Uint64ArrayToQuadraticExtension(input []uint64) gl.QuadraticExtensionVariable {
+	return gl.NewQuadraticExtensionVariable(gl.NewVariableFromConst(input[0]), gl.NewVariableFromConst(input[1]))
 }
 
-func Uint64ArrayToQuadraticExtensionArray(input [][]uint64) []field.QuadraticExtension {
-	var output []field.QuadraticExtension
+func Uint64ArrayToQuadraticExtensionArray(input [][]uint64) []gl.QuadraticExtensionVariable {
+	var output []gl.QuadraticExtensionVariable
 	for i := 0; i < len(input); i++ {
-		output = append(output, [2]field.F{field.NewFieldConst(input[i][0]), field.NewFieldConst(input[i][1])})
+		output = append(output, gl.NewQuadraticExtensionVariable(gl.NewVariableFromConst(input[i][0]), gl.NewVariableFromConst(input[i][1])))
 	}
 	return output
 }

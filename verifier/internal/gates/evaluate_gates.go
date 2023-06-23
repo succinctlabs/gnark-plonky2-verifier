@@ -71,7 +71,7 @@ func (g *EvaluateGatesChip) evalFiltered(
 
 	vars.RemovePrefix(numSelectors)
 
-	unfiltered := gate.EvalUnfiltered(g.api, g.qeAPI, vars)
+	unfiltered := gate.EvalUnfiltered(g.api, vars)
 	for i := range unfiltered {
 		unfiltered[i] = glApi.MulExtension(unfiltered[i], filter)
 	}

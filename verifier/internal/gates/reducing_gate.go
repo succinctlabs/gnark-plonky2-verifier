@@ -7,6 +7,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
 var reducingGateRegex = regexp.MustCompile("ReducingGate { num_coeffs: (?P<numCoeffs>[0-9]+) }")
@@ -74,32 +75,36 @@ func (g *ReducingGate) wiresAccs(i uint64) Range {
 	return Range{g.startAccs() + field.D*i, g.startAccs() + field.D*(i+1)}
 }
 
-func (g *ReducingGate) EvalUnfiltered(api frontend.API, qeAPI *field.QuadraticExtensionAPI, vars EvaluationVars) []field.QuadraticExtension {
+func (g *ReducingGate) EvalUnfiltered(
+	api frontend.API,
+	vars EvaluationVars,
+) []gl.QuadraticExtensionVariable {
+	glApi := gl.NewChip(api)
 	alpha := vars.GetLocalExtAlgebra(g.wiresAlpha())
 	oldAcc := vars.GetLocalExtAlgebra(g.wiresOldAcc())
 
-	coeffs := []field.QuadraticExtension{}
+	coeffs := []gl.QuadraticExtensionVariable{}
 	coeffsRange := g.wiresCoeff()
 	for i := coeffsRange.start; i < coeffsRange.end; i++ {
 		coeffs = append(coeffs, vars.localWires[i])
 	}
 
-	accs := []field.QEAlgebra{}
+	accs := []gl.QuadraticExtensionAlgebraVariable{}
 	for i := uint64(0); i < g.numCoeffs; i++ {
 		accs = append(accs, vars.GetLocalExtAlgebra(g.wiresAccs(i)))
 	}
 
-	constraints := []field.QuadraticExtension{}
+	constraints := []gl.QuadraticExtensionVariable{}
 	acc := oldAcc
 	for i := uint64(0); i < g.numCoeffs; i++ {
-		var coeff field.QEAlgebra
+		var coeff gl.QuadraticExtensionAlgebraVariable
 		for j := 0; j < field.D; j++ {
-			coeff[j] = qeAPI.ZERO_QE
+			coeff[j] = gl.ZeroExtension()
 		}
 		coeff[0] = coeffs[i]
-		tmp := qeAPI.MulExtensionAlgebra(acc, alpha)
-		tmp = qeAPI.AddExtensionAlgebra(tmp, coeff)
-		tmp = qeAPI.SubExtensionAlgebra(tmp, accs[i])
+		tmp := glApi.MulExtensionAlgebra(acc, alpha)
+		tmp = glApi.AddExtensionAlgebra(tmp, coeff)
+		tmp = glApi.SubExtensionAlgebra(tmp, accs[i])
 		for j := 0; j < field.D; j++ {
 			constraints = append(constraints, tmp[j])
 		}
