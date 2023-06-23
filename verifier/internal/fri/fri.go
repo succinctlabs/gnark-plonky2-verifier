@@ -400,7 +400,18 @@ func (f *FriChip) verifyQueryRound(
 
 	subgroupX_QE := gl.QuadraticExtensionVariable{subgroupX, gl.NewVariableFromConst(0)}
 
-	fmt.Println(challenges.FriAlpha[0], challenges.FriAlpha[1], subgroupX_QE[0], subgroupX_QE[1])
+	// fmt.Println(challenges.FriAlpha[0], challenges.FriAlpha[1], subgroupX_QE[0], subgroupX_QE[1])
+	// oldEval := f.friCombineInitial(
+	// 	instance,
+	// 	roundProof.InitialTreesProof,
+	// 	challenges.FriAlpha,
+	// 	subgroupX_QE,
+	// 	precomputedReducedEval,
+	// )
+
+	fmt.Println("FriAlpha:", challenges.FriAlpha[0], challenges.FriAlpha[1])
+	fmt.Println("SubgroupX:", subgroupX_QE[0], subgroupX_QE[1])
+	fmt.Println("Precomputed Reduce Eval:", precomputedReducedEval[0][0].Limb, precomputedReducedEval[0][1].Limb)
 	oldEval := f.friCombineInitial(
 		instance,
 		roundProof.InitialTreesProof,
@@ -408,6 +419,8 @@ func (f *FriChip) verifyQueryRound(
 		subgroupX_QE,
 		precomputedReducedEval,
 	)
+	fmt.Println("Old Eval:", oldEval[0].Limb, oldEval[1].Limb)
+	// old eval seems to match?
 
 	for i, arityBits := range f.friParams.ReductionArityBits {
 		evals := roundProof.Steps[i].Evals
@@ -436,7 +449,10 @@ func (f *FriChip) verifyQueryRound(
 				evals[i*NUM_LEAF_LOOKUPS+2],
 				evals[i*NUM_LEAF_LOOKUPS+3],
 			)
+			fmt.Println("leaf lookups", i, leafLookups[i])
 		}
+
+		panic("done")
 
 		// Use the most 2 significant bits of the xIndexWithCosetBits array for the "root" lookup
 		newEval := f.gl.Lookup2(
@@ -449,7 +465,6 @@ func (f *FriChip) verifyQueryRound(
 		)
 
 		glApi := gl.NewChip(f.api)
-		fmt.Println(newEval[0], oldEval[0])
 		glApi.AssertIsEqual(newEval[0], oldEval[0])
 		glApi.AssertIsEqual(newEval[1], oldEval[1])
 
