@@ -400,6 +400,7 @@ func (f *FriChip) verifyQueryRound(
 
 	subgroupX_QE := gl.QuadraticExtensionVariable{subgroupX, gl.NewVariableFromConst(0)}
 
+	fmt.Println(challenges.FriAlpha[0], challenges.FriAlpha[1], subgroupX_QE[0], subgroupX_QE[1])
 	oldEval := f.friCombineInitial(
 		instance,
 		roundProof.InitialTreesProof,
