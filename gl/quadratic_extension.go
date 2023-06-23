@@ -61,20 +61,38 @@ func (p *Chip) MulExtension(a, b QuadraticExtensionVariable) QuadraticExtensionV
 
 // Multiplies quadratic extension variable in the Goldilocks field without reducing.
 func (p *Chip) MulExtensionNoReduce(a, b QuadraticExtensionVariable) QuadraticExtensionVariable {
-	c0o0 := p.MulNoReduce(a[0], b[0])                                         // < 128 bits
-	c0o1 := p.MulNoReduce(p.MulNoReduce(NewVariableFromConst(7), a[1]), b[1]) // < 132 bits
-	c0 := p.AddNoReduce(c0o0, c0o1)                                           // < 133 bits
-	c1 := p.AddNoReduce(p.MulNoReduce(a[0], b[1]), p.MulNoReduce(a[1], b[0])) // < 129 bits
+	c0o0 := p.MulNoReduce(a[0], b[0])
+	c0o1 := p.MulNoReduce(p.MulNoReduce(NewVariableFromConst(7), a[1]), b[1])
+	c0 := p.AddNoReduce(c0o0, c0o1)
+	c1 := p.AddNoReduce(p.MulNoReduce(a[0], b[1]), p.MulNoReduce(a[1], b[0]))
 	return NewQuadraticExtensionVariable(c0, c1)
 }
 
-// Multiplies two operands a and b and adds to c in the Goldilocks extension field.
+// Multiplies two operands a and b and adds to c in the Goldilocks extension field. a * b + c must
+// be less than 140 bits.
 func (p *Chip) MulAddExtension(a, b, c QuadraticExtensionVariable) QuadraticExtensionVariable {
 	product := p.MulExtensionNoReduce(a, b)
-	acc := p.AddExtensionNoReduce(product, c)
-	acc[0] = p.ReduceWithMaxBits(acc[0], 140)
-	acc[1] = p.ReduceWithMaxBits(acc[1], 140)
-	return acc
+	sum := p.AddExtensionNoReduce(product, c)
+
+	sum[0] = p.ReduceWithMaxBits(sum[0], 140)
+	sum[1] = p.ReduceWithMaxBits(sum[1], 140)
+	return sum
+}
+
+func (p *Chip) MulAddExtensionNoReduce(a, b, c QuadraticExtensionVariable) QuadraticExtensionVariable {
+	product := p.MulExtensionNoReduce(a, b)
+	sum := p.AddExtensionNoReduce(product, c)
+	return sum
+}
+
+// Multiplies two operands a and b and adds to c in the Goldilocks extension field. a * b - c must
+// be less than 140 bits.
+func (p *Chip) SubMulExtension(a, b, c QuadraticExtensionVariable) QuadraticExtensionVariable {
+	difference := p.SubExtensionNoReduce(a, b)
+	product := p.MulExtensionNoReduce(difference, c)
+	product[0] = p.ReduceWithMaxBits(product[0], 140)
+	product[1] = p.ReduceWithMaxBits(product[1], 140)
+	return product
 }
 
 // Multiplies quadratic extension variable in the Goldilocks field by a scalar.
@@ -99,9 +117,9 @@ func (p *Chip) InnerProductExtension(
 		a := pairs[i][0]
 		b := pairs[i][1]
 		mul := p.ScalarMulExtension(a, constant)
-		acc = p.MulAddExtension(mul, b, acc)
+		acc = p.MulAddExtensionNoReduce(mul, b, acc)
 	}
-	return acc
+	return p.ReduceExtension(acc)
 }
 
 // Computes the inverse of a quadratic extension variable in the Goldilocks field.
@@ -153,6 +171,10 @@ func (p *Chip) ExpExtension(
 	return product
 }
 
+func (p *Chip) ReduceExtension(x QuadraticExtensionVariable) QuadraticExtensionVariable {
+	return NewQuadraticExtensionVariable(p.Reduce(x[0]), p.Reduce(x[1]))
+}
+
 // Reduces a list of extension field terms with a scalar power in the Goldilocks field.
 func (p *Chip) ReduceWithPowers(
 	terms []QuadraticExtensionVariable,
@@ -199,6 +221,7 @@ func (p *Chip) Lookup2(
 	return p.Lookup(b1, c0, c1)
 }
 
+// Asserts that two quadratic extension variables are equal.
 func (p *Chip) AssertIsEqualExtension(
 	a QuadraticExtensionVariable,
 	b QuadraticExtensionVariable,

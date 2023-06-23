@@ -4,6 +4,13 @@
 // linear combination of powers of two.
 package gl
 
+// In general, methods whose name do not contain `NoReduce` can be used without any extra mental
+// overhead. These methods act exactly as you would expect a normal field would operate.
+//
+// However, if you want to aggressively optimize the number of constraints in your circuit, it can
+// be very beneficial to use the no reduction methods and keep track of the maximum number of bits
+// your computation uses.
+
 import (
 	"fmt"
 	"math/big"
@@ -34,6 +41,7 @@ var REDUCE_NB_BITS_THRESHOLD uint8 = 254 - 64
 func init() {
 	solver.RegisterHint(MulAddHint)
 	solver.RegisterHint(ReduceHint)
+	solver.RegisterHint(InverseHint)
 }
 
 // A type alias used to represent Goldilocks field elements.
@@ -171,7 +179,7 @@ func (p *Chip) Reduce(x Variable) Variable {
 	}
 
 	quotient := result[0]
-	p.api.ToBinary(quotient, 170)
+	p.api.ToBinary(quotient, 130)
 
 	remainder := NewVariable(result[1])
 	p.RangeCheck(remainder)
@@ -184,7 +192,7 @@ func (p *Chip) ReduceWithMaxBits(x Variable, maxNbBits uint64) Variable {
 	//
 	// 		MODULUS * carry + offset = x
 	//
-	// Must check that offset \in [0, MODULUS) and carry \in [0, 2^170] to ensure that this
+	// Must check that offset \in [0, MODULUS) and carry \in [0, maxNbBits] to ensure that this
 	// computation does not overflow.
 
 	result, err := p.api.Compiler().NewHint(ReduceHint, 2, x.Limb)

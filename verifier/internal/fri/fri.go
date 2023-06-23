@@ -224,14 +224,12 @@ func (f *FriChip) friCombineInitial(
 		}
 
 		reducedEvals := f.gl.ReduceWithPowers(evals, friAlpha)
-		numerator := f.gl.SubExtension(reducedEvals, reducedOpenings)
+		numerator := f.gl.SubExtensionNoReduce(reducedEvals, reducedOpenings)
 		denominator := f.gl.SubExtension(subgroupX_QE, point)
 		sum = f.gl.MulExtension(f.gl.ExpExtension(friAlpha, uint64(len(evals))), sum)
-		sum = f.gl.AddExtension(
-			f.gl.DivExtension(
-				numerator,
-				denominator,
-			),
+		sum = f.gl.MulAddExtension(
+			numerator,
+			f.gl.InverseExtension(denominator),
 			sum,
 		)
 	}
@@ -240,15 +238,9 @@ func (f *FriChip) friCombineInitial(
 }
 
 func (f *FriChip) finalPolyEval(finalPoly common.PolynomialCoeffs, point gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
-	ret := gl.QuadraticExtensionVariable{gl.NewVariableFromConst(0), gl.NewVariableFromConst(0)}
+	ret := gl.ZeroExtension()
 	for i := len(finalPoly.Coeffs) - 1; i >= 0; i-- {
-		ret = f.gl.AddExtension(
-			f.gl.MulExtension(
-				ret,
-				point,
-			),
-			finalPoly.Coeffs[i],
-		)
+		ret = f.gl.MulAddExtension(ret, point, finalPoly.Coeffs[i])
 	}
 	return ret
 }
@@ -265,13 +257,7 @@ func (f *FriChip) interpolate(
 
 	lX := gl.OneExtension()
 	for i := 0; i < len(xPoints); i++ {
-		lX = f.gl.MulExtension(
-			lX,
-			f.gl.SubExtension(
-				x,
-				xPoints[i],
-			),
-		)
+		lX = f.gl.SubMulExtension(x, xPoints[i], lX)
 	}
 
 	sum := gl.ZeroExtension()
@@ -361,8 +347,9 @@ func (f *FriChip) computeEvaluation(
 		barycentricWeights[i] = gl.QuadraticExtensionVariable{gl.NewVariableFromConst(1), gl.NewVariableFromConst(0)}
 		for j := 0; j < len(xPoints); j++ {
 			if i != j {
-				barycentricWeights[i] = f.gl.MulExtension(
-					f.gl.SubExtension(xPoints[i], xPoints[j]),
+				barycentricWeights[i] = f.gl.SubMulExtension(
+					xPoints[i],
+					xPoints[j],
 					barycentricWeights[i],
 				)
 			}
@@ -400,15 +387,6 @@ func (f *FriChip) verifyQueryRound(
 
 	subgroupX_QE := gl.QuadraticExtensionVariable{subgroupX, gl.NewVariableFromConst(0)}
 
-	// fmt.Println(challenges.FriAlpha[0], challenges.FriAlpha[1], subgroupX_QE[0], subgroupX_QE[1])
-	// oldEval := f.friCombineInitial(
-	// 	instance,
-	// 	roundProof.InitialTreesProof,
-	// 	challenges.FriAlpha,
-	// 	subgroupX_QE,
-	// 	precomputedReducedEval,
-	// )
-
 	oldEval := f.friCombineInitial(
 		instance,
 		roundProof.InitialTreesProof,
@@ -416,7 +394,6 @@ func (f *FriChip) verifyQueryRound(
 		subgroupX_QE,
 		precomputedReducedEval,
 	)
-	// old eval seems to match?
 
 	for i, arityBits := range f.friParams.ReductionArityBits {
 		evals := roundProof.Steps[i].Evals
