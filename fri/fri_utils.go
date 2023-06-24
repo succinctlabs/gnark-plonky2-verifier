@@ -5,44 +5,44 @@ import (
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 )
 
-type FriOpeningBatch struct {
+type OpeningBatch struct {
 	Values []gl.QuadraticExtensionVariable
 }
 
-type FriOpenings struct {
-	Batches []FriOpeningBatch
+type Openings struct {
+	Batches []OpeningBatch
 }
 
-func ToFriOpenings(c common.OpeningSet) FriOpenings {
+func ToOpenings(c common.OpeningSet) Openings {
 	values := c.Constants                         // num_constants + 1
 	values = append(values, c.PlonkSigmas...)     // num_routed_wires
 	values = append(values, c.Wires...)           // num_wires
 	values = append(values, c.PlonkZs...)         // num_challenges
 	values = append(values, c.PartialProducts...) // num_challenges * num_partial_products
 	values = append(values, c.QuotientPolys...)   // num_challenges * quotient_degree_factor
-	zetaBatch := FriOpeningBatch{Values: values}
-	zetaNextBatch := FriOpeningBatch{Values: c.PlonkZsNext}
-	return FriOpenings{Batches: []FriOpeningBatch{zetaBatch, zetaNextBatch}}
+	zetaBatch := OpeningBatch{Values: values}
+	zetaNextBatch := OpeningBatch{Values: c.PlonkZsNext}
+	return Openings{Batches: []OpeningBatch{zetaBatch, zetaNextBatch}}
 }
 
-type FriPolynomialInfo struct {
+type PolynomialInfo struct {
 	OracleIndex    uint64
 	PolynomialInfo uint64
 }
 
-type FriOracleInfo struct {
+type OracleInfo struct {
 	NumPolys uint64
 	Blinding bool
 }
 
-type FriBatchInfo struct {
+type BatchInfo struct {
 	Point       gl.QuadraticExtensionVariable
-	Polynomials []FriPolynomialInfo
+	Polynomials []PolynomialInfo
 }
 
-type FriInstanceInfo struct {
-	Oracles []FriOracleInfo
-	Batches []FriBatchInfo
+type InstanceInfo struct {
+	Oracles []OracleInfo
+	Batches []BatchInfo
 }
 
 type PlonkOracle struct {
@@ -70,11 +70,11 @@ var QUOTIENT = PlonkOracle{
 	blinding: true,
 }
 
-func polynomialInfoFromRange(c *common.CommonCircuitData, oracleIdx uint64, startPolyIdx uint64, endPolyIdx uint64) []FriPolynomialInfo {
-	returnArr := make([]FriPolynomialInfo, 0)
+func polynomialInfoFromRange(c *common.CommonCircuitData, oracleIdx uint64, startPolyIdx uint64, endPolyIdx uint64) []PolynomialInfo {
+	returnArr := make([]PolynomialInfo, 0)
 	for i := startPolyIdx; i < endPolyIdx; i++ {
 		returnArr = append(returnArr,
-			FriPolynomialInfo{
+			PolynomialInfo{
 				OracleIndex:    oracleIdx,
 				PolynomialInfo: i,
 			})
@@ -106,7 +106,7 @@ func numQuotientPolys(c *common.CommonCircuitData) uint64 {
 	return c.Config.NumChallenges * c.QuotientDegreeFactor
 }
 
-func friPreprocessedPolys(c *common.CommonCircuitData) []FriPolynomialInfo {
+func friPreprocessedPolys(c *common.CommonCircuitData) []PolynomialInfo {
 	return polynomialInfoFromRange(
 		c,
 		CONSTANTS_SIGMAS.index,
@@ -115,12 +115,12 @@ func friPreprocessedPolys(c *common.CommonCircuitData) []FriPolynomialInfo {
 	)
 }
 
-func friWirePolys(c *common.CommonCircuitData) []FriPolynomialInfo {
+func friWirePolys(c *common.CommonCircuitData) []PolynomialInfo {
 	numWirePolys := c.Config.NumWires
 	return polynomialInfoFromRange(c, WIRES.index, 0, numWirePolys)
 }
 
-func friZSPartialProductsPolys(c *common.CommonCircuitData) []FriPolynomialInfo {
+func friZSPartialProductsPolys(c *common.CommonCircuitData) []PolynomialInfo {
 	return polynomialInfoFromRange(
 		c,
 		ZS_PARTIAL_PRODUCTS.index,
@@ -129,7 +129,7 @@ func friZSPartialProductsPolys(c *common.CommonCircuitData) []FriPolynomialInfo 
 	)
 }
 
-func friQuotientPolys(c *common.CommonCircuitData) []FriPolynomialInfo {
+func friQuotientPolys(c *common.CommonCircuitData) []PolynomialInfo {
 	return polynomialInfoFromRange(
 		c,
 		QUOTIENT.index,
@@ -138,7 +138,7 @@ func friQuotientPolys(c *common.CommonCircuitData) []FriPolynomialInfo {
 	)
 }
 
-func friZSPolys(c *common.CommonCircuitData) []FriPolynomialInfo {
+func friZSPolys(c *common.CommonCircuitData) []PolynomialInfo {
 	return polynomialInfoFromRange(
 		c,
 		ZS_PARTIAL_PRODUCTS.index,
@@ -147,8 +147,8 @@ func friZSPolys(c *common.CommonCircuitData) []FriPolynomialInfo {
 	)
 }
 
-func friOracles(c *common.CommonCircuitData) []FriOracleInfo {
-	return []FriOracleInfo{
+func friOracles(c *common.CommonCircuitData) []OracleInfo {
+	return []OracleInfo{
 		{
 			NumPolys: numPreprocessedPolys(c),
 			Blinding: CONSTANTS_SIGMAS.blinding,
@@ -168,8 +168,8 @@ func friOracles(c *common.CommonCircuitData) []FriOracleInfo {
 	}
 }
 
-func friAllPolys(c *common.CommonCircuitData) []FriPolynomialInfo {
-	returnArr := make([]FriPolynomialInfo, 0)
+func friAllPolys(c *common.CommonCircuitData) []PolynomialInfo {
+	returnArr := make([]PolynomialInfo, 0)
 	returnArr = append(returnArr, friPreprocessedPolys(c)...)
 	returnArr = append(returnArr, friWirePolys(c)...)
 	returnArr = append(returnArr, friZSPartialProductsPolys(c)...)
@@ -178,8 +178,8 @@ func friAllPolys(c *common.CommonCircuitData) []FriPolynomialInfo {
 	return returnArr
 }
 
-func GetFriInstance(c *common.CommonCircuitData, glApi *gl.Chip, zeta gl.QuadraticExtensionVariable, degreeBits uint64) FriInstanceInfo {
-	zetaBatch := FriBatchInfo{
+func GetInstance(c *common.CommonCircuitData, glApi *gl.Chip, zeta gl.QuadraticExtensionVariable, degreeBits uint64) InstanceInfo {
+	zetaBatch := BatchInfo{
 		Point:       zeta,
 		Polynomials: friAllPolys(c),
 	}
@@ -190,13 +190,13 @@ func GetFriInstance(c *common.CommonCircuitData, glApi *gl.Chip, zeta gl.Quadrat
 		zeta,
 	)
 
-	zetaNextBath := FriBatchInfo{
+	zetaNextBath := BatchInfo{
 		Point:       zetaNext,
 		Polynomials: friZSPolys(c),
 	}
 
-	return FriInstanceInfo{
+	return InstanceInfo{
 		Oracles: friOracles(c),
-		Batches: []FriBatchInfo{zetaBatch, zetaNextBath},
+		Batches: []BatchInfo{zetaBatch, zetaNextBath},
 	}
 }

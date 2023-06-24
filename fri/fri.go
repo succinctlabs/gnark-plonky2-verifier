@@ -13,21 +13,21 @@ import (
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 )
 
-type FriChip struct {
+type Chip struct {
 	api frontend.API `gnark:"-"`
 	gl  gl.Chip      `gnark:"-"`
 
-	poseidonBN254Chip *poseidon.PoseidonBN254Chip
+	poseidonBN254Chip *poseidon.BN254Chip
 
 	friParams *common.FriParams `gnark:"-"`
 }
 
-func NewFriChip(
+func NewChip(
 	api frontend.API,
-	poseidonBN254Chip *poseidon.PoseidonBN254Chip,
+	poseidonBN254Chip *poseidon.BN254Chip,
 	friParams *common.FriParams,
-) *FriChip {
-	return &FriChip{
+) *Chip {
+	return &Chip{
 		api:               api,
 		poseidonBN254Chip: poseidonBN254Chip,
 		friParams:         friParams,
@@ -35,7 +35,7 @@ func NewFriChip(
 	}
 }
 
-func (f *FriChip) assertLeadingZeros(powWitness gl.Variable, friConfig common.FriConfig) {
+func (f *Chip) assertLeadingZeros(powWitness gl.Variable, friConfig common.FriConfig) {
 	// Asserts that powWitness'es big-endian bit representation has at least `leading_zeros` leading zeros.
 	// Note that this is assuming that the Goldilocks field is being used.  Specfically that the
 	// field is 64 bits long
@@ -44,8 +44,8 @@ func (f *FriChip) assertLeadingZeros(powWitness gl.Variable, friConfig common.Fr
 	f.api.AssertIsLessOrEqual(reducedPowWitness.Limb, frontend.Variable(maxPowWitness))
 }
 
-func (f *FriChip) fromOpeningsAndAlpha(
-	openings *FriOpenings,
+func (f *Chip) fromOpeningsAndAlpha(
+	openings *Openings,
 	alpha gl.QuadraticExtensionVariable,
 ) []gl.QuadraticExtensionVariable {
 	// One reduced opening for all openings evaluated at point Zeta.
@@ -59,7 +59,7 @@ func (f *FriChip) fromOpeningsAndAlpha(
 	return reducedOpenings
 }
 
-func (f *FriChip) verifyMerkleProofToCapWithCapIndex(
+func (f *Chip) verifyMerkleProofToCapWithCapIndex(
 	leafData []gl.Variable,
 	leafIndexBits []frontend.Variable,
 	capIndexBits []frontend.Variable,
@@ -102,7 +102,7 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(
 	f.api.AssertIsEqual(currentDigest, merkleCapEntry)
 }
 
-func (f *FriChip) verifyInitialProof(xIndexBits []frontend.Variable, proof *common.FriInitialTreeProof, initialMerkleCaps []common.MerkleCap, capIndexBits []frontend.Variable) {
+func (f *Chip) verifyInitialProof(xIndexBits []frontend.Variable, proof *common.FriInitialTreeProof, initialMerkleCaps []common.MerkleCap, capIndexBits []frontend.Variable) {
 	if len(proof.EvalsProofs) != len(initialMerkleCaps) {
 		panic("length of eval proofs in fri proof should equal length of initial merkle caps")
 	}
@@ -127,7 +127,7 @@ func (f *FriChip) verifyInitialProof(xIndexBits []frontend.Variable, proof *comm
 // / Thus ambiguous elements contribute a negligible amount to soundness error.
 // /
 // / Here we compare the probabilities as a sanity check, to verify the claim above.
-func (f *FriChip) assertNoncanonicalIndicesOK() {
+func (f *Chip) assertNoncanonicalIndicesOK() {
 	numAmbiguousElems := uint64(math.MaxUint64) - goldilocks.Modulus().Uint64() + 1
 	queryError := f.friParams.Config.Rate()
 	pAmbiguous := float64(numAmbiguousElems) / float64(goldilocks.Modulus().Uint64())
@@ -138,7 +138,7 @@ func (f *FriChip) assertNoncanonicalIndicesOK() {
 	}
 }
 
-func (f *FriChip) expFromBitsConstBase(
+func (f *Chip) expFromBitsConstBase(
 	base goldilocks.Element,
 	exponentBits []frontend.Variable,
 ) gl.Variable {
@@ -166,7 +166,7 @@ func (f *FriChip) expFromBitsConstBase(
 	return product
 }
 
-func (f *FriChip) calculateSubgroupX(
+func (f *Chip) calculateSubgroupX(
 	xIndexBits []frontend.Variable,
 	nLog uint64,
 ) gl.Variable {
@@ -187,8 +187,8 @@ func (f *FriChip) calculateSubgroupX(
 	return f.gl.Mul(g, product)
 }
 
-func (f *FriChip) friCombineInitial(
-	instance FriInstanceInfo,
+func (f *Chip) friCombineInitial(
+	instance InstanceInfo,
 	proof common.FriInitialTreeProof,
 	friAlpha gl.QuadraticExtensionVariable,
 	subgroupX_QE gl.QuadraticExtensionVariable,
@@ -230,7 +230,7 @@ func (f *FriChip) friCombineInitial(
 	return sum
 }
 
-func (f *FriChip) finalPolyEval(finalPoly common.PolynomialCoeffs, point gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
+func (f *Chip) finalPolyEval(finalPoly common.PolynomialCoeffs, point gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
 	ret := gl.ZeroExtension()
 	for i := len(finalPoly.Coeffs) - 1; i >= 0; i-- {
 		ret = f.gl.MulAddExtension(ret, point, finalPoly.Coeffs[i])
@@ -238,7 +238,7 @@ func (f *FriChip) finalPolyEval(finalPoly common.PolynomialCoeffs, point gl.Quad
 	return ret
 }
 
-func (f *FriChip) interpolate(
+func (f *Chip) interpolate(
 	x gl.QuadraticExtensionVariable,
 	xPoints []gl.QuadraticExtensionVariable,
 	yPoints []gl.QuadraticExtensionVariable,
@@ -285,7 +285,7 @@ func (f *FriChip) interpolate(
 	return returnField
 }
 
-func (f *FriChip) computeEvaluation(
+func (f *Chip) computeEvaluation(
 	x gl.Variable,
 	xIndexWithinCosetBits []frontend.Variable,
 	arityBits uint64,
@@ -355,8 +355,8 @@ func (f *FriChip) computeEvaluation(
 	return f.interpolate(beta, xPoints, yPoints, barycentricWeights)
 }
 
-func (f *FriChip) verifyQueryRound(
-	instance FriInstanceInfo,
+func (f *Chip) verifyQueryRound(
+	instance InstanceInfo,
 	challenges *common.FriChallenges,
 	precomputedReducedEval []gl.QuadraticExtensionVariable,
 	initialMerkleCaps []common.MerkleCap,
@@ -469,9 +469,9 @@ func (f *FriChip) verifyQueryRound(
 	glApi.AssertIsEqual(oldEval[1], finalPolyEval[1])
 }
 
-func (f *FriChip) VerifyFriProof(
-	instance FriInstanceInfo,
-	openings FriOpenings,
+func (f *Chip) VerifyFriProof(
+	instance InstanceInfo,
+	openings Openings,
 	friChallenges *common.FriChallenges,
 	initialMerkleCaps []common.MerkleCap,
 	friProof *common.FriProof,

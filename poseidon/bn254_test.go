@@ -10,15 +10,15 @@ import (
 )
 
 type TestPoseidonBN254Circuit struct {
-	In  [spongeWidth]frontend.Variable
-	Out [spongeWidth]frontend.Variable
+	In  [BN254_SPONGE_WIDTH]frontend.Variable
+	Out [BN254_SPONGE_WIDTH]frontend.Variable
 }
 
 func (circuit *TestPoseidonBN254Circuit) Define(api frontend.API) error {
 	poseidonChip := NewPoseidonBN254Chip(api)
 	output := poseidonChip.Poseidon(circuit.In)
 
-	for i := 0; i < spongeWidth; i++ {
+	for i := 0; i < BN254_SPONGE_WIDTH; i++ {
 		api.AssertIsEqual(
 			output[i],
 			circuit.Out[i],
@@ -31,7 +31,7 @@ func (circuit *TestPoseidonBN254Circuit) Define(api frontend.API) error {
 func TestPoseidonBN254(t *testing.T) {
 	assert := test.NewAssert(t)
 
-	testCaseFn := func(in [spongeWidth]frontend.Variable, out [spongeWidth]frontend.Variable) {
+	testCaseFn := func(in [BN254_SPONGE_WIDTH]frontend.Variable, out [BN254_SPONGE_WIDTH]frontend.Variable) {
 		circuit := TestPoseidonBN254Circuit{In: in, Out: out}
 		witness := TestPoseidonBN254Circuit{In: in, Out: out}
 		err := test.IsSolved(&circuit, &witness, ecc.BN254.ScalarField())
@@ -88,8 +88,8 @@ func TestPoseidonBN254(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		var in [spongeWidth]frontend.Variable
-		var out [spongeWidth]frontend.Variable
+		var in [BN254_SPONGE_WIDTH]frontend.Variable
+		var out [BN254_SPONGE_WIDTH]frontend.Variable
 		copy(in[:], utils.StrArrayToFrontendVariableArray(testCase[0]))
 		copy(out[:], utils.StrArrayToFrontendVariableArray(testCase[1]))
 		testCaseFn(in, out)

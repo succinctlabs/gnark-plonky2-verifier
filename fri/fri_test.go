@@ -28,8 +28,8 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	glApi := gl.NewChip(api)
 	poseidonChip := poseidon.NewPoseidonChip(api)
 	poseidonBN254Chip := poseidon.NewPoseidonBN254Chip(api)
-	friChip := fri.NewFriChip(api, poseidonBN254Chip, &commonCircuitData.FriParams)
-	challengerChip := challenger.NewChallengerChip(api, poseidonChip, poseidonBN254Chip)
+	friChip := fri.NewChip(api, poseidonBN254Chip, &commonCircuitData.FriParams)
+	challengerChip := challenger.NewChip(api, poseidonChip, poseidonBN254Chip)
 
 	challengerChip.ObserveBN254Hash(verifierOnlyCircuitData.CircuitDigest)
 	challengerChip.ObserveHash(poseidonChip.HashNoPad(proofWithPis.PublicInputs))
@@ -47,7 +47,7 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	plonkZeta := challengerChip.GetExtensionChallenge()
 	glApi.AssertIsEqual(plonkZeta[0], gl.NewVariable("3892795992421241388"))
 
-	challengerChip.ObserveOpenings(fri.ToFriOpenings(proofWithPis.Proof.Openings))
+	challengerChip.ObserveOpenings(fri.ToOpenings(proofWithPis.Proof.Openings))
 
 	friChallenges := challengerChip.GetFriChallenges(
 		proofWithPis.Proof.OpeningProof.CommitPhaseMerkleCaps,
@@ -95,8 +95,8 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	}
 
 	friChip.VerifyFriProof(
-		fri.GetFriInstance(&commonCircuitData, glApi, plonkZeta, commonCircuitData.DegreeBits),
-		fri.ToFriOpenings(proofWithPis.Proof.Openings),
+		fri.GetInstance(&commonCircuitData, glApi, plonkZeta, commonCircuitData.DegreeBits),
+		fri.ToOpenings(proofWithPis.Proof.Openings),
 		&friChallenges,
 		initialMerkleCaps,
 		&proofWithPis.Proof.OpeningProof,

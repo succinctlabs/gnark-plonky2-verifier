@@ -12,16 +12,16 @@ import (
 
 type VerifierChip struct {
 	api               frontend.API `gnark:"-"`
-	poseidonChip      *poseidon.PoseidonChip
-	poseidonBN254Chip *poseidon.PoseidonBN254Chip
+	poseidonChip      *poseidon.GoldilocksChip
+	poseidonBN254Chip *poseidon.BN254Chip
 	plonkChip         *plonk.PlonkChip
-	friChip           *fri.FriChip
+	friChip           *fri.Chip
 }
 
 func NewVerifierChip(api frontend.API, commonCircuitData common.CommonCircuitData) *VerifierChip {
 	poseidonBN254Chip := poseidon.NewPoseidonBN254Chip(api)
 
-	friChip := fri.NewFriChip(api, poseidonBN254Chip, &commonCircuitData.FriParams)
+	friChip := fri.NewChip(api, poseidonBN254Chip, &commonCircuitData.FriParams)
 	plonkChip := plonk.NewPlonkChip(api, commonCircuitData)
 
 	// We are using goldilocks poseidon for the challenge computation
@@ -48,7 +48,7 @@ func (c *VerifierChip) GetChallenges(
 ) common.ProofChallenges {
 	config := commonData.Config
 	numChallenges := config.NumChallenges
-	challenger := challenger.NewChallengerChip(c.api, c.poseidonChip, c.poseidonBN254Chip)
+	challenger := challenger.NewChip(c.api, c.poseidonChip, c.poseidonBN254Chip)
 
 	var circuitDigest = verifierData.CircuitDigest
 
@@ -64,7 +64,7 @@ func (c *VerifierChip) GetChallenges(
 	challenger.ObserveCap(proof.QuotientPolysCap)
 	plonkZeta := challenger.GetExtensionChallenge()
 
-	challenger.ObserveOpenings(fri.ToFriOpenings(proof.Openings))
+	challenger.ObserveOpenings(fri.ToOpenings(proof.Openings))
 
 	return common.ProofChallenges{
 		PlonkBetas:  plonkBetas,
@@ -190,8 +190,8 @@ func (c *VerifierChip) Verify(
 	}
 
 	c.friChip.VerifyFriProof(
-		fri.GetFriInstance(&commonData, glApi, proofChallenges.PlonkZeta, commonData.DegreeBits),
-		fri.ToFriOpenings(proof.Openings),
+		fri.GetInstance(&commonData, glApi, proofChallenges.PlonkZeta, commonData.DegreeBits),
+		fri.ToOpenings(proof.Openings),
 		&proofChallenges.FriChallenges,
 		initialMerkleCaps,
 		&proof.OpeningProof,

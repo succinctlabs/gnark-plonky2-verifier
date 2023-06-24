@@ -10,16 +10,16 @@ import (
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 )
 
-type ChallengerChip struct {
+type Chip struct {
 	api               frontend.API `gnark:"-"`
-	poseidonChip      *poseidon.PoseidonChip
-	poseidonBN254Chip *poseidon.PoseidonBN254Chip
+	poseidonChip      *poseidon.GoldilocksChip
+	poseidonBN254Chip *poseidon.BN254Chip
 	spongeState       [poseidon.SPONGE_WIDTH]gl.Variable
 	inputBuffer       []gl.Variable
 	outputBuffer      []gl.Variable
 }
 
-func NewChallengerChip(api frontend.API, poseidonChip *poseidon.PoseidonChip, poseidonBN254Chip *poseidon.PoseidonBN254Chip) *ChallengerChip {
+func NewChip(api frontend.API, poseidonChip *poseidon.GoldilocksChip, poseidonBN254Chip *poseidon.BN254Chip) *Chip {
 	var spongeState [poseidon.SPONGE_WIDTH]gl.Variable
 	var inputBuffer []gl.Variable
 	var outputBuffer []gl.Variable
@@ -28,7 +28,7 @@ func NewChallengerChip(api frontend.API, poseidonChip *poseidon.PoseidonChip, po
 		spongeState[i] = gl.Zero()
 	}
 
-	return &ChallengerChip{
+	return &Chip{
 		api:               api,
 		poseidonChip:      poseidonChip,
 		poseidonBN254Chip: poseidonBN254Chip,
@@ -38,7 +38,7 @@ func NewChallengerChip(api frontend.API, poseidonChip *poseidon.PoseidonChip, po
 	}
 }
 
-func (c *ChallengerChip) ObserveElement(element gl.Variable) {
+func (c *Chip) ObserveElement(element gl.Variable) {
 	c.outputBuffer = clearBuffer(c.outputBuffer)
 	c.inputBuffer = append(c.inputBuffer, element)
 	if len(c.inputBuffer) == poseidon.SPONGE_RATE {
@@ -46,45 +46,45 @@ func (c *ChallengerChip) ObserveElement(element gl.Variable) {
 	}
 }
 
-func (c *ChallengerChip) ObserveElements(elements []gl.Variable) {
+func (c *Chip) ObserveElements(elements []gl.Variable) {
 	for i := 0; i < len(elements); i++ {
 		c.ObserveElement(elements[i])
 	}
 }
 
-func (c *ChallengerChip) ObserveHash(hash poseidon.PoseidonHashOut) {
+func (c *Chip) ObserveHash(hash poseidon.PoseidonHashOut) {
 	elements := c.poseidonChip.ToVec(hash)
 	c.ObserveElements(elements)
 }
 
-func (c *ChallengerChip) ObserveBN254Hash(hash poseidon.PoseidonBN254HashOut) {
+func (c *Chip) ObserveBN254Hash(hash poseidon.PoseidonBN254HashOut) {
 	elements := c.poseidonBN254Chip.ToVec(hash)
 	c.ObserveElements(elements)
 }
 
-func (c *ChallengerChip) ObserveCap(cap []poseidon.PoseidonBN254HashOut) {
+func (c *Chip) ObserveCap(cap []poseidon.PoseidonBN254HashOut) {
 	for i := 0; i < len(cap); i++ {
 		c.ObserveBN254Hash(cap[i])
 	}
 }
 
-func (c *ChallengerChip) ObserveExtensionElement(element gl.QuadraticExtensionVariable) {
+func (c *Chip) ObserveExtensionElement(element gl.QuadraticExtensionVariable) {
 	c.ObserveElements(element[:])
 }
 
-func (c *ChallengerChip) ObserveExtensionElements(elements []gl.QuadraticExtensionVariable) {
+func (c *Chip) ObserveExtensionElements(elements []gl.QuadraticExtensionVariable) {
 	for i := 0; i < len(elements); i++ {
 		c.ObserveExtensionElement(elements[i])
 	}
 }
 
-func (c *ChallengerChip) ObserveOpenings(openings fri.FriOpenings) {
+func (c *Chip) ObserveOpenings(openings fri.Openings) {
 	for i := 0; i < len(openings.Batches); i++ {
 		c.ObserveExtensionElements(openings.Batches[i].Values)
 	}
 }
 
-func (c *ChallengerChip) GetChallenge() gl.Variable {
+func (c *Chip) GetChallenge() gl.Variable {
 	if len(c.inputBuffer) != 0 || len(c.outputBuffer) == 0 {
 		c.duplexing()
 	}
@@ -95,7 +95,7 @@ func (c *ChallengerChip) GetChallenge() gl.Variable {
 	return challenge
 }
 
-func (c *ChallengerChip) GetNChallenges(n uint64) []gl.Variable {
+func (c *Chip) GetNChallenges(n uint64) []gl.Variable {
 	challenges := make([]gl.Variable, n)
 	for i := uint64(0); i < n; i++ {
 		challenges[i] = c.GetChallenge()
@@ -103,16 +103,16 @@ func (c *ChallengerChip) GetNChallenges(n uint64) []gl.Variable {
 	return challenges
 }
 
-func (c *ChallengerChip) GetExtensionChallenge() gl.QuadraticExtensionVariable {
+func (c *Chip) GetExtensionChallenge() gl.QuadraticExtensionVariable {
 	values := c.GetNChallenges(2)
 	return gl.QuadraticExtensionVariable{values[0], values[1]}
 }
 
-func (c *ChallengerChip) GetHash() poseidon.PoseidonHashOut {
+func (c *Chip) GetHash() poseidon.PoseidonHashOut {
 	return [4]gl.Variable{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
 }
 
-func (c *ChallengerChip) GetFriChallenges(
+func (c *Chip) GetFriChallenges(
 	commitPhaseMerkleCaps []common.MerkleCap,
 	finalPoly common.PolynomialCoeffs,
 	powWitness gl.Variable,
@@ -146,7 +146,7 @@ func clearBuffer(buffer []gl.Variable) []gl.Variable {
 	return make([]gl.Variable, 0)
 }
 
-func (c *ChallengerChip) duplexing() {
+func (c *Chip) duplexing() {
 	if len(c.inputBuffer) > poseidon.SPONGE_RATE {
 		fmt.Println(len(c.inputBuffer))
 		panic("something went wrong")

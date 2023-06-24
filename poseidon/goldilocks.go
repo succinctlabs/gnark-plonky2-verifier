@@ -15,19 +15,19 @@ type PoseidonState = [SPONGE_WIDTH]gl.Variable
 type PoseidonStateExtension = [SPONGE_WIDTH]gl.QuadraticExtensionVariable
 type PoseidonHashOut = [4]gl.Variable
 
-type PoseidonChip struct {
+type GoldilocksChip struct {
 	api frontend.API `gnark:"-"`
 	gl  gl.Chip      `gnark:"-"`
 }
 
-func NewPoseidonChip(api frontend.API) *PoseidonChip {
-	return &PoseidonChip{api: api, gl: *gl.NewChip(api)}
+func NewPoseidonChip(api frontend.API) *GoldilocksChip {
+	return &GoldilocksChip{api: api, gl: *gl.NewChip(api)}
 }
 
 // The permutation function.
 // The input state MUST have all it's elements be within Goldilocks field (e.g. this function will not reduce the input elements).
 // The returned state's elements will all be within Goldilocks field.
-func (c *PoseidonChip) Poseidon(input PoseidonState) PoseidonState {
+func (c *GoldilocksChip) Poseidon(input PoseidonState) PoseidonState {
 	state := input
 	roundCounter := 0
 	state = c.fullRounds(state, &roundCounter)
@@ -38,7 +38,7 @@ func (c *PoseidonChip) Poseidon(input PoseidonState) PoseidonState {
 
 // The input elements MUST have all it's elements be within Goldilocks field.
 // The returned slice's elements will all be within Goldilocks field.
-func (c *PoseidonChip) HashNToMNoPad(input []gl.Variable, nbOutputs int) []gl.Variable {
+func (c *GoldilocksChip) HashNToMNoPad(input []gl.Variable, nbOutputs int) []gl.Variable {
 	var state PoseidonState
 
 	for i := 0; i < SPONGE_WIDTH; i++ {
@@ -69,7 +69,7 @@ func (c *PoseidonChip) HashNToMNoPad(input []gl.Variable, nbOutputs int) []gl.Va
 
 // The input elements can be outside of the Goldilocks field.
 // The returned slice's elements will all be within Goldilocks field.
-func (c *PoseidonChip) HashNoPad(input []gl.Variable) PoseidonHashOut {
+func (c *GoldilocksChip) HashNoPad(input []gl.Variable) PoseidonHashOut {
 	var hash PoseidonHashOut
 	inputVars := []gl.Variable{}
 
@@ -85,11 +85,11 @@ func (c *PoseidonChip) HashNoPad(input []gl.Variable) PoseidonHashOut {
 	return hash
 }
 
-func (c *PoseidonChip) ToVec(hash PoseidonHashOut) []gl.Variable {
+func (c *GoldilocksChip) ToVec(hash PoseidonHashOut) []gl.Variable {
 	return hash[:]
 }
 
-func (c *PoseidonChip) fullRounds(state PoseidonState, roundCounter *int) PoseidonState {
+func (c *GoldilocksChip) fullRounds(state PoseidonState, roundCounter *int) PoseidonState {
 	for i := 0; i < HALF_N_FULL_ROUNDS; i++ {
 		state = c.constantLayer(state, roundCounter)
 		state = c.sBoxLayer(state)
@@ -99,7 +99,7 @@ func (c *PoseidonChip) fullRounds(state PoseidonState, roundCounter *int) Poseid
 	return state
 }
 
-func (c *PoseidonChip) partialRounds(state PoseidonState, roundCounter *int) PoseidonState {
+func (c *GoldilocksChip) partialRounds(state PoseidonState, roundCounter *int) PoseidonState {
 	state = c.partialFirstConstantLayer(state)
 	state = c.mdsPartialLayerInit(state)
 
@@ -114,7 +114,7 @@ func (c *PoseidonChip) partialRounds(state PoseidonState, roundCounter *int) Pos
 	return state
 }
 
-func (c *PoseidonChip) constantLayer(state PoseidonState, roundCounter *int) PoseidonState {
+func (c *GoldilocksChip) constantLayer(state PoseidonState, roundCounter *int) PoseidonState {
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
 			roundConstant := ALL_ROUND_CONSTANTS[i+SPONGE_WIDTH*(*roundCounter)]
@@ -124,7 +124,7 @@ func (c *PoseidonChip) constantLayer(state PoseidonState, roundCounter *int) Pos
 	return state
 }
 
-func (c *PoseidonChip) ConstantLayerExtension(state PoseidonStateExtension, roundCounter *int) PoseidonStateExtension {
+func (c *GoldilocksChip) ConstantLayerExtension(state PoseidonStateExtension, roundCounter *int) PoseidonStateExtension {
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
 			roundConstant := gl.NewVariable(ALL_ROUND_CONSTANTS[i+SPONGE_WIDTH*(*roundCounter)])
@@ -135,21 +135,21 @@ func (c *PoseidonChip) ConstantLayerExtension(state PoseidonStateExtension, roun
 	return state
 }
 
-func (c *PoseidonChip) sBoxMonomial(x gl.Variable) gl.Variable {
+func (c *GoldilocksChip) sBoxMonomial(x gl.Variable) gl.Variable {
 	x2 := c.gl.Mul(x, x)
 	x4 := c.gl.Mul(x2, x2)
 	x6 := c.gl.Mul(x4, x2)
 	return c.gl.Mul(x6, x)
 }
 
-func (c *PoseidonChip) SBoxMonomialExtension(x gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
+func (c *GoldilocksChip) SBoxMonomialExtension(x gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
 	x2 := c.gl.MulExtension(x, x)
 	x4 := c.gl.MulExtension(x2, x2)
 	x3 := c.gl.MulExtension(x, x2)
 	return c.gl.MulExtension(x4, x3)
 }
 
-func (c *PoseidonChip) sBoxLayer(state PoseidonState) PoseidonState {
+func (c *GoldilocksChip) sBoxLayer(state PoseidonState) PoseidonState {
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
 			state[i] = c.sBoxMonomial(state[i])
@@ -158,7 +158,7 @@ func (c *PoseidonChip) sBoxLayer(state PoseidonState) PoseidonState {
 	return state
 }
 
-func (c *PoseidonChip) SBoxLayerExtension(state PoseidonStateExtension) PoseidonStateExtension {
+func (c *GoldilocksChip) SBoxLayerExtension(state PoseidonStateExtension) PoseidonStateExtension {
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
 			state[i] = c.SBoxMonomialExtension(state[i])
@@ -167,7 +167,7 @@ func (c *PoseidonChip) SBoxLayerExtension(state PoseidonStateExtension) Poseidon
 	return state
 }
 
-func (c *PoseidonChip) mdsRowShf(r int, v [SPONGE_WIDTH]gl.Variable) gl.Variable {
+func (c *GoldilocksChip) mdsRowShf(r int, v [SPONGE_WIDTH]gl.Variable) gl.Variable {
 	res := gl.Zero()
 
 	for i := 0; i < 12; i++ {
@@ -180,7 +180,7 @@ func (c *PoseidonChip) mdsRowShf(r int, v [SPONGE_WIDTH]gl.Variable) gl.Variable
 	return c.gl.Reduce(res)
 }
 
-func (c *PoseidonChip) MdsRowShfExtension(r int, v [SPONGE_WIDTH]gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
+func (c *GoldilocksChip) MdsRowShfExtension(r int, v [SPONGE_WIDTH]gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
 	res := gl.ZeroExtension()
 
 	for i := 0; i < 12; i++ {
@@ -198,7 +198,7 @@ func (c *PoseidonChip) MdsRowShfExtension(r int, v [SPONGE_WIDTH]gl.QuadraticExt
 	return res
 }
 
-func (c *PoseidonChip) mdsLayer(state_ PoseidonState) PoseidonState {
+func (c *GoldilocksChip) mdsLayer(state_ PoseidonState) PoseidonState {
 	var result PoseidonState
 	for i := 0; i < SPONGE_WIDTH; i++ {
 		result[i] = gl.NewVariable(0)
@@ -213,7 +213,7 @@ func (c *PoseidonChip) mdsLayer(state_ PoseidonState) PoseidonState {
 	return result
 }
 
-func (c *PoseidonChip) MdsLayerExtension(state_ PoseidonStateExtension) PoseidonStateExtension {
+func (c *GoldilocksChip) MdsLayerExtension(state_ PoseidonStateExtension) PoseidonStateExtension {
 	var result PoseidonStateExtension
 
 	for r := 0; r < 12; r++ {
@@ -226,7 +226,7 @@ func (c *PoseidonChip) MdsLayerExtension(state_ PoseidonStateExtension) Poseidon
 	return result
 }
 
-func (c *PoseidonChip) partialFirstConstantLayer(state PoseidonState) PoseidonState {
+func (c *GoldilocksChip) partialFirstConstantLayer(state PoseidonState) PoseidonState {
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
 			state[i] = c.gl.Add(state[i], gl.NewVariable(FAST_PARTIAL_FIRST_ROUND_CONSTANT[i]))
@@ -235,7 +235,7 @@ func (c *PoseidonChip) partialFirstConstantLayer(state PoseidonState) PoseidonSt
 	return state
 }
 
-func (c *PoseidonChip) PartialFirstConstantLayerExtension(state PoseidonStateExtension) PoseidonStateExtension {
+func (c *GoldilocksChip) PartialFirstConstantLayerExtension(state PoseidonStateExtension) PoseidonStateExtension {
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
 			fastPartialRoundConstant := gl.NewVariable(FAST_PARTIAL_FIRST_ROUND_CONSTANT[i])
@@ -246,7 +246,7 @@ func (c *PoseidonChip) PartialFirstConstantLayerExtension(state PoseidonStateExt
 	return state
 }
 
-func (c *PoseidonChip) mdsPartialLayerInit(state PoseidonState) PoseidonState {
+func (c *GoldilocksChip) mdsPartialLayerInit(state PoseidonState) PoseidonState {
 	var result PoseidonState
 	for i := 0; i < 12; i++ {
 		result[i] = gl.NewVariable(0)
@@ -272,7 +272,7 @@ func (c *PoseidonChip) mdsPartialLayerInit(state PoseidonState) PoseidonState {
 	return result
 }
 
-func (c *PoseidonChip) MdsPartialLayerInitExtension(state PoseidonStateExtension) PoseidonStateExtension {
+func (c *GoldilocksChip) MdsPartialLayerInitExtension(state PoseidonStateExtension) PoseidonStateExtension {
 	var result PoseidonStateExtension
 	for i := 0; i < 12; i++ {
 		result[i] = gl.ZeroExtension()
@@ -295,7 +295,7 @@ func (c *PoseidonChip) MdsPartialLayerInitExtension(state PoseidonStateExtension
 	return result
 }
 
-func (c *PoseidonChip) mdsPartialLayerFast(state PoseidonState, r int) PoseidonState {
+func (c *GoldilocksChip) mdsPartialLayerFast(state PoseidonState, r int) PoseidonState {
 	dSum := gl.Zero()
 	for i := 1; i < 12; i++ {
 		if i < SPONGE_WIDTH {
@@ -323,7 +323,7 @@ func (c *PoseidonChip) mdsPartialLayerFast(state PoseidonState, r int) PoseidonS
 	return result
 }
 
-func (c *PoseidonChip) MdsPartialLayerFastExtension(state PoseidonStateExtension, r int) PoseidonStateExtension {
+func (c *GoldilocksChip) MdsPartialLayerFastExtension(state PoseidonStateExtension, r int) PoseidonStateExtension {
 	s0 := state[0]
 	mds0to0 := gl.NewVariable(MDS0TO0)
 	mds0to0QE := gl.NewQuadraticExtensionVariable(mds0to0, gl.Zero())

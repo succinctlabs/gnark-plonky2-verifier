@@ -1,5 +1,12 @@
 package poseidon
 
+// This is a customized implementation of the Poseidon hash function inside the BN254 field.
+// This implementation is based on the following implementation:
+//
+// 		https://github.com/iden3/go-iden3-crypto/blob/master/poseidon/poseidon.go
+//
+// The input and output are modified to ingest Goldilocks field elements.
+
 import (
 	"math/big"
 
@@ -7,26 +14,24 @@ import (
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 )
 
-const fullRounds = 8
-const partialRounds = 56
-const spongeWidth = 4
-const spongeRate = 3
+const BN254_FULL_ROUNDS int = 8
+const BN254_PARTIAL_ROUNDS int = 56
+const BN254_SPONGE_WIDTH int = 4
+const BN254_SPONGE_RATE int = 3
 
-type PoseidonBN254Chip struct {
+type BN254Chip struct {
 	api frontend.API `gnark:"-"`
 	gl  gl.Chip      `gnark:"-"`
 }
 
-type PoseidonBN254State = [spongeWidth]frontend.Variable
+type BN254State = [BN254_SPONGE_WIDTH]frontend.Variable
 type PoseidonBN254HashOut = frontend.Variable
 
-// This implementation is based on the following implementation:
-// https://github.com/iden3/go-iden3-crypto/blob/e5cf066b8be3da9a3df9544c65818df189fdbebe/poseidon/poseidon.go
-func NewPoseidonBN254Chip(api frontend.API) *PoseidonBN254Chip {
-	return &PoseidonBN254Chip{api: api, gl: *gl.NewChip(api)}
+func NewPoseidonBN254Chip(api frontend.API) *BN254Chip {
+	return &BN254Chip{api: api, gl: *gl.NewChip(api)}
 }
 
-func (c *PoseidonBN254Chip) Poseidon(state PoseidonBN254State) PoseidonBN254State {
+func (c *BN254Chip) Poseidon(state BN254State) BN254State {
 	state = c.ark(state, 0)
 	state = c.fullRounds(state, true)
 	state = c.partialRounds(state)
@@ -34,16 +39,16 @@ func (c *PoseidonBN254Chip) Poseidon(state PoseidonBN254State) PoseidonBN254Stat
 	return state
 }
 
-func (c *PoseidonBN254Chip) HashNoPad(input []gl.Variable) PoseidonBN254HashOut {
-	state := PoseidonBN254State{
+func (c *BN254Chip) HashNoPad(input []gl.Variable) PoseidonBN254HashOut {
+	state := BN254State{
 		frontend.Variable(0),
 		frontend.Variable(0),
 		frontend.Variable(0),
 		frontend.Variable(0),
 	}
 
-	for i := 0; i < len(input); i += spongeRate * 3 {
-		endI := c.min(len(input), i+spongeRate*3)
+	for i := 0; i < len(input); i += BN254_SPONGE_RATE * 3 {
+		endI := c.min(len(input), i+BN254_SPONGE_RATE*3)
 		rateChunk := input[i:endI]
 		for j, stateIdx := 0, 0; j < len(rateChunk); j, stateIdx = j+3, stateIdx+1 {
 			endJ := c.min(len(rateChunk), j+3)
@@ -64,7 +69,7 @@ func (c *PoseidonBN254Chip) HashNoPad(input []gl.Variable) PoseidonBN254HashOut 
 	return PoseidonBN254HashOut(state[0])
 }
 
-func (c *PoseidonBN254Chip) HashOrNoop(input []gl.Variable) PoseidonBN254HashOut {
+func (c *BN254Chip) HashOrNoop(input []gl.Variable) PoseidonBN254HashOut {
 	if len(input) <= 3 {
 		returnVal := frontend.Variable(0)
 
@@ -79,8 +84,8 @@ func (c *PoseidonBN254Chip) HashOrNoop(input []gl.Variable) PoseidonBN254HashOut
 	}
 }
 
-func (c *PoseidonBN254Chip) TwoToOne(left PoseidonBN254HashOut, right PoseidonBN254HashOut) PoseidonBN254HashOut {
-	var inputs PoseidonBN254State
+func (c *BN254Chip) TwoToOne(left PoseidonBN254HashOut, right PoseidonBN254HashOut) PoseidonBN254HashOut {
+	var inputs BN254State
 	inputs[0] = frontend.Variable(0)
 	inputs[1] = frontend.Variable(0)
 	inputs[2] = left
@@ -89,7 +94,7 @@ func (c *PoseidonBN254Chip) TwoToOne(left PoseidonBN254HashOut, right PoseidonBN
 	return state[0]
 }
 
-func (c *PoseidonBN254Chip) ToVec(hash PoseidonBN254HashOut) []gl.Variable {
+func (c *BN254Chip) ToVec(hash PoseidonBN254HashOut) []gl.Variable {
 	bits := c.api.ToBinary(hash)
 
 	returnElements := []gl.Variable{}
@@ -105,7 +110,7 @@ func (c *PoseidonBN254Chip) ToVec(hash PoseidonBN254HashOut) []gl.Variable {
 	return returnElements
 }
 
-func (c *PoseidonBN254Chip) min(x, y int) int {
+func (c *BN254Chip) min(x, y int) int {
 	if x < y {
 		return x
 	}
@@ -113,20 +118,20 @@ func (c *PoseidonBN254Chip) min(x, y int) int {
 	return y
 }
 
-func (c *PoseidonBN254Chip) fullRounds(state PoseidonBN254State, isFirst bool) PoseidonBN254State {
-	for i := 0; i < fullRounds/2-1; i++ {
+func (c *BN254Chip) fullRounds(state BN254State, isFirst bool) BN254State {
+	for i := 0; i < BN254_FULL_ROUNDS/2-1; i++ {
 		state = c.exp5state(state)
 		if isFirst {
-			state = c.ark(state, (i+1)*spongeWidth)
+			state = c.ark(state, (i+1)*BN254_SPONGE_WIDTH)
 		} else {
-			state = c.ark(state, (fullRounds/2+1)*spongeWidth+partialRounds+i*spongeWidth)
+			state = c.ark(state, (BN254_FULL_ROUNDS/2+1)*BN254_SPONGE_WIDTH+BN254_PARTIAL_ROUNDS+i*BN254_SPONGE_WIDTH)
 		}
 		state = c.mix(state, mMatrix)
 	}
 
 	state = c.exp5state(state)
 	if isFirst {
-		state = c.ark(state, (fullRounds/2)*spongeWidth)
+		state = c.ark(state, (BN254_FULL_ROUNDS/2)*BN254_SPONGE_WIDTH)
 		state = c.mix(state, pMatrix)
 	} else {
 		state = c.mix(state, mMatrix)
@@ -135,20 +140,20 @@ func (c *PoseidonBN254Chip) fullRounds(state PoseidonBN254State, isFirst bool) P
 	return state
 }
 
-func (c *PoseidonBN254Chip) partialRounds(state PoseidonBN254State) PoseidonBN254State {
-	for i := 0; i < partialRounds; i++ {
+func (c *BN254Chip) partialRounds(state BN254State) BN254State {
+	for i := 0; i < BN254_PARTIAL_ROUNDS; i++ {
 		state[0] = c.exp5(state[0])
-		state[0] = c.api.Add(state[0], cConstants[(fullRounds/2+1)*spongeWidth+i])
+		state[0] = c.api.Add(state[0], cConstants[(BN254_FULL_ROUNDS/2+1)*BN254_SPONGE_WIDTH+i])
 
 		var mul frontend.Variable
 		newState0 := frontend.Variable(0)
-		for j := 0; j < spongeWidth; j++ {
-			mul = c.api.Mul(sConstants[(spongeWidth*2-1)*i+j], state[j])
+		for j := 0; j < BN254_SPONGE_WIDTH; j++ {
+			mul = c.api.Mul(sConstants[(BN254_SPONGE_WIDTH*2-1)*i+j], state[j])
 			newState0 = c.api.Add(newState0, mul)
 		}
 
-		for k := 1; k < spongeWidth; k++ {
-			mul = c.api.Mul(state[0], sConstants[(spongeWidth*2-1)*i+spongeWidth+k-1])
+		for k := 1; k < BN254_SPONGE_WIDTH; k++ {
+			mul = c.api.Mul(state[0], sConstants[(BN254_SPONGE_WIDTH*2-1)*i+BN254_SPONGE_WIDTH+k-1])
 			state[k] = c.api.Add(state[k], mul)
 		}
 		state[0] = newState0
@@ -157,8 +162,8 @@ func (c *PoseidonBN254Chip) partialRounds(state PoseidonBN254State) PoseidonBN25
 	return state
 }
 
-func (c *PoseidonBN254Chip) ark(state PoseidonBN254State, it int) PoseidonBN254State {
-	var result PoseidonBN254State
+func (c *BN254Chip) ark(state BN254State, it int) BN254State {
+	var result BN254State
 
 	for i := 0; i < len(state); i++ {
 		result[i] = c.api.Add(state[i], cConstants[it+i])
@@ -167,29 +172,29 @@ func (c *PoseidonBN254Chip) ark(state PoseidonBN254State, it int) PoseidonBN254S
 	return result
 }
 
-func (c *PoseidonBN254Chip) exp5(x frontend.Variable) frontend.Variable {
+func (c *BN254Chip) exp5(x frontend.Variable) frontend.Variable {
 	x2 := c.api.Mul(x, x)
 	x4 := c.api.Mul(x2, x2)
 	return c.api.Mul(x4, x)
 }
 
-func (c *PoseidonBN254Chip) exp5state(state PoseidonBN254State) PoseidonBN254State {
-	for i := 0; i < spongeWidth; i++ {
+func (c *BN254Chip) exp5state(state BN254State) BN254State {
+	for i := 0; i < BN254_SPONGE_WIDTH; i++ {
 		state[i] = c.exp5(state[i])
 	}
 	return state
 }
 
-func (c *PoseidonBN254Chip) mix(state_ PoseidonBN254State, constantMatrix [][]*big.Int) PoseidonBN254State {
+func (c *BN254Chip) mix(state_ BN254State, constantMatrix [][]*big.Int) BN254State {
 	var mul frontend.Variable
-	var result PoseidonBN254State
+	var result BN254State
 
-	for i := 0; i < spongeWidth; i++ {
+	for i := 0; i < BN254_SPONGE_WIDTH; i++ {
 		result[i] = frontend.Variable(0)
 	}
 
-	for i := 0; i < spongeWidth; i++ {
-		for j := 0; j < spongeWidth; j++ {
+	for i := 0; i < BN254_SPONGE_WIDTH; i++ {
+		for j := 0; j < BN254_SPONGE_WIDTH; j++ {
 			mul = c.api.Mul(constantMatrix[j][i], state_[j])
 			result[i] = c.api.Add(result[i], mul)
 		}
