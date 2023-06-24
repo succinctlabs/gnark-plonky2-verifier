@@ -186,13 +186,14 @@ func (p *Chip) ReduceWithPowers(
 ) QuadraticExtensionVariable {
 	sum := ZeroExtension()
 	for i := len(terms) - 1; i >= 0; i-- {
-		sum = p.AddExtension(
-			p.MulExtension(
+		sum = p.AddExtensionNoReduce(
+			p.MulExtensionNoReduce(
 				sum,
 				scalar,
 			),
 			terms[i],
 		)
+		sum = p.ReduceExtension(sum)
 	}
 	return sum
 }
