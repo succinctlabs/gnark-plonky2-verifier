@@ -176,8 +176,8 @@ func (c *PoseidonChip) mdsRowShf(r int, v [SPONGE_WIDTH]gl.Variable) gl.Variable
 		}
 	}
 
-	res = c.gl.MulAdd(v[r], gl.NewVariable(MDS_MATRIX_DIAG_VARS[r]), res)
-	return res
+	res = c.gl.MulAddNoReduce(v[r], gl.NewVariable(MDS_MATRIX_DIAG_VARS[r]), res)
+	return c.gl.Reduce(res)
 }
 
 func (c *PoseidonChip) MdsRowShfExtension(r int, v [SPONGE_WIDTH]gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
@@ -259,10 +259,14 @@ func (c *PoseidonChip) mdsPartialLayerInit(state PoseidonState) PoseidonState {
 			for d := 1; d < 12; d++ {
 				if d < SPONGE_WIDTH {
 					t := FAST_PARTIAL_ROUND_INITIAL_MATRIX[r-1][d-1]
-					result[d] = c.gl.MulAdd(state[r], gl.NewVariable(t), result[d])
+					result[d] = c.gl.MulAddNoReduce(state[r], gl.NewVariable(t), result[d])
 				}
 			}
 		}
+	}
+
+	for i := 0; i < 12; i++ {
+		result[i] = c.gl.Reduce(result[i])
 	}
 
 	return result
