@@ -187,7 +187,7 @@ func GetFriInstance(c *common.CommonCircuitData, glApi *gl.Chip, zeta gl.Quadrat
 
 	g := field.GoldilocksPrimitiveRootOfUnity(degreeBits)
 	zetaNext := glApi.MulExtension(
-		gl.QuadraticExtensionVariable{gl.NewVariableFromConst(g.Uint64()), gl.NewVariableFromConst(0)},
+		gl.NewVariable(g.Uint64()).ToQuadraticExtension(),
 		zeta,
 	)
 

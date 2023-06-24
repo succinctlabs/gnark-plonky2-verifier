@@ -4,7 +4,6 @@ import (
 	"math/big"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
@@ -14,9 +13,8 @@ const spongeWidth = 4
 const spongeRate = 3
 
 type PoseidonBN128Chip struct {
-	api      frontend.API   `gnark:"-"`
-	fieldAPI field.FieldAPI `gnark:"-"`
-	gl       gl.Chip        `gnark:"-"`
+	api frontend.API `gnark:"-"`
+	gl  gl.Chip      `gnark:"-"`
 }
 
 type PoseidonBN128State = [spongeWidth]frontend.Variable
@@ -24,8 +22,8 @@ type PoseidonBN128HashOut = frontend.Variable
 
 // This implementation is based on the following implementation:
 // https://github.com/iden3/go-iden3-crypto/blob/e5cf066b8be3da9a3df9544c65818df189fdbebe/poseidon/poseidon.go
-func NewPoseidonBN128Chip(api frontend.API, fieldAPI field.FieldAPI) *PoseidonBN128Chip {
-	return &PoseidonBN128Chip{api: api, fieldAPI: fieldAPI, gl: *gl.NewChip(api)}
+func NewPoseidonBN128Chip(api frontend.API) *PoseidonBN128Chip {
+	return &PoseidonBN128Chip{api: api, gl: *gl.NewChip(api)}
 }
 
 func (c *PoseidonBN128Chip) Poseidon(state PoseidonBN128State) PoseidonBN128State {

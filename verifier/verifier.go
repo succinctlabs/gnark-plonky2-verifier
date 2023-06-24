@@ -24,9 +24,9 @@ func NewVerifierChip(api frontend.API, commonCircuitData common.CommonCircuitDat
 
 	fieldAPI := field.NewFieldAPI(api)
 	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI)
-	poseidonBN128Chip := poseidon.NewPoseidonBN128Chip(api, fieldAPI)
+	poseidonBN128Chip := poseidon.NewPoseidonBN128Chip(api)
 
-	friChip := fri.NewFriChip(api, fieldAPI, qeAPI, poseidonBN128Chip, &commonCircuitData.FriParams)
+	friChip := fri.NewFriChip(api, poseidonBN128Chip, &commonCircuitData.FriParams)
 	plonkChip := plonk.NewPlonkChip(api, qeAPI, commonCircuitData)
 
 	// We are using goldilocks poseidon for the challenge computation

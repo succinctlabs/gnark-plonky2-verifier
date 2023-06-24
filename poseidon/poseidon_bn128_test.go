@@ -15,8 +15,7 @@ type TestPoseidonBN128Circuit struct {
 }
 
 func (circuit *TestPoseidonBN128Circuit) Define(api frontend.API) error {
-	fieldAPI := field.NewFieldAPI(api)
-	poseidonChip := NewPoseidonBN128Chip(api, fieldAPI)
+	poseidonChip := NewPoseidonBN128Chip(api)
 	output := poseidonChip.Poseidon(circuit.In)
 
 	for i := 0; i < spongeWidth; i++ {

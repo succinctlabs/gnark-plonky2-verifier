@@ -25,16 +25,16 @@ func (c *TestQuadraticExtensionMulCircuit) Define(api frontend.API) error {
 func TestQuadraticExtensionMul4(t *testing.T) {
 	assert := test.NewAssert(t)
 	operand1 := QuadraticExtensionVariable{
-		NewVariableFromConst(4994088319481652598),
-		NewVariableFromConst(16489566008211790727),
+		NewVariable("4994088319481652598"),
+		NewVariable("16489566008211790727"),
 	}
 	operand2 := QuadraticExtensionVariable{
-		NewVariableFromConst(3797605683985595697),
-		NewVariableFromConst(13424401189265534004),
+		NewVariable("3797605683985595697"),
+		NewVariable("13424401189265534004"),
 	}
 	expectedResult := QuadraticExtensionVariable{
-		NewVariableFromConst(15052319864161058789),
-		NewVariableFromConst(16841416332519902625),
+		NewVariable("15052319864161058789"),
+		NewVariable("16841416332519902625"),
 	}
 	circuit := TestQuadraticExtensionMulCircuit{
 		Operand1:       operand1,
@@ -68,16 +68,16 @@ func (c *TestQuadraticExtensionDivCircuit) Define(api frontend.API) error {
 func TestQuadraticExtensionDiv(t *testing.T) {
 	assert := test.NewAssert(t)
 	operand1 := QuadraticExtensionVariable{
-		NewVariableFromConst(4994088319481652598),
-		NewVariableFromConst(16489566008211790727),
+		NewVariable("4994088319481652598"),
+		NewVariable("16489566008211790727"),
 	}
 	operand2 := QuadraticExtensionVariable{
-		NewVariableFromConst(7166004739148609569),
-		NewVariableFromConst(14655965871663555016),
+		NewVariable("7166004739148609569"),
+		NewVariable("14655965871663555016"),
 	}
 	expectedResult := QuadraticExtensionVariable{
-		NewVariableFromConst(15052319864161058789),
-		NewVariableFromConst(16841416332519902625),
+		NewVariable("15052319864161058789"),
+		NewVariable("16841416332519902625"),
 	}
 	circuit := TestQuadraticExtensionDivCircuit{
 		Operand1:       operand1,

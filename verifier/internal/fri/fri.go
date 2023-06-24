@@ -8,17 +8,14 @@ import (
 
 	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 )
 
 type FriChip struct {
-	api      frontend.API                 `gnark:"-"`
-	fieldAPI field.FieldAPI               `gnark:"-"`
-	qeAPI    *field.QuadraticExtensionAPI `gnark:"-"`
-	gl       gl.Chip                      `gnark:"-"`
+	api frontend.API `gnark:"-"`
+	gl  gl.Chip      `gnark:"-"`
 
 	poseidonBN128Chip *poseidon.PoseidonBN128Chip
 
@@ -27,15 +24,11 @@ type FriChip struct {
 
 func NewFriChip(
 	api frontend.API,
-	fieldAPI field.FieldAPI,
-	qeAPI *field.QuadraticExtensionAPI,
 	poseidonBN128Chip *poseidon.PoseidonBN128Chip,
 	friParams *common.FriParams,
 ) *FriChip {
 	return &FriChip{
 		api:               api,
-		fieldAPI:          fieldAPI,
-		qeAPI:             qeAPI,
 		poseidonBN128Chip: poseidonBN128Chip,
 		friParams:         friParams,
 		gl:                *gl.NewChip(api),
@@ -149,7 +142,7 @@ func (f *FriChip) expFromBitsConstBase(
 	base goldilocks.Element,
 	exponentBits []frontend.Variable,
 ) gl.Variable {
-	product := gl.NewVariableFromConst(1)
+	product := gl.One()
 	for i, bit := range exponentBits {
 		// If the bit is on, we multiply product by base^pow.
 		// We can arithmetize this as:
@@ -158,7 +151,7 @@ func (f *FriChip) expFromBitsConstBase(
 		pow := int64(1 << i)
 		basePow := goldilocks.NewElement(0)
 		basePow.Exp(base, big.NewInt(pow))
-		basePowVariable := gl.NewVariableFromConst(basePow.Uint64() - 1)
+		basePowVariable := gl.NewVariable(basePow.Uint64() - 1)
 		product = f.gl.Add(
 			f.gl.Mul(
 				f.gl.Mul(
@@ -180,7 +173,7 @@ func (f *FriChip) calculateSubgroupX(
 	// Compute x from its index
 	// `subgroup_x` is `subgroup[x_index]`, i.e., the actual field element in the domain.
 	// TODO - Make these as global values
-	g := gl.NewVariableFromConst(gl.MULTIPLICATIVE_GROUP_GENERATOR.Uint64())
+	g := gl.NewVariable(gl.MULTIPLICATIVE_GROUP_GENERATOR.Uint64())
 	base := gl.PrimitiveRootOfUnity(nLog)
 
 	// Create a reverse list of xIndexBits
@@ -334,8 +327,8 @@ func (f *FriChip) computeEvaluation(
 	yPoints := permutedEvals
 
 	// TODO: Make g_F a constant
-	g_F := gl.QuadraticExtensionVariable{gl.NewVariableFromConst(g.Uint64()), gl.NewVariableFromConst(0)}
-	xPoints[0] = gl.QuadraticExtensionVariable{cosetStart, gl.NewVariableFromConst(0)}
+	g_F := gl.NewVariable(g.Uint64()).ToQuadraticExtension()
+	xPoints[0] = gl.QuadraticExtensionVariable{cosetStart, gl.Zero()}
 	for i := 1; i < len(evals); i++ {
 		xPoints[i] = f.gl.MulExtension(xPoints[i-1], g_F)
 	}
@@ -344,7 +337,7 @@ func (f *FriChip) computeEvaluation(
 	// Compute the barycentric weights
 	barycentricWeights := make([]gl.QuadraticExtensionVariable, len(xPoints))
 	for i := 0; i < len(xPoints); i++ {
-		barycentricWeights[i] = gl.QuadraticExtensionVariable{gl.NewVariableFromConst(1), gl.NewVariableFromConst(0)}
+		barycentricWeights[i] = gl.OneExtension()
 		for j := 0; j < len(xPoints); j++ {
 			if i != j {
 				barycentricWeights[i] = f.gl.SubMulExtension(
@@ -385,7 +378,7 @@ func (f *FriChip) verifyQueryRound(
 		nLog,
 	)
 
-	subgroupX_QE := gl.QuadraticExtensionVariable{subgroupX, gl.NewVariableFromConst(0)}
+	subgroupX_QE := subgroupX.ToQuadraticExtension()
 
 	oldEval := f.friCombineInitial(
 		instance,
@@ -468,7 +461,7 @@ func (f *FriChip) verifyQueryRound(
 		xIndexBits = cosetIndexBits
 	}
 
-	subgroupX_QE = gl.QuadraticExtensionVariable{subgroupX, gl.NewVariableFromConst(0)}
+	subgroupX_QE = subgroupX.ToQuadraticExtension()
 	finalPolyEval := f.finalPolyEval(proof.FinalPoly, subgroupX_QE)
 
 	glApi := gl.NewChip(f.api)

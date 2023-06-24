@@ -42,7 +42,7 @@ func (c *PoseidonChip) HashNToMNoPad(input []gl.Variable, nbOutputs int) []gl.Va
 	var state PoseidonState
 
 	for i := 0; i < SPONGE_WIDTH; i++ {
-		state[i] = gl.NewVariableFromConst(0)
+		state[i] = gl.NewVariable(0)
 	}
 
 	for i := 0; i < len(input); i += SPONGE_RATE {
@@ -172,7 +172,7 @@ func (c *PoseidonChip) mdsRowShf(r int, v [SPONGE_WIDTH]gl.Variable) gl.Variable
 
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
-			res = c.gl.MulAdd(v[(i+r)%SPONGE_WIDTH], gl.NewVariable(MDS_MATRIX_CIRC_VARS[i]), res)
+			res = c.gl.MulAddNoReduce(v[(i+r)%SPONGE_WIDTH], gl.NewVariable(MDS_MATRIX_CIRC_VARS[i]), res)
 		}
 	}
 
@@ -201,7 +201,7 @@ func (c *PoseidonChip) MdsRowShfExtension(r int, v [SPONGE_WIDTH]gl.QuadraticExt
 func (c *PoseidonChip) mdsLayer(state_ PoseidonState) PoseidonState {
 	var result PoseidonState
 	for i := 0; i < SPONGE_WIDTH; i++ {
-		result[i] = gl.NewVariableFromConst(0)
+		result[i] = gl.NewVariable(0)
 	}
 
 	for r := 0; r < 12; r++ {
@@ -249,7 +249,7 @@ func (c *PoseidonChip) PartialFirstConstantLayerExtension(state PoseidonStateExt
 func (c *PoseidonChip) mdsPartialLayerInit(state PoseidonState) PoseidonState {
 	var result PoseidonState
 	for i := 0; i < 12; i++ {
-		result[i] = gl.NewVariableFromConst(0)
+		result[i] = gl.NewVariable(0)
 	}
 
 	result[0] = state[0]
@@ -304,7 +304,7 @@ func (c *PoseidonChip) mdsPartialLayerFast(state PoseidonState, r int) PoseidonS
 
 	var result PoseidonState
 	for i := 0; i < SPONGE_WIDTH; i++ {
-		result[i] = gl.NewVariableFromConst(0)
+		result[i] = gl.NewVariable(0)
 	}
 
 	result[0] = d

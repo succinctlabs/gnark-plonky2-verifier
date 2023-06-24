@@ -55,19 +55,14 @@ func NewVariable(x frontend.Variable) Variable {
 	return Variable{Limb: x}
 }
 
-// Creates a new Goldilocks field element from a constant.
-func NewVariableFromConst(x uint64) Variable {
-	return Variable{Limb: x}
-}
-
 // The zero element in the Golidlocks field.
 func Zero() Variable {
-	return NewVariableFromConst(0)
+	return NewVariable(0)
 }
 
 // The one element in the Goldilocks field.
 func One() Variable {
-	return NewVariableFromConst(1)
+	return NewVariable(1)
 }
 
 // The negative one element in the Goldilocks field.
@@ -77,22 +72,17 @@ func NegOne() Variable {
 
 // The chip used for Goldilocks field operations.
 type Chip struct {
-	api      frontend.API
-	fieldAPI emulated.Field[emulated.Goldilocks]
+	api frontend.API
 }
 
 // Creates a new Goldilocks chip.
 func NewChip(api frontend.API) *Chip {
-	fieldAPI, err := emulated.NewField[emulated.Goldilocks](api)
-	if err != nil {
-		panic(err)
-	}
-	return &Chip{api: api, fieldAPI: *fieldAPI}
+	return &Chip{api: api}
 }
 
 // Adds two field elements such that x + y = z within the Golidlocks field.
 func (p *Chip) Add(a Variable, b Variable) Variable {
-	return p.MulAdd(a, NewVariableFromConst(1), b)
+	return p.MulAdd(a, NewVariable(1), b)
 }
 
 // Adds two field elements such that x + y = z within the Golidlocks field without reducing.
@@ -102,7 +92,7 @@ func (p *Chip) AddNoReduce(a Variable, b Variable) Variable {
 
 // Subtracts two field elements such that x + y = z within the Golidlocks field.
 func (p *Chip) Sub(a Variable, b Variable) Variable {
-	return p.MulAdd(b, NewVariableFromConst(MODULUS.Uint64()-1), a)
+	return p.MulAdd(b, NewVariable(MODULUS.Uint64()-1), a)
 }
 
 // Subtracts two field elements such that x + y = z within the Golidlocks field without reducing.
@@ -139,6 +129,12 @@ func (p *Chip) MulAdd(a Variable, b Variable, c Variable) Variable {
 	p.RangeCheck(quotient)
 	p.RangeCheck(remainder)
 	return remainder
+}
+
+// Multiplies two field elements and adds a field element such that x * y + z = c within the
+// Golidlocks field without reducing.
+func (p *Chip) MulAddNoReduce(a Variable, b Variable, c Variable) Variable {
+	return p.AddNoReduce(p.MulNoReduce(a, b), c)
 }
 
 // The hint used to compute MulAdd.

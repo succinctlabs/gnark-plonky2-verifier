@@ -119,7 +119,7 @@ func (g *RandomAccessGate) EvalUnfiltered(
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
 	glApi := gl.NewChip(api)
-	two := gl.NewQuadraticExtensionVariable(gl.NewVariableFromConst(2), gl.NewVariable(0))
+	two := gl.NewVariable(2).ToQuadraticExtension()
 	constraints := []gl.QuadraticExtensionVariable{}
 
 	for copy := uint64(0); copy < g.numCopies; copy++ {

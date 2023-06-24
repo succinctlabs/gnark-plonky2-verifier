@@ -6,8 +6,8 @@ import (
 	"github.com/consensys/gnark/frontend"
 )
 
-const W = 7
-const DTH_ROOT = 18446744069414584320
+const W uint64 = 7
+const DTH_ROOT uint64 = 18446744069414584320
 
 type QuadraticExtensionVariable [2]Variable
 
@@ -15,12 +15,16 @@ func NewQuadraticExtensionVariable(x Variable, y Variable) QuadraticExtensionVar
 	return QuadraticExtensionVariable{x, y}
 }
 
+func (p Variable) ToQuadraticExtension() QuadraticExtensionVariable {
+	return NewQuadraticExtensionVariable(p, Zero())
+}
+
 func ZeroExtension() QuadraticExtensionVariable {
-	return NewQuadraticExtensionVariable(Zero(), Zero())
+	return Zero().ToQuadraticExtension()
 }
 
 func OneExtension() QuadraticExtensionVariable {
-	return NewQuadraticExtensionVariable(One(), Zero())
+	return One().ToQuadraticExtension()
 }
 
 // Adds two quadratic extension variables in the Goldilocks field.
@@ -62,7 +66,7 @@ func (p *Chip) MulExtension(a, b QuadraticExtensionVariable) QuadraticExtensionV
 // Multiplies quadratic extension variable in the Goldilocks field without reducing.
 func (p *Chip) MulExtensionNoReduce(a, b QuadraticExtensionVariable) QuadraticExtensionVariable {
 	c0o0 := p.MulNoReduce(a[0], b[0])
-	c0o1 := p.MulNoReduce(p.MulNoReduce(NewVariableFromConst(7), a[1]), b[1])
+	c0o1 := p.MulNoReduce(p.MulNoReduce(NewVariable(7), a[1]), b[1])
 	c0 := p.AddNoReduce(c0o0, c0o1)
 	c1 := p.AddNoReduce(p.MulNoReduce(a[0], b[1]), p.MulNoReduce(a[1], b[0]))
 	return NewQuadraticExtensionVariable(c0, c1)
@@ -130,7 +134,7 @@ func (p *Chip) InverseExtension(a QuadraticExtensionVariable) QuadraticExtension
 
 	aPowRMinus1 := QuadraticExtensionVariable{
 		a[0],
-		p.Mul(a[1], NewVariableFromConst(DTH_ROOT)),
+		p.Mul(a[1], NewVariable(DTH_ROOT)),
 	}
 	aPowR := p.MulExtension(aPowRMinus1, a)
 	return p.ScalarMulExtension(aPowRMinus1, p.Inverse(aPowR[0]))
@@ -148,7 +152,7 @@ func (p *Chip) ExpExtension(
 ) QuadraticExtensionVariable {
 	switch exponent {
 	case 0:
-		return QuadraticExtensionVariable{NewVariableFromConst(1), NewVariableFromConst(0)}
+		return OneExtension()
 	case 1:
 		return a
 	case 2:
@@ -157,7 +161,7 @@ func (p *Chip) ExpExtension(
 	}
 
 	current := a
-	product := QuadraticExtensionVariable{NewVariableFromConst(1), NewVariableFromConst(0)}
+	product := OneExtension()
 
 	for i := 0; i < bits.Len64(exponent); i++ {
 		if i != 0 {
@@ -180,7 +184,7 @@ func (p *Chip) ReduceWithPowers(
 	terms []QuadraticExtensionVariable,
 	scalar QuadraticExtensionVariable,
 ) QuadraticExtensionVariable {
-	sum := QuadraticExtensionVariable{NewVariableFromConst(0), NewVariableFromConst(0)}
+	sum := ZeroExtension()
 	for i := len(terms) - 1; i >= 0; i-- {
 		sum = p.AddExtension(
 			p.MulExtension(

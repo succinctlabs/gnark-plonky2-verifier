@@ -27,27 +27,26 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 
 	glApi := gl.NewChip(api)
 	fieldAPI := field.NewFieldAPI(api)
-	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI)
 	poseidonChip := poseidon.NewPoseidonChip(api)
-	poseidonBN128Chip := poseidon.NewPoseidonBN128Chip(api, fieldAPI)
-	friChip := fri.NewFriChip(api, fieldAPI, qeAPI, poseidonBN128Chip, &commonCircuitData.FriParams)
+	poseidonBN128Chip := poseidon.NewPoseidonBN128Chip(api)
+	friChip := fri.NewFriChip(api, poseidonBN128Chip, &commonCircuitData.FriParams)
 	challengerChip := plonk.NewChallengerChip(api, fieldAPI, poseidonChip, poseidonBN128Chip)
 
 	challengerChip.ObserveBN128Hash(verifierOnlyCircuitData.CircuitDigest)
 	challengerChip.ObserveHash(poseidonChip.HashNoPad(proofWithPis.PublicInputs))
 	challengerChip.ObserveCap(proofWithPis.Proof.WiresCap)
 	plonkBetas := challengerChip.GetNChallenges(commonCircuitData.Config.NumChallenges) // For plonk betas
-	glApi.AssertIsEqual(plonkBetas[0], gl.NewVariableFromConst(17615363392879944733))
+	glApi.AssertIsEqual(plonkBetas[0], gl.NewVariable("17615363392879944733"))
 	plonkGammas := challengerChip.GetNChallenges(commonCircuitData.Config.NumChallenges) // For plonk gammas
-	glApi.AssertIsEqual(plonkGammas[0], gl.NewVariableFromConst(15174493176564484303))
+	glApi.AssertIsEqual(plonkGammas[0], gl.NewVariable("15174493176564484303"))
 
 	challengerChip.ObserveCap(proofWithPis.Proof.PlonkZsPartialProductsCap)
 	plonkAlphas := challengerChip.GetNChallenges(commonCircuitData.Config.NumChallenges) // For plonk alphas
-	glApi.AssertIsEqual(plonkAlphas[0], gl.NewVariableFromConst(9276470834414745550))
+	glApi.AssertIsEqual(plonkAlphas[0], gl.NewVariable("9276470834414745550"))
 
 	challengerChip.ObserveCap(proofWithPis.Proof.QuotientPolysCap)
 	plonkZeta := challengerChip.GetExtensionChallenge()
-	glApi.AssertIsEqual(plonkZeta[0], gl.NewVariableFromConst(3892795992421241388))
+	glApi.AssertIsEqual(plonkZeta[0], gl.NewVariable("3892795992421241388"))
 
 	challengerChip.ObserveOpenings(fri.ToFriOpenings(proofWithPis.Proof.Openings))
 

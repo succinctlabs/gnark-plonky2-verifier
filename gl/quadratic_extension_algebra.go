@@ -6,12 +6,23 @@ const D = 2
 
 type QuadraticExtensionAlgebraVariable = [D]QuadraticExtensionVariable
 
+func NewQuadraticExtensionAlgebraVariable(
+	a QuadraticExtensionVariable,
+	b QuadraticExtensionVariable,
+) QuadraticExtensionAlgebraVariable {
+	return QuadraticExtensionAlgebraVariable{a, b}
+}
+
+func (p QuadraticExtensionVariable) ToQuadraticExtensionAlgebra() QuadraticExtensionAlgebraVariable {
+	return [2]QuadraticExtensionVariable{p, ZeroExtension()}
+}
+
 func ZeroExtensionAlgebra() QuadraticExtensionAlgebraVariable {
-	return QuadraticExtensionAlgebraVariable{ZeroExtension(), ZeroExtension()}
+	return ZeroExtension().ToQuadraticExtensionAlgebra()
 }
 
 func OneExtensionAlgebra() QuadraticExtensionAlgebraVariable {
-	return QuadraticExtensionAlgebraVariable{OneExtension(), ZeroExtension()}
+	return OneExtension().ToQuadraticExtensionAlgebra()
 }
 
 func (p *Chip) AddExtensionAlgebra(
@@ -99,9 +110,9 @@ func (p *Chip) PartialInterpolateExtAlgebra(
 		val := values[i]
 		x := domain[i]
 		xField := NewVariable(x)
-		xQE := QuadraticExtensionVariable{xField, Zero()}
-		xQEAlgebra := QuadraticExtensionAlgebraVariable{xQE, ZeroExtension()}
-		weight := QuadraticExtensionVariable{NewVariable(barycentricWeights[i].Uint64()), Zero()}
+		xQE := xField.ToQuadraticExtension()
+		xQEAlgebra := xQE.ToQuadraticExtensionAlgebra()
+		weight := NewVariable(barycentricWeights[i].Uint64()).ToQuadraticExtension()
 		term := p.SubExtensionAlgebra(point, xQEAlgebra)
 		weightedVal := p.ScalarMulExtensionAlgebra(weight, val)
 		newEval = p.MulExtensionAlgebra(newEval, term)

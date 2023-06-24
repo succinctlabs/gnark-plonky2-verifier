@@ -39,9 +39,9 @@ func NewPlonkChip(api frontend.API, qeAPI *field.QuadraticExtensionAPI, commonDa
 
 		commonData: commonData,
 
-		DEGREE:        gl.NewVariableFromConst(1 << commonData.DegreeBits),
-		DEGREE_BITS_F: gl.NewVariableFromConst(commonData.DegreeBits),
-		DEGREE_QE:     gl.QuadraticExtensionVariable{gl.NewVariableFromConst(1 << commonData.DegreeBits), gl.Zero()},
+		DEGREE:        gl.NewVariable(1 << commonData.DegreeBits),
+		DEGREE_BITS_F: gl.NewVariable(commonData.DegreeBits),
+		DEGREE_QE:     gl.NewVariable(1 << commonData.DegreeBits).ToQuadraticExtension(),
 
 		evaluateGatesChip: evaluateGatesChip,
 	}

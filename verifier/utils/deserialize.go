@@ -219,7 +219,7 @@ func DeserializeFriProof(openingProofRaw struct {
 	PowWitness uint64
 }) common.FriProof {
 	var openingProof common.FriProof
-	openingProof.PowWitness = gl.NewVariableFromConst(openingProofRaw.PowWitness)
+	openingProof.PowWitness = gl.NewVariable(openingProofRaw.PowWitness)
 	openingProof.FinalPoly.Coeffs = utils.Uint64ArrayToQuadraticExtensionArray(openingProofRaw.FinalPoly.Coeffs)
 
 	openingProof.CommitPhaseMerkleCaps = make([]common.MerkleCap, len(openingProofRaw.CommitPhaseMerkleCaps))
@@ -320,7 +320,7 @@ func DeserializeProofChallenges(path string) common.ProofChallenges {
 	proofChallenges.PlonkZeta = utils.Uint64ArrayToQuadraticExtension(raw.PlonkZeta)
 	proofChallenges.FriChallenges.FriAlpha = utils.Uint64ArrayToQuadraticExtension(raw.FriChallenges.FriAlpha)
 	proofChallenges.FriChallenges.FriBetas = utils.Uint64ArrayToQuadraticExtensionArray(raw.FriChallenges.FriBetas)
-	proofChallenges.FriChallenges.FriPowResponse = gl.NewVariableFromConst(raw.FriChallenges.FriPowResponse)
+	proofChallenges.FriChallenges.FriPowResponse = gl.NewVariable(raw.FriChallenges.FriPowResponse)
 	proofChallenges.FriChallenges.FriQueryIndices = utils.Uint64ArrayToFArray(raw.FriChallenges.FriQueryIndices)
 
 	return proofChallenges

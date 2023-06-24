@@ -27,7 +27,7 @@ func NewChallengerChip(api frontend.API, fieldAPI field.FieldAPI, poseidonChip *
 	var outputBuffer []gl.Variable
 
 	for i := 0; i < poseidon.SPONGE_WIDTH; i++ {
-		spongeState[i] = gl.NewVariableFromConst(0)
+		spongeState[i] = gl.Zero()
 	}
 
 	return &ChallengerChip{
