@@ -6,7 +6,7 @@ import (
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
-	"github.com/succinctlabs/gnark-plonky2-verifier/utils"
+	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 )
 
 type TestPoseidonBN254Circuit struct {
@@ -90,8 +90,8 @@ func TestPoseidonBN254(t *testing.T) {
 	for _, testCase := range testCases {
 		var in [BN254_SPONGE_WIDTH]frontend.Variable
 		var out [BN254_SPONGE_WIDTH]frontend.Variable
-		copy(in[:], utils.StrArrayToFrontendVariableArray(testCase[0]))
-		copy(out[:], utils.StrArrayToFrontendVariableArray(testCase[1]))
+		copy(in[:], gl.StrArrayToFrontendVariableArray(testCase[0]))
+		copy(out[:], gl.StrArrayToFrontendVariableArray(testCase[1]))
 		testCaseFn(in, out)
 	}
 }

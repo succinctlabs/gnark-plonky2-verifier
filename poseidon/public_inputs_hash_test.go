@@ -8,7 +8,6 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
-	"github.com/succinctlabs/gnark-plonky2-verifier/utils"
 )
 
 var testCurve = ecc.BN254
@@ -55,8 +54,8 @@ func TestPublicInputsHashWitness(t *testing.T) {
 	outStr := []string{"8416658900775745054", "12574228347150446423", "9629056739760131473", "3119289788404190010"}
 	var in [3]frontend.Variable
 	var out [4]frontend.Variable
-	copy(in[:], utils.StrArrayToFrontendVariableArray(inStr))
-	copy(out[:], utils.StrArrayToFrontendVariableArray(outStr))
+	copy(in[:], gl.StrArrayToFrontendVariableArray(inStr))
+	copy(out[:], gl.StrArrayToFrontendVariableArray(outStr))
 	testCase(in, out)
 }
 
@@ -67,8 +66,8 @@ func TestPublicInputsHashWitness2(t *testing.T) {
 	outStr := []string{"8416658900775745054", "12574228347150446423", "9629056739760131473", "3119289788404190010"}
 	var in [3]frontend.Variable
 	var out [4]frontend.Variable
-	copy(in[:], utils.StrArrayToFrontendVariableArray(inStr))
-	copy(out[:], utils.StrArrayToFrontendVariableArray(outStr))
+	copy(in[:], gl.StrArrayToFrontendVariableArray(inStr))
+	copy(out[:], gl.StrArrayToFrontendVariableArray(outStr))
 
 	circuit := TestPublicInputsHashCircuit{In: in, Out: out}
 	witness := TestPublicInputsHashCircuit{In: in, Out: out}

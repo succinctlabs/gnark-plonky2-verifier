@@ -9,7 +9,6 @@ import (
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/consensys/gnark/test"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
-	"github.com/succinctlabs/gnark-plonky2-verifier/utils"
 )
 
 type TestPoseidonCircuit struct {
@@ -54,8 +53,8 @@ func TestPoseidonWitness(t *testing.T) {
 	}
 	var in [12]frontend.Variable
 	var out [12]frontend.Variable
-	copy(in[:], utils.StrArrayToFrontendVariableArray(inStr))
-	copy(out[:], utils.StrArrayToFrontendVariableArray(outStr))
+	copy(in[:], gl.StrArrayToFrontendVariableArray(inStr))
+	copy(out[:], gl.StrArrayToFrontendVariableArray(outStr))
 	testCase(in, out)
 }
 
@@ -69,8 +68,8 @@ func TestPoseidonProof(t *testing.T) {
 	}
 	var in [12]frontend.Variable
 	var out [12]frontend.Variable
-	copy(in[:], utils.StrArrayToFrontendVariableArray(inStr))
-	copy(out[:], utils.StrArrayToFrontendVariableArray(outStr))
+	copy(in[:], gl.StrArrayToFrontendVariableArray(inStr))
+	copy(out[:], gl.StrArrayToFrontendVariableArray(outStr))
 
 	circuit := TestPoseidonCircuit{In: in, Out: out}
 	assignment := TestPoseidonCircuit{In: in, Out: out}

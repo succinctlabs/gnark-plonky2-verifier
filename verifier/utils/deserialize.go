@@ -11,7 +11,6 @@ import (
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/plonk/gates"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
-	"github.com/succinctlabs/gnark-plonky2-verifier/utils"
 )
 
 type ProofWithPublicInputsRaw struct {
@@ -163,7 +162,7 @@ func DeserializeMerkleProof(merkleProofRaw struct{ Siblings []interface{} }) com
 	mp.Siblings = make([]poseidon.BN254HashOut, n)
 	for i := 0; i < n; i++ {
 		element := merkleProofRaw.Siblings[i].(struct{ Elements []uint64 })
-		mp.Siblings[i] = utils.Uint64ArrayToFArray(element.Elements)
+		mp.Siblings[i] = gl.Uint64ArrayToVariableArray(element.Elements)
 	}
 	return mp
 }
@@ -178,13 +177,13 @@ func DeserializeOpeningSet(openingSetRaw struct {
 	QuotientPolys   [][]uint64
 }) common.OpeningSet {
 	return common.OpeningSet{
-		Constants:       utils.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.Constants),
-		PlonkSigmas:     utils.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.PlonkSigmas),
-		Wires:           utils.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.Wires),
-		PlonkZs:         utils.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.PlonkZs),
-		PlonkZsNext:     utils.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.PlonkZsNext),
-		PartialProducts: utils.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.PartialProducts),
-		QuotientPolys:   utils.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.QuotientPolys),
+		Constants:       gl.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.Constants),
+		PlonkSigmas:     gl.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.PlonkSigmas),
+		Wires:           gl.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.Wires),
+		PlonkZs:         gl.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.PlonkZs),
+		PlonkZsNext:     gl.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.PlonkZsNext),
+		PartialProducts: gl.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.PartialProducts),
+		QuotientPolys:   gl.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.QuotientPolys),
 	}
 }
 
@@ -220,7 +219,7 @@ func DeserializeFriProof(openingProofRaw struct {
 }) common.FriProof {
 	var openingProof common.FriProof
 	openingProof.PowWitness = gl.NewVariable(openingProofRaw.PowWitness)
-	openingProof.FinalPoly.Coeffs = utils.Uint64ArrayToQuadraticExtensionArray(openingProofRaw.FinalPoly.Coeffs)
+	openingProof.FinalPoly.Coeffs = gl.Uint64ArrayToQuadraticExtensionArray(openingProofRaw.FinalPoly.Coeffs)
 
 	openingProof.CommitPhaseMerkleCaps = make([]common.MerkleCap, len(openingProofRaw.CommitPhaseMerkleCaps))
 	for i := 0; i < len(openingProofRaw.CommitPhaseMerkleCaps); i++ {
@@ -234,14 +233,14 @@ func DeserializeFriProof(openingProofRaw struct {
 		numEvalProofs := len(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs)
 		openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs = make([]common.EvalProof, numEvalProofs)
 		for j := 0; j < numEvalProofs; j++ {
-			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].Elements = utils.Uint64ArrayToFArray(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].LeafElements)
+			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].Elements = gl.Uint64ArrayToVariableArray(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].LeafElements)
 			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Siblings = StringArrayToHashBN254Array(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Hash)
 		}
 
 		numSteps := len(openingProofRaw.QueryRoundProofs[i].Steps)
 		openingProof.QueryRoundProofs[i].Steps = make([]common.FriQueryStep, numSteps)
 		for j := 0; j < numSteps; j++ {
-			openingProof.QueryRoundProofs[i].Steps[j].Evals = utils.Uint64ArrayToQuadraticExtensionArray(openingProofRaw.QueryRoundProofs[i].Steps[j].Evals)
+			openingProof.QueryRoundProofs[i].Steps[j].Evals = gl.Uint64ArrayToQuadraticExtensionArray(openingProofRaw.QueryRoundProofs[i].Steps[j].Evals)
 			openingProof.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings = StringArrayToHashBN254Array(openingProofRaw.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings)
 		}
 	}
@@ -293,7 +292,7 @@ func DeserializeProofWithPublicInputs(path string) common.ProofWithPublicInputs 
 		FinalPoly  struct{ Coeffs [][]uint64 }
 		PowWitness uint64
 	}(raw.Proof.OpeningProof))
-	proofWithPis.PublicInputs = utils.Uint64ArrayToFArray(raw.PublicInputs)
+	proofWithPis.PublicInputs = gl.Uint64ArrayToVariableArray(raw.PublicInputs)
 
 	return proofWithPis
 }
@@ -314,14 +313,14 @@ func DeserializeProofChallenges(path string) common.ProofChallenges {
 	}
 
 	var proofChallenges common.ProofChallenges
-	proofChallenges.PlonkBetas = utils.Uint64ArrayToFArray(raw.PlonkBetas)
-	proofChallenges.PlonkGammas = utils.Uint64ArrayToFArray(raw.PlonkGammas)
-	proofChallenges.PlonkAlphas = utils.Uint64ArrayToFArray(raw.PlonkAlphas)
-	proofChallenges.PlonkZeta = utils.Uint64ArrayToQuadraticExtension(raw.PlonkZeta)
-	proofChallenges.FriChallenges.FriAlpha = utils.Uint64ArrayToQuadraticExtension(raw.FriChallenges.FriAlpha)
-	proofChallenges.FriChallenges.FriBetas = utils.Uint64ArrayToQuadraticExtensionArray(raw.FriChallenges.FriBetas)
+	proofChallenges.PlonkBetas = gl.Uint64ArrayToVariableArray(raw.PlonkBetas)
+	proofChallenges.PlonkGammas = gl.Uint64ArrayToVariableArray(raw.PlonkGammas)
+	proofChallenges.PlonkAlphas = gl.Uint64ArrayToVariableArray(raw.PlonkAlphas)
+	proofChallenges.PlonkZeta = gl.Uint64ArrayToQuadraticExtension(raw.PlonkZeta)
+	proofChallenges.FriChallenges.FriAlpha = gl.Uint64ArrayToQuadraticExtension(raw.FriChallenges.FriAlpha)
+	proofChallenges.FriChallenges.FriBetas = gl.Uint64ArrayToQuadraticExtensionArray(raw.FriChallenges.FriBetas)
 	proofChallenges.FriChallenges.FriPowResponse = gl.NewVariable(raw.FriChallenges.FriPowResponse)
-	proofChallenges.FriChallenges.FriQueryIndices = utils.Uint64ArrayToFArray(raw.FriChallenges.FriQueryIndices)
+	proofChallenges.FriChallenges.FriQueryIndices = gl.Uint64ArrayToVariableArray(raw.FriChallenges.FriQueryIndices)
 
 	return proofChallenges
 }
@@ -406,7 +405,7 @@ func DeserializeCommonCircuitData(path string) common.CommonCircuitData {
 	commonCircuitData.NumGateConstraints = raw.NumGateConstraints
 	commonCircuitData.NumConstants = raw.NumConstants
 	commonCircuitData.NumPublicInputs = raw.NumPublicInputs
-	commonCircuitData.KIs = utils.Uint64ArrayToFArray(raw.KIs)
+	commonCircuitData.KIs = gl.Uint64ArrayToVariableArray(raw.KIs)
 	commonCircuitData.NumPartialProducts = raw.NumPartialProducts
 
 	return commonCircuitData
