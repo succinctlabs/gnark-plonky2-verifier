@@ -8,7 +8,6 @@ import (
 	"github.com/consensys/gnark/test"
 	"github.com/succinctlabs/gnark-plonky2-verifier/plonk"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/utils"
 )
 
 type TestPlonkCircuit struct {
@@ -18,9 +17,9 @@ type TestPlonkCircuit struct {
 }
 
 func (circuit *TestPlonkCircuit) Define(api frontend.API) error {
-	proofWithPis := utils.DeserializeProofWithPublicInputs(circuit.proofWithPIsFilename)
-	commonCircuitData := utils.DeserializeCommonCircuitData(circuit.commonCircuitDataFilename)
-	verifierOnlyCircuitData := utils.DeserializeVerifierOnlyCircuitData(circuit.verifierOnlyCircuitDataFilename)
+	proofWithPis := verifier.DeserializeProofWithPublicInputs(circuit.proofWithPIsFilename)
+	commonCircuitData := verifier.DeserializeCommonCircuitData(circuit.commonCircuitDataFilename)
+	verifierOnlyCircuitData := verifier.DeserializeVerifierOnlyCircuitData(circuit.verifierOnlyCircuitDataFilename)
 
 	verifierChip := verifier.NewVerifierChip(api, commonCircuitData)
 	publicInputsHash := verifierChip.GetPublicInputsHash(proofWithPis.PublicInputs)

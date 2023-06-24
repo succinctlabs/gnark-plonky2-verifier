@@ -8,10 +8,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/succinctlabs/gnark-plonky2-verifier/common"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
+	"github.com/succinctlabs/gnark-plonky2-verifier/types"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/utils"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
@@ -22,7 +21,7 @@ import (
 )
 
 type BenchmarkPlonky2VerifierCircuit struct {
-	Proof        common.Proof
+	Proof        types.Proof
 	PublicInputs []gl.Variable `gnark:",public"`
 
 	verifierChip       *verifier.VerifierChip `gnark:"-"`
@@ -31,8 +30,8 @@ type BenchmarkPlonky2VerifierCircuit struct {
 
 func (circuit *BenchmarkPlonky2VerifierCircuit) Define(api frontend.API) error {
 	circuitDirname := "./verifier/data/" + circuit.plonky2CircuitName + "/"
-	commonCircuitData := utils.DeserializeCommonCircuitData(circuitDirname + "common_circuit_data.json")
-	verifierOnlyCircuitData := utils.DeserializeVerifierOnlyCircuitData(circuitDirname + "verifier_only_circuit_data.json")
+	commonCircuitData := verifier.DeserializeCommonCircuitData(circuitDirname + "common_circuit_data.json")
+	verifierOnlyCircuitData := verifier.DeserializeVerifierOnlyCircuitData(circuitDirname + "verifier_only_circuit_data.json")
 
 	circuit.verifierChip = verifier.NewVerifierChip(api, commonCircuitData)
 
@@ -45,7 +44,7 @@ func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, 
 	circuit := BenchmarkPlonky2VerifierCircuit{
 		plonky2CircuitName: plonky2Circuit,
 	}
-	proofWithPis := utils.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
+	proofWithPis := verifier.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
 	circuit.Proof = proofWithPis.Proof
 	circuit.PublicInputs = proofWithPis.PublicInputs
 
@@ -104,7 +103,7 @@ func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, 
 }
 
 func createProof(plonky2Circuit string, r1cs constraint.ConstraintSystem, pk groth16.ProvingKey, vk groth16.VerifyingKey, serialize bool) groth16.Proof {
-	proofWithPis := utils.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
+	proofWithPis := verifier.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
 
 	// Witness
 	assignment := &BenchmarkPlonky2VerifierCircuit{

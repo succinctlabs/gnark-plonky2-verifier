@@ -8,21 +8,21 @@ import (
 
 	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/common"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
+	"github.com/succinctlabs/gnark-plonky2-verifier/types"
 )
 
 type Chip struct {
 	api               frontend.API `gnark:"-"`
 	gl                gl.Chip      `gnark:"-"`
 	poseidonBN254Chip *poseidon.BN254Chip
-	friParams         *common.FriParams `gnark:"-"`
+	friParams         *types.FriParams `gnark:"-"`
 }
 
 func NewChip(
 	api frontend.API,
-	friParams *common.FriParams,
+	friParams *types.FriParams,
 ) *Chip {
 	poseidonBN254Chip := poseidon.NewBN254Chip(api)
 	return &Chip{
@@ -33,7 +33,7 @@ func NewChip(
 	}
 }
 
-func (f *Chip) assertLeadingZeros(powWitness gl.Variable, friConfig common.FriConfig) {
+func (f *Chip) assertLeadingZeros(powWitness gl.Variable, friConfig types.FriConfig) {
 	// Asserts that powWitness'es big-endian bit representation has at least `leading_zeros` leading zeros.
 	// Note that this is assuming that the Goldilocks field is being used.  Specfically that the
 	// field is 64 bits long
@@ -61,8 +61,8 @@ func (f *Chip) verifyMerkleProofToCapWithCapIndex(
 	leafData []gl.Variable,
 	leafIndexBits []frontend.Variable,
 	capIndexBits []frontend.Variable,
-	merkleCap common.MerkleCap,
-	proof *common.MerkleProof,
+	merkleCap types.FriMerkleCap,
+	proof *types.FriMerkleProof,
 ) {
 	currentDigest := f.poseidonBN254Chip.HashOrNoop(leafData)
 	for i, sibling := range proof.Siblings {
@@ -100,7 +100,7 @@ func (f *Chip) verifyMerkleProofToCapWithCapIndex(
 	f.api.AssertIsEqual(currentDigest, merkleCapEntry)
 }
 
-func (f *Chip) verifyInitialProof(xIndexBits []frontend.Variable, proof *common.FriInitialTreeProof, initialMerkleCaps []common.MerkleCap, capIndexBits []frontend.Variable) {
+func (f *Chip) verifyInitialProof(xIndexBits []frontend.Variable, proof *types.FriInitialTreeProof, initialMerkleCaps []types.FriMerkleCap, capIndexBits []frontend.Variable) {
 	if len(proof.EvalsProofs) != len(initialMerkleCaps) {
 		panic("length of eval proofs in fri proof should equal length of initial merkle caps")
 	}
@@ -187,7 +187,7 @@ func (f *Chip) calculateSubgroupX(
 
 func (f *Chip) friCombineInitial(
 	instance InstanceInfo,
-	proof common.FriInitialTreeProof,
+	proof types.FriInitialTreeProof,
 	friAlpha gl.QuadraticExtensionVariable,
 	subgroupX_QE gl.QuadraticExtensionVariable,
 	precomputedReducedEval []gl.QuadraticExtensionVariable,
@@ -228,7 +228,7 @@ func (f *Chip) friCombineInitial(
 	return sum
 }
 
-func (f *Chip) finalPolyEval(finalPoly common.PolynomialCoeffs, point gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
+func (f *Chip) finalPolyEval(finalPoly types.PolynomialCoeffs, point gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
 	ret := gl.ZeroExtension()
 	for i := len(finalPoly.Coeffs) - 1; i >= 0; i-- {
 		ret = f.gl.MulAddExtension(ret, point, finalPoly.Coeffs[i])
@@ -355,14 +355,14 @@ func (f *Chip) computeEvaluation(
 
 func (f *Chip) verifyQueryRound(
 	instance InstanceInfo,
-	challenges *common.FriChallenges,
+	challenges *types.FriChallenges,
 	precomputedReducedEval []gl.QuadraticExtensionVariable,
-	initialMerkleCaps []common.MerkleCap,
-	proof *common.FriProof,
+	initialMerkleCaps []types.FriMerkleCap,
+	proof *types.FriProof,
 	xIndex gl.Variable,
 	n uint64,
 	nLog uint64,
-	roundProof *common.FriQueryRound,
+	roundProof *types.FriQueryRound,
 ) {
 	f.assertNoncanonicalIndicesOK()
 	xIndex = f.gl.Reduce(xIndex)
@@ -468,9 +468,9 @@ func (f *Chip) verifyQueryRound(
 func (f *Chip) VerifyFriProof(
 	instance InstanceInfo,
 	openings Openings,
-	friChallenges *common.FriChallenges,
-	initialMerkleCaps []common.MerkleCap,
-	friProof *common.FriProof,
+	friChallenges *types.FriChallenges,
+	initialMerkleCaps []types.FriMerkleCap,
+	friProof *types.FriProof,
 ) {
 	// TODO:  Check fri config
 	/* if let Some(max_arity_bits) = params.max_arity_bits() {

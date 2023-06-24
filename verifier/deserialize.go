@@ -1,4 +1,4 @@
-package utils
+package verifier
 
 import (
 	"encoding/json"
@@ -7,10 +7,10 @@ import (
 	"os"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/common"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/plonk/gates"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
+	"github.com/succinctlabs/gnark-plonky2-verifier/types"
 )
 
 type ProofWithPublicInputsRaw struct {
@@ -146,7 +146,7 @@ type VerifierOnlyCircuitDataRaw struct {
 	CircuitDigest      string   `json:"circuit_digest"`
 }
 
-func DeserializeMerkleCap(merkleCapRaw []string) common.MerkleCap {
+func DeserializeMerkleCap(merkleCapRaw []string) types.FriMerkleCap {
 	n := len(merkleCapRaw)
 	merkleCap := make([]poseidon.BN254HashOut, n)
 	for i := 0; i < n; i++ {
@@ -156,9 +156,9 @@ func DeserializeMerkleCap(merkleCapRaw []string) common.MerkleCap {
 	return merkleCap
 }
 
-func DeserializeMerkleProof(merkleProofRaw struct{ Siblings []interface{} }) common.MerkleProof {
+func DeserializeMerkleProof(merkleProofRaw struct{ Siblings []interface{} }) types.FriMerkleProof {
 	n := len(merkleProofRaw.Siblings)
-	var mp common.MerkleProof
+	var mp types.FriMerkleProof
 	mp.Siblings = make([]poseidon.BN254HashOut, n)
 	for i := 0; i < n; i++ {
 		element := merkleProofRaw.Siblings[i].(struct{ Elements []uint64 })
@@ -175,8 +175,8 @@ func DeserializeOpeningSet(openingSetRaw struct {
 	PlonkZsNext     [][]uint64
 	PartialProducts [][]uint64
 	QuotientPolys   [][]uint64
-}) common.OpeningSet {
-	return common.OpeningSet{
+}) types.OpeningSet {
+	return types.OpeningSet{
 		Constants:       gl.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.Constants),
 		PlonkSigmas:     gl.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.PlonkSigmas),
 		Wires:           gl.Uint64ArrayToQuadraticExtensionArray(openingSetRaw.Wires),
@@ -216,29 +216,29 @@ func DeserializeFriProof(openingProofRaw struct {
 		Coeffs [][]uint64
 	}
 	PowWitness uint64
-}) common.FriProof {
-	var openingProof common.FriProof
+}) types.FriProof {
+	var openingProof types.FriProof
 	openingProof.PowWitness = gl.NewVariable(openingProofRaw.PowWitness)
 	openingProof.FinalPoly.Coeffs = gl.Uint64ArrayToQuadraticExtensionArray(openingProofRaw.FinalPoly.Coeffs)
 
-	openingProof.CommitPhaseMerkleCaps = make([]common.MerkleCap, len(openingProofRaw.CommitPhaseMerkleCaps))
+	openingProof.CommitPhaseMerkleCaps = make([]types.FriMerkleCap, len(openingProofRaw.CommitPhaseMerkleCaps))
 	for i := 0; i < len(openingProofRaw.CommitPhaseMerkleCaps); i++ {
 		openingProof.CommitPhaseMerkleCaps[i] = StringArrayToHashBN254Array(openingProofRaw.CommitPhaseMerkleCaps[i])
 	}
 
 	numQueryRoundProofs := len(openingProofRaw.QueryRoundProofs)
-	openingProof.QueryRoundProofs = make([]common.FriQueryRound, numQueryRoundProofs)
+	openingProof.QueryRoundProofs = make([]types.FriQueryRound, numQueryRoundProofs)
 
 	for i := 0; i < numQueryRoundProofs; i++ {
 		numEvalProofs := len(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs)
-		openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs = make([]common.EvalProof, numEvalProofs)
+		openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs = make([]types.FriEvalProof, numEvalProofs)
 		for j := 0; j < numEvalProofs; j++ {
 			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].Elements = gl.Uint64ArrayToVariableArray(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].LeafElements)
 			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Siblings = StringArrayToHashBN254Array(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Hash)
 		}
 
 		numSteps := len(openingProofRaw.QueryRoundProofs[i].Steps)
-		openingProof.QueryRoundProofs[i].Steps = make([]common.FriQueryStep, numSteps)
+		openingProof.QueryRoundProofs[i].Steps = make([]types.FriQueryStep, numSteps)
 		for j := 0; j < numSteps; j++ {
 			openingProof.QueryRoundProofs[i].Steps[j].Evals = gl.Uint64ArrayToQuadraticExtensionArray(openingProofRaw.QueryRoundProofs[i].Steps[j].Evals)
 			openingProof.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings = StringArrayToHashBN254Array(openingProofRaw.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings)
@@ -248,7 +248,7 @@ func DeserializeFriProof(openingProofRaw struct {
 	return openingProof
 }
 
-func DeserializeProofWithPublicInputs(path string) common.ProofWithPublicInputs {
+func DeserializeProofWithPublicInputs(path string) types.ProofWithPublicInputs {
 	jsonFile, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -263,7 +263,7 @@ func DeserializeProofWithPublicInputs(path string) common.ProofWithPublicInputs 
 		panic(err)
 	}
 
-	var proofWithPis common.ProofWithPublicInputs
+	var proofWithPis types.ProofWithPublicInputs
 	proofWithPis.Proof.WiresCap = DeserializeMerkleCap(raw.Proof.WiresCap)
 	proofWithPis.Proof.PlonkZsPartialProductsCap = DeserializeMerkleCap(raw.Proof.PlonkZsPartialProductsCap)
 	proofWithPis.Proof.QuotientPolysCap = DeserializeMerkleCap(raw.Proof.QuotientPolysCap)
@@ -297,7 +297,7 @@ func DeserializeProofWithPublicInputs(path string) common.ProofWithPublicInputs 
 	return proofWithPis
 }
 
-func DeserializeProofChallenges(path string) common.ProofChallenges {
+func DeserializeProofChallenges(path string) types.ProofChallenges {
 	jsonFile, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -312,7 +312,7 @@ func DeserializeProofChallenges(path string) common.ProofChallenges {
 		panic(err)
 	}
 
-	var proofChallenges common.ProofChallenges
+	var proofChallenges types.ProofChallenges
 	proofChallenges.PlonkBetas = gl.Uint64ArrayToVariableArray(raw.PlonkBetas)
 	proofChallenges.PlonkGammas = gl.Uint64ArrayToVariableArray(raw.PlonkGammas)
 	proofChallenges.PlonkAlphas = gl.Uint64ArrayToVariableArray(raw.PlonkAlphas)
@@ -345,7 +345,7 @@ func ReductionArityBits(
 	return returnArr
 }
 
-func DeserializeCommonCircuitData(path string) common.CommonCircuitData {
+func DeserializeCommonCircuitData(path string) types.CommonCircuitData {
 	jsonFile, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -360,7 +360,7 @@ func DeserializeCommonCircuitData(path string) common.CommonCircuitData {
 		panic(err)
 	}
 
-	var commonCircuitData common.CommonCircuitData
+	var commonCircuitData types.CommonCircuitData
 	commonCircuitData.Config.NumWires = raw.Config.NumWires
 	commonCircuitData.Config.NumRoutedWires = raw.Config.NumRoutedWires
 	commonCircuitData.Config.NumConstants = raw.Config.NumConstants
@@ -411,7 +411,7 @@ func DeserializeCommonCircuitData(path string) common.CommonCircuitData {
 	return commonCircuitData
 }
 
-func DeserializeVerifierOnlyCircuitData(path string) common.VerifierOnlyCircuitData {
+func DeserializeVerifierOnlyCircuitData(path string) types.VerifierOnlyCircuitData {
 	jsonFile, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -426,7 +426,7 @@ func DeserializeVerifierOnlyCircuitData(path string) common.VerifierOnlyCircuitD
 		panic(err)
 	}
 
-	var verifierOnlyCircuitData common.VerifierOnlyCircuitData
+	var verifierOnlyCircuitData types.VerifierOnlyCircuitData
 	verifierOnlyCircuitData.ConstantSigmasCap = DeserializeMerkleCap(raw.ConstantsSigmasCap)
 	circuitDigestBigInt, _ := new(big.Int).SetString(raw.CircuitDigest, 10)
 	circuitDigestVar := frontend.Variable(circuitDigestBigInt)

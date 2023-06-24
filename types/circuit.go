@@ -1,4 +1,4 @@
-package common
+package types
 
 import (
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
@@ -6,8 +6,21 @@ import (
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 )
 
+type Proof struct {
+	WiresCap                  FriMerkleCap // length = 2^CircuitConfig.FriConfig.CapHeight
+	PlonkZsPartialProductsCap FriMerkleCap // length = 2^CircuitConfig.FriConfig.CapHeight
+	QuotientPolysCap          FriMerkleCap // length = 2^CircuitConfig.FriConfig.CapHeight
+	Openings                  OpeningSet
+	OpeningProof              FriProof
+}
+
+type ProofWithPublicInputs struct {
+	Proof        Proof
+	PublicInputs []gl.Variable // Length = CommonCircuitData.NumPublicInputs
+}
+
 type VerifierOnlyCircuitData struct {
-	ConstantSigmasCap MerkleCap
+	ConstantSigmasCap FriMerkleCap
 	CircuitDigest     poseidon.BN254HashOut
 }
 
@@ -35,23 +48,4 @@ type CommonCircuitData struct {
 	NumPublicInputs      uint64
 	KIs                  []gl.Variable
 	NumPartialProducts   uint64
-}
-
-type FriConfig struct {
-	RateBits        uint64
-	CapHeight       uint64
-	ProofOfWorkBits uint64
-	NumQueryRounds  uint64
-	// TODO: add FriReductionStrategy
-}
-
-func (fc *FriConfig) Rate() float64 {
-	return 1.0 / float64((uint64(1) << fc.RateBits))
-}
-
-type FriParams struct {
-	Config             FriConfig
-	Hiding             bool
-	DegreeBits         uint64
-	ReductionArityBits []uint64
 }

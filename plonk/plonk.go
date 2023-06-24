@@ -2,16 +2,16 @@ package plonk
 
 import (
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/common"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/plonk/gates"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
+	"github.com/succinctlabs/gnark-plonky2-verifier/types"
 )
 
 type PlonkChip struct {
 	api frontend.API `gnark:"-"`
 
-	commonData common.CommonCircuitData `gnark:"-"`
+	commonData types.CommonCircuitData `gnark:"-"`
 
 	DEGREE        gl.Variable                   `gnark:"-"`
 	DEGREE_BITS_F gl.Variable                   `gnark:"-"`
@@ -20,7 +20,7 @@ type PlonkChip struct {
 	evaluateGatesChip *gates.EvaluateGatesChip
 }
 
-func NewPlonkChip(api frontend.API, commonData common.CommonCircuitData) *PlonkChip {
+func NewPlonkChip(api frontend.API, commonData types.CommonCircuitData) *PlonkChip {
 	// TODO:  Should degreeBits be verified that it fits within the field and that degree is within uint64?
 
 	evaluateGatesChip := gates.NewEvaluateGatesChip(
@@ -72,7 +72,7 @@ func (p *PlonkChip) checkPartialProducts(
 	numerators []gl.QuadraticExtensionVariable,
 	denominators []gl.QuadraticExtensionVariable,
 	challengeNum uint64,
-	openings common.OpeningSet,
+	openings types.OpeningSet,
 ) []gl.QuadraticExtensionVariable {
 	glApi := gl.NewChip(p.api)
 	numPartProds := p.commonData.NumPartialProducts
@@ -106,8 +106,8 @@ func (p *PlonkChip) checkPartialProducts(
 
 func (p *PlonkChip) evalVanishingPoly(
 	vars gates.EvaluationVars,
-	proofChallenges common.ProofChallenges,
-	openings common.OpeningSet,
+	proofChallenges types.ProofChallenges,
+	openings types.OpeningSet,
 	zetaPowN gl.QuadraticExtensionVariable,
 ) []gl.QuadraticExtensionVariable {
 	glApi := gl.NewChip(p.api)
@@ -193,8 +193,8 @@ func (p *PlonkChip) evalVanishingPoly(
 }
 
 func (p *PlonkChip) Verify(
-	proofChallenges common.ProofChallenges,
-	openings common.OpeningSet,
+	proofChallenges types.ProofChallenges,
+	openings types.OpeningSet,
 	publicInputsHash poseidon.GoldilocksHashOut,
 ) {
 	glApi := gl.NewChip(p.api)

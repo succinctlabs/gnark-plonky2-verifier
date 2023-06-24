@@ -3,11 +3,11 @@ package verifier
 import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/challenger"
-	"github.com/succinctlabs/gnark-plonky2-verifier/common"
 	"github.com/succinctlabs/gnark-plonky2-verifier/fri"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/plonk"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
+	"github.com/succinctlabs/gnark-plonky2-verifier/types"
 )
 
 type VerifierChip struct {
@@ -18,7 +18,7 @@ type VerifierChip struct {
 	friChip           *fri.Chip
 }
 
-func NewVerifierChip(api frontend.API, commonCircuitData common.CommonCircuitData) *VerifierChip {
+func NewVerifierChip(api frontend.API, commonCircuitData types.CommonCircuitData) *VerifierChip {
 	friChip := fri.NewChip(api, &commonCircuitData.FriParams)
 	plonkChip := plonk.NewPlonkChip(api, commonCircuitData)
 	poseidonGlChip := poseidon.NewGoldilocksChip(api)
@@ -37,11 +37,11 @@ func (c *VerifierChip) GetPublicInputsHash(publicInputs []gl.Variable) poseidon.
 }
 
 func (c *VerifierChip) GetChallenges(
-	proof common.Proof,
+	proof types.Proof,
 	publicInputsHash poseidon.GoldilocksHashOut,
-	commonData common.CommonCircuitData,
-	verifierData common.VerifierOnlyCircuitData,
-) common.ProofChallenges {
+	commonData types.CommonCircuitData,
+	verifierData types.VerifierOnlyCircuitData,
+) types.ProofChallenges {
 	config := commonData.Config
 	numChallenges := config.NumChallenges
 	challenger := challenger.NewChip(c.api)
@@ -62,7 +62,7 @@ func (c *VerifierChip) GetChallenges(
 
 	challenger.ObserveOpenings(fri.ToOpenings(proof.Openings))
 
-	return common.ProofChallenges{
+	return types.ProofChallenges{
 		PlonkBetas:  plonkBetas,
 		PlonkGammas: plonkGammas,
 		PlonkAlphas: plonkAlphas,
@@ -145,10 +145,10 @@ func (c *VerifierChip) generateProofInput(commonData common.CommonCircuitData) c
 */
 
 func (c *VerifierChip) Verify(
-	proof common.Proof,
+	proof types.Proof,
 	publicInputs []gl.Variable,
-	verifierData common.VerifierOnlyCircuitData,
-	commonData common.CommonCircuitData,
+	verifierData types.VerifierOnlyCircuitData,
+	commonData types.CommonCircuitData,
 ) {
 	glApi := gl.NewChip(c.api)
 	// TODO: Need to range check all the proof and public input elements to make sure they are within goldilocks field
@@ -159,7 +159,7 @@ func (c *VerifierChip) Verify(
 
 	c.plonkChip.Verify(proofChallenges, proof.Openings, publicInputsHash)
 
-	initialMerkleCaps := []common.MerkleCap{
+	initialMerkleCaps := []types.FriMerkleCap{
 		verifierData.ConstantSigmasCap,
 		proof.WiresCap,
 		proof.PlonkZsPartialProductsCap,

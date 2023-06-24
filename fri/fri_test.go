@@ -7,11 +7,11 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
 	"github.com/succinctlabs/gnark-plonky2-verifier/challenger"
-	"github.com/succinctlabs/gnark-plonky2-verifier/common"
 	"github.com/succinctlabs/gnark-plonky2-verifier/fri"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/utils"
+	"github.com/succinctlabs/gnark-plonky2-verifier/types"
+	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
 )
 
 type TestFriCircuit struct {
@@ -21,9 +21,9 @@ type TestFriCircuit struct {
 }
 
 func (circuit *TestFriCircuit) Define(api frontend.API) error {
-	proofWithPis := utils.DeserializeProofWithPublicInputs(circuit.proofWithPIsFilename)
-	commonCircuitData := utils.DeserializeCommonCircuitData(circuit.commonCircuitDataFilename)
-	verifierOnlyCircuitData := utils.DeserializeVerifierOnlyCircuitData(circuit.verifierOnlyCircuitDataFilename)
+	proofWithPis := verifier.DeserializeProofWithPublicInputs(circuit.proofWithPIsFilename)
+	commonCircuitData := verifier.DeserializeCommonCircuitData(circuit.commonCircuitDataFilename)
+	verifierOnlyCircuitData := verifier.DeserializeVerifierOnlyCircuitData(circuit.verifierOnlyCircuitDataFilename)
 
 	glApi := gl.NewChip(api)
 	poseidonChip := poseidon.NewGoldilocksChip(api)
@@ -67,7 +67,7 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	x = 11890500485816111017
 	api.AssertIsEqual(friChallenges.FriQueryIndices[0].Limb, x)
 
-	initialMerkleCaps := []common.MerkleCap{
+	initialMerkleCaps := []types.FriMerkleCap{
 		verifierOnlyCircuitData.ConstantSigmasCap,
 		proofWithPis.Proof.WiresCap,
 		proofWithPis.Proof.PlonkZsPartialProductsCap,

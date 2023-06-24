@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/common"
 	"github.com/succinctlabs/gnark-plonky2-verifier/fri"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
+	"github.com/succinctlabs/gnark-plonky2-verifier/types"
 )
 
 type Chip struct {
@@ -113,12 +113,12 @@ func (c *Chip) GetHash() poseidon.GoldilocksHashOut {
 }
 
 func (c *Chip) GetFriChallenges(
-	commitPhaseMerkleCaps []common.MerkleCap,
-	finalPoly common.PolynomialCoeffs,
+	commitPhaseMerkleCaps []types.FriMerkleCap,
+	finalPoly types.PolynomialCoeffs,
 	powWitness gl.Variable,
 	degreeBits uint64,
-	config common.FriConfig,
-) common.FriChallenges {
+	config types.FriConfig,
+) types.FriChallenges {
 	numFriQueries := config.NumQueryRounds
 	friAlpha := c.GetExtensionChallenge()
 
@@ -134,7 +134,7 @@ func (c *Chip) GetFriChallenges(
 	friPowResponse := c.GetChallenge()
 	friQueryIndices := c.GetNChallenges(numFriQueries)
 
-	return common.FriChallenges{
+	return types.FriChallenges{
 		FriAlpha:        friAlpha,
 		FriBetas:        friBetas,
 		FriPowResponse:  friPowResponse,
