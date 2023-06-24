@@ -136,10 +136,12 @@ func (c *GoldilocksChip) ConstantLayerExtension(state GoldilocksStateExtension, 
 }
 
 func (c *GoldilocksChip) sBoxMonomial(x gl.Variable) gl.Variable {
-	x2 := c.gl.Mul(x, x)
-	x4 := c.gl.Mul(x2, x2)
-	x6 := c.gl.Mul(x4, x2)
-	return c.gl.Mul(x6, x)
+	x2 := c.gl.MulNoReduce(x, x)
+	x3 := c.gl.MulNoReduce(x, x2)
+	x3 = c.gl.ReduceWithMaxBits(x3, 192)
+	x6 := c.gl.MulNoReduce(x3, x3)
+	x7 := c.gl.MulNoReduce(x, x6)
+	return c.gl.ReduceWithMaxBits(x7, 192)
 }
 
 func (c *GoldilocksChip) SBoxMonomialExtension(x gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
