@@ -1,13 +1,13 @@
-package plonk
+package challenger
 
 import (
 	"fmt"
 
 	"github.com/consensys/gnark/frontend"
+	"github.com/succinctlabs/gnark-plonky2-verifier/fri"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/fri"
 )
 
 type ChallengerChip struct {

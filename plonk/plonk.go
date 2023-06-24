@@ -3,9 +3,9 @@ package plonk
 import (
 	"github.com/consensys/gnark/frontend"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
+	"github.com/succinctlabs/gnark-plonky2-verifier/plonk/gates"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/gates"
 )
 
 type PlonkChip struct {

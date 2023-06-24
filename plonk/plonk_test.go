@@ -6,8 +6,8 @@ import (
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
+	"github.com/succinctlabs/gnark-plonky2-verifier/plonk"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/plonk"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/utils"
 )
 

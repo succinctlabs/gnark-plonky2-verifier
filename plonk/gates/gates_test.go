@@ -9,8 +9,8 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
+	"github.com/succinctlabs/gnark-plonky2-verifier/plonk/gates"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/gates"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/utils"
 )
 

@@ -6,11 +6,11 @@ import (
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
+	"github.com/succinctlabs/gnark-plonky2-verifier/challenger"
+	"github.com/succinctlabs/gnark-plonky2-verifier/fri"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/fri"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/plonk"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/utils"
 )
 
@@ -29,7 +29,7 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	poseidonChip := poseidon.NewPoseidonChip(api)
 	poseidonBN254Chip := poseidon.NewPoseidonBN254Chip(api)
 	friChip := fri.NewFriChip(api, poseidonBN254Chip, &commonCircuitData.FriParams)
-	challengerChip := plonk.NewChallengerChip(api, poseidonChip, poseidonBN254Chip)
+	challengerChip := challenger.NewChallengerChip(api, poseidonChip, poseidonBN254Chip)
 
 	challengerChip.ObserveBN254Hash(verifierOnlyCircuitData.CircuitDigest)
 	challengerChip.ObserveHash(poseidonChip.HashNoPad(proofWithPis.PublicInputs))
