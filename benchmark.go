@@ -8,9 +8,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/succinctlabs/gnark-plonky2-verifier/common"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/utils"
 
 	"github.com/consensys/gnark-crypto/ecc"

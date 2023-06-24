@@ -7,11 +7,11 @@ import (
 	"os"
 
 	"github.com/consensys/gnark/frontend"
+	"github.com/succinctlabs/gnark-plonky2-verifier/common"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/plonk/gates"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/utils"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 )
 
 type ProofWithPublicInputsRaw struct {

@@ -1,8 +1,8 @@
 package fri
 
 import (
+	"github.com/succinctlabs/gnark-plonky2-verifier/common"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 )
 
 type OpeningBatch struct {
