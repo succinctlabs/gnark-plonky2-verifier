@@ -1,14 +1,14 @@
 package common
 
 import (
-	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
+	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/gates"
 )
 
 type VerifierOnlyCircuitData struct {
 	ConstantSigmasCap MerkleCap
-	CircuitDigest     poseidon.PoseidonBN128HashOut
+	CircuitDigest     poseidon.PoseidonBN254HashOut
 }
 
 type CircuitConfig struct {

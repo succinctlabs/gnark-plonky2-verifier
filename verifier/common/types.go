@@ -1,22 +1,22 @@
 package common
 
 import (
-	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
+	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 )
 
-type MerkleCap = []poseidon.PoseidonBN128HashOut
+type MerkleCap = []poseidon.PoseidonBN254HashOut
 
 func NewMerkleCap(capHeight uint64) MerkleCap {
-	return make([]poseidon.PoseidonBN128HashOut, 1<<capHeight)
+	return make([]poseidon.PoseidonBN254HashOut, 1<<capHeight)
 }
 
 type MerkleProof struct {
-	Siblings []poseidon.PoseidonBN128HashOut // Length = CircuitConfig.FriConfig.DegreeBits + CircuitConfig.FriConfig.RateBits - CircuitConfig.FriConfig.CapHeight
+	Siblings []poseidon.PoseidonBN254HashOut // Length = CircuitConfig.FriConfig.DegreeBits + CircuitConfig.FriConfig.RateBits - CircuitConfig.FriConfig.CapHeight
 }
 
 func NewMerkleProof(merkleProofLen uint64) MerkleProof {
-	return MerkleProof{Siblings: make([]poseidon.PoseidonBN128HashOut, merkleProofLen)}
+	return MerkleProof{Siblings: make([]poseidon.PoseidonBN254HashOut, merkleProofLen)}
 }
 
 type EvalProof struct {

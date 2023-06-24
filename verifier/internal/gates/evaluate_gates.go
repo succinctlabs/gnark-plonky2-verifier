@@ -2,7 +2,7 @@ package gates
 
 import (
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
+	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 )
 
 type EvaluateGatesChip struct {

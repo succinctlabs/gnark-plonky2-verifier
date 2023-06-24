@@ -8,7 +8,7 @@ import (
 
 	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
+	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 )
@@ -17,19 +17,19 @@ type FriChip struct {
 	api frontend.API `gnark:"-"`
 	gl  gl.Chip      `gnark:"-"`
 
-	poseidonBN128Chip *poseidon.PoseidonBN128Chip
+	poseidonBN254Chip *poseidon.PoseidonBN254Chip
 
 	friParams *common.FriParams `gnark:"-"`
 }
 
 func NewFriChip(
 	api frontend.API,
-	poseidonBN128Chip *poseidon.PoseidonBN128Chip,
+	poseidonBN254Chip *poseidon.PoseidonBN254Chip,
 	friParams *common.FriParams,
 ) *FriChip {
 	return &FriChip{
 		api:               api,
-		poseidonBN128Chip: poseidonBN128Chip,
+		poseidonBN254Chip: poseidonBN254Chip,
 		friParams:         friParams,
 		gl:                *gl.NewChip(api),
 	}
@@ -66,13 +66,13 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(
 	merkleCap common.MerkleCap,
 	proof *common.MerkleProof,
 ) {
-	currentDigest := f.poseidonBN128Chip.HashOrNoop(leafData)
+	currentDigest := f.poseidonBN254Chip.HashOrNoop(leafData)
 	for i, sibling := range proof.Siblings {
 		bit := leafIndexBits[i]
 		// TODO: Don't need to do two hashes by using a trick that the plonky2 verifier circuit does
 		// https://github.com/mir-protocol/plonky2/blob/973624f12d2d12d74422b3ea051358b9eaacb050/plonky2/src/gates/poseidon.rs#L298
-		leftHash := f.poseidonBN128Chip.TwoToOne(sibling, currentDigest)
-		rightHash := f.poseidonBN128Chip.TwoToOne(currentDigest, sibling)
+		leftHash := f.poseidonBN254Chip.TwoToOne(sibling, currentDigest)
+		rightHash := f.poseidonBN254Chip.TwoToOne(currentDigest, sibling)
 		currentDigest = f.api.Select(bit, leftHash, rightHash)
 	}
 
@@ -87,7 +87,7 @@ func (f *FriChip) verifyMerkleProofToCapWithCapIndex(
 	}
 
 	const NUM_LEAF_LOOKUPS = 4
-	var leafLookups [NUM_LEAF_LOOKUPS]poseidon.PoseidonBN128HashOut
+	var leafLookups [NUM_LEAF_LOOKUPS]poseidon.PoseidonBN254HashOut
 	// First create the "leaf" lookup2 circuits
 	// The will use the least significant bits of the capIndexBits array
 	for i := 0; i < NUM_LEAF_LOOKUPS; i++ {

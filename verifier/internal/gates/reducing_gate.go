@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
+	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 )
 
 var reducingGateRegex = regexp.MustCompile("ReducingGate { num_coeffs: (?P<numCoeffs>[0-9]+) }")

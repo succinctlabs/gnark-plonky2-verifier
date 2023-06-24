@@ -2,7 +2,7 @@ package verifier
 
 import (
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
+	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/fri"
@@ -12,15 +12,15 @@ import (
 type VerifierChip struct {
 	api               frontend.API `gnark:"-"`
 	poseidonChip      *poseidon.PoseidonChip
-	poseidonBN128Chip *poseidon.PoseidonBN128Chip
+	poseidonBN254Chip *poseidon.PoseidonBN254Chip
 	plonkChip         *plonk.PlonkChip
 	friChip           *fri.FriChip
 }
 
 func NewVerifierChip(api frontend.API, commonCircuitData common.CommonCircuitData) *VerifierChip {
-	poseidonBN128Chip := poseidon.NewPoseidonBN128Chip(api)
+	poseidonBN254Chip := poseidon.NewPoseidonBN254Chip(api)
 
-	friChip := fri.NewFriChip(api, poseidonBN128Chip, &commonCircuitData.FriParams)
+	friChip := fri.NewFriChip(api, poseidonBN254Chip, &commonCircuitData.FriParams)
 	plonkChip := plonk.NewPlonkChip(api, commonCircuitData)
 
 	// We are using goldilocks poseidon for the challenge computation
@@ -29,7 +29,7 @@ func NewVerifierChip(api frontend.API, commonCircuitData common.CommonCircuitDat
 	return &VerifierChip{
 		api:               api,
 		poseidonChip:      poseidonChip,
-		poseidonBN128Chip: poseidonBN128Chip,
+		poseidonBN254Chip: poseidonBN254Chip,
 		plonkChip:         plonkChip,
 		friChip:           friChip,
 	}
@@ -47,11 +47,11 @@ func (c *VerifierChip) GetChallenges(
 ) common.ProofChallenges {
 	config := commonData.Config
 	numChallenges := config.NumChallenges
-	challenger := plonk.NewChallengerChip(c.api, c.poseidonChip, c.poseidonBN128Chip)
+	challenger := plonk.NewChallengerChip(c.api, c.poseidonChip, c.poseidonBN254Chip)
 
 	var circuitDigest = verifierData.CircuitDigest
 
-	challenger.ObserveBN128Hash(circuitDigest)
+	challenger.ObserveBN254Hash(circuitDigest)
 	challenger.ObserveHash(publicInputsHash)
 	challenger.ObserveCap(proof.WiresCap)
 	plonkBetas := challenger.GetNChallenges(numChallenges)

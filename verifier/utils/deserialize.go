@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
+	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/utils"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
@@ -149,7 +149,7 @@ type VerifierOnlyCircuitDataRaw struct {
 
 func DeserializeMerkleCap(merkleCapRaw []string) common.MerkleCap {
 	n := len(merkleCapRaw)
-	merkleCap := make([]poseidon.PoseidonBN128HashOut, n)
+	merkleCap := make([]poseidon.PoseidonBN254HashOut, n)
 	for i := 0; i < n; i++ {
 		capBigInt, _ := new(big.Int).SetString(merkleCapRaw[i], 10)
 		merkleCap[i] = frontend.Variable(capBigInt)
@@ -160,7 +160,7 @@ func DeserializeMerkleCap(merkleCapRaw []string) common.MerkleCap {
 func DeserializeMerkleProof(merkleProofRaw struct{ Siblings []interface{} }) common.MerkleProof {
 	n := len(merkleProofRaw.Siblings)
 	var mp common.MerkleProof
-	mp.Siblings = make([]poseidon.PoseidonBN128HashOut, n)
+	mp.Siblings = make([]poseidon.PoseidonBN254HashOut, n)
 	for i := 0; i < n; i++ {
 		element := merkleProofRaw.Siblings[i].(struct{ Elements []uint64 })
 		mp.Siblings[i] = utils.Uint64ArrayToFArray(element.Elements)
@@ -188,13 +188,13 @@ func DeserializeOpeningSet(openingSetRaw struct {
 	}
 }
 
-func StringArrayToHashBN128Array(rawHashes []string) []poseidon.PoseidonBN128HashOut {
-	hashes := []poseidon.PoseidonBN128HashOut{}
+func StringArrayToHashBN254Array(rawHashes []string) []poseidon.PoseidonBN254HashOut {
+	hashes := []poseidon.PoseidonBN254HashOut{}
 
 	for i := 0; i < len(rawHashes); i++ {
 		hashBigInt, _ := new(big.Int).SetString(rawHashes[i], 10)
 		hashVar := frontend.Variable(hashBigInt)
-		hashes = append(hashes, poseidon.PoseidonBN128HashOut(hashVar))
+		hashes = append(hashes, poseidon.PoseidonBN254HashOut(hashVar))
 	}
 
 	return hashes
@@ -224,7 +224,7 @@ func DeserializeFriProof(openingProofRaw struct {
 
 	openingProof.CommitPhaseMerkleCaps = make([]common.MerkleCap, len(openingProofRaw.CommitPhaseMerkleCaps))
 	for i := 0; i < len(openingProofRaw.CommitPhaseMerkleCaps); i++ {
-		openingProof.CommitPhaseMerkleCaps[i] = StringArrayToHashBN128Array(openingProofRaw.CommitPhaseMerkleCaps[i])
+		openingProof.CommitPhaseMerkleCaps[i] = StringArrayToHashBN254Array(openingProofRaw.CommitPhaseMerkleCaps[i])
 	}
 
 	numQueryRoundProofs := len(openingProofRaw.QueryRoundProofs)
@@ -235,14 +235,14 @@ func DeserializeFriProof(openingProofRaw struct {
 		openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs = make([]common.EvalProof, numEvalProofs)
 		for j := 0; j < numEvalProofs; j++ {
 			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].Elements = utils.Uint64ArrayToFArray(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].LeafElements)
-			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Siblings = StringArrayToHashBN128Array(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Hash)
+			openingProof.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Siblings = StringArrayToHashBN254Array(openingProofRaw.QueryRoundProofs[i].InitialTreesProof.EvalsProofs[j].MerkleProof.Hash)
 		}
 
 		numSteps := len(openingProofRaw.QueryRoundProofs[i].Steps)
 		openingProof.QueryRoundProofs[i].Steps = make([]common.FriQueryStep, numSteps)
 		for j := 0; j < numSteps; j++ {
 			openingProof.QueryRoundProofs[i].Steps[j].Evals = utils.Uint64ArrayToQuadraticExtensionArray(openingProofRaw.QueryRoundProofs[i].Steps[j].Evals)
-			openingProof.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings = StringArrayToHashBN128Array(openingProofRaw.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings)
+			openingProof.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings = StringArrayToHashBN254Array(openingProofRaw.QueryRoundProofs[i].Steps[j].MerkleProof.Siblings)
 		}
 	}
 
@@ -431,6 +431,6 @@ func DeserializeVerifierOnlyCircuitData(path string) common.VerifierOnlyCircuitD
 	verifierOnlyCircuitData.ConstantSigmasCap = DeserializeMerkleCap(raw.ConstantsSigmasCap)
 	circuitDigestBigInt, _ := new(big.Int).SetString(raw.CircuitDigest, 10)
 	circuitDigestVar := frontend.Variable(circuitDigestBigInt)
-	verifierOnlyCircuitData.CircuitDigest = poseidon.PoseidonBN128HashOut(circuitDigestVar)
+	verifierOnlyCircuitData.CircuitDigest = poseidon.PoseidonBN254HashOut(circuitDigestVar)
 	return verifierOnlyCircuitData
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
+	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/fri"
@@ -13,13 +13,13 @@ import (
 type ChallengerChip struct {
 	api               frontend.API `gnark:"-"`
 	poseidonChip      *poseidon.PoseidonChip
-	poseidonBN128Chip *poseidon.PoseidonBN128Chip
+	poseidonBN254Chip *poseidon.PoseidonBN254Chip
 	spongeState       [poseidon.SPONGE_WIDTH]gl.Variable
 	inputBuffer       []gl.Variable
 	outputBuffer      []gl.Variable
 }
 
-func NewChallengerChip(api frontend.API, poseidonChip *poseidon.PoseidonChip, poseidonBN128Chip *poseidon.PoseidonBN128Chip) *ChallengerChip {
+func NewChallengerChip(api frontend.API, poseidonChip *poseidon.PoseidonChip, poseidonBN254Chip *poseidon.PoseidonBN254Chip) *ChallengerChip {
 	var spongeState [poseidon.SPONGE_WIDTH]gl.Variable
 	var inputBuffer []gl.Variable
 	var outputBuffer []gl.Variable
@@ -31,7 +31,7 @@ func NewChallengerChip(api frontend.API, poseidonChip *poseidon.PoseidonChip, po
 	return &ChallengerChip{
 		api:               api,
 		poseidonChip:      poseidonChip,
-		poseidonBN128Chip: poseidonBN128Chip,
+		poseidonBN254Chip: poseidonBN254Chip,
 		spongeState:       spongeState,
 		inputBuffer:       inputBuffer,
 		outputBuffer:      outputBuffer,
@@ -57,14 +57,14 @@ func (c *ChallengerChip) ObserveHash(hash poseidon.PoseidonHashOut) {
 	c.ObserveElements(elements)
 }
 
-func (c *ChallengerChip) ObserveBN128Hash(hash poseidon.PoseidonBN128HashOut) {
-	elements := c.poseidonBN128Chip.ToVec(hash)
+func (c *ChallengerChip) ObserveBN254Hash(hash poseidon.PoseidonBN254HashOut) {
+	elements := c.poseidonBN254Chip.ToVec(hash)
 	c.ObserveElements(elements)
 }
 
-func (c *ChallengerChip) ObserveCap(cap []poseidon.PoseidonBN128HashOut) {
+func (c *ChallengerChip) ObserveCap(cap []poseidon.PoseidonBN254HashOut) {
 	for i := 0; i < len(cap); i++ {
-		c.ObserveBN128Hash(cap[i])
+		c.ObserveBN254Hash(cap[i])
 	}
 }
 
