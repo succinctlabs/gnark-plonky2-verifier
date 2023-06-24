@@ -1,7 +1,6 @@
 package fri
 
 import (
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
 )
@@ -185,7 +184,7 @@ func GetFriInstance(c *common.CommonCircuitData, glApi *gl.Chip, zeta gl.Quadrat
 		Polynomials: friAllPolys(c),
 	}
 
-	g := field.GoldilocksPrimitiveRootOfUnity(degreeBits)
+	g := gl.PrimitiveRootOfUnity(degreeBits)
 	zetaNext := glApi.MulExtension(
 		gl.NewVariable(g.Uint64()).ToQuadraticExtension(),
 		zeta,

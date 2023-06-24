@@ -8,7 +8,6 @@ import (
 
 	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
@@ -90,32 +89,32 @@ func (g *CosetInterpolationGate) wiresValue(i uint64) Range {
 	if i >= g.numPoints() {
 		panic("Invalid point index")
 	}
-	start := g.startValues() + i*field.D
-	return Range{start, start + field.D}
+	start := g.startValues() + i*gl.D
+	return Range{start, start + gl.D}
 }
 
 func (g *CosetInterpolationGate) startEvaluationPoint() uint64 {
-	return g.startValues() + g.numPoints()*field.D
+	return g.startValues() + g.numPoints()*gl.D
 }
 
 // Wire indices of the point to evaluate the interpolant at.
 func (g *CosetInterpolationGate) wiresEvaluationPoint() Range {
 	start := g.startEvaluationPoint()
-	return Range{start, start + field.D}
+	return Range{start, start + gl.D}
 }
 
 func (g *CosetInterpolationGate) startEvaluationValue() uint64 {
-	return g.startEvaluationPoint() + field.D
+	return g.startEvaluationPoint() + gl.D
 }
 
 // Wire indices of the interpolated value.
 func (g *CosetInterpolationGate) wiresEvaluationValue() Range {
 	start := g.startEvaluationValue()
-	return Range{start, start + field.D}
+	return Range{start, start + gl.D}
 }
 
 func (g *CosetInterpolationGate) startIntermediates() uint64 {
-	return g.startEvaluationValue() + field.D
+	return g.startEvaluationValue() + gl.D
 }
 
 func (g *CosetInterpolationGate) numIntermediates() uint64 {
@@ -127,8 +126,8 @@ func (g *CosetInterpolationGate) wiresIntermediateEval(i uint64) Range {
 	if i >= g.numIntermediates() {
 		panic("Invalid intermediate index")
 	}
-	start := g.startIntermediates() + field.D*i
-	return Range{start, start + field.D}
+	start := g.startIntermediates() + gl.D*i
+	return Range{start, start + gl.D}
 }
 
 // The wires corresponding to the i'th intermediate product.
@@ -136,14 +135,14 @@ func (g *CosetInterpolationGate) wiresIntermediateProd(i uint64) Range {
 	if i >= g.numIntermediates() {
 		panic("Invalid intermediate index")
 	}
-	start := g.startIntermediates() + field.D*(g.numIntermediates()+i)
-	return Range{start, start + field.D}
+	start := g.startIntermediates() + gl.D*(g.numIntermediates()+i)
+	return Range{start, start + gl.D}
 }
 
 // Wire indices of the shifted point to evaluate the interpolant at.
 func (g *CosetInterpolationGate) wiresShiftedEvaluationPoint() Range {
-	start := g.startIntermediates() + field.D*2*g.numIntermediates()
-	return Range{start, start + field.D}
+	start := g.startIntermediates() + gl.D*2*g.numIntermediates()
+	return Range{start, start + gl.D}
 }
 
 func (g *CosetInterpolationGate) EvalUnfiltered(
@@ -162,11 +161,11 @@ func (g *CosetInterpolationGate) EvalUnfiltered(
 	tmp := glApi.ScalarMulExtensionAlgebra(negShift, shiftedEvaluationPoint)
 	tmp = glApi.AddExtensionAlgebra(tmp, evaluationPoint)
 
-	for i := 0; i < field.D; i++ {
+	for i := 0; i < gl.D; i++ {
 		constraints = append(constraints, tmp[i])
 	}
 
-	domain := field.TwoAdicSubgroup(g.subgroupBits)
+	domain := gl.TwoAdicSubgroup(g.subgroupBits)
 	values := []gl.QuadraticExtensionAlgebraVariable{}
 	for i := uint64(0); i < g.numPoints(); i++ {
 		values = append(values, vars.GetLocalExtAlgebra(g.wiresValue(i)))
@@ -189,12 +188,12 @@ func (g *CosetInterpolationGate) EvalUnfiltered(
 		intermediateProd := vars.GetLocalExtAlgebra(g.wiresIntermediateProd(i))
 
 		evalDiff := glApi.SubExtensionAlgebra(intermediateEval, computedEval)
-		for j := 0; j < field.D; j++ {
+		for j := 0; j < gl.D; j++ {
 			constraints = append(constraints, evalDiff[j])
 		}
 
 		prodDiff := glApi.SubExtensionAlgebra(intermediateProd, computedProd)
-		for j := 0; j < field.D; j++ {
+		for j := 0; j < gl.D; j++ {
 			constraints = append(constraints, prodDiff[j])
 		}
 
@@ -212,7 +211,7 @@ func (g *CosetInterpolationGate) EvalUnfiltered(
 
 	evaluationValue := vars.GetLocalExtAlgebra(g.wiresEvaluationValue())
 	evalDiff := glApi.SubExtensionAlgebra(evaluationValue, computedEval)
-	for j := 0; j < field.D; j++ {
+	for j := 0; j < gl.D; j++ {
 		constraints = append(constraints, evalDiff[j])
 	}
 

@@ -2,13 +2,11 @@ package gates
 
 import (
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
 type EvaluateGatesChip struct {
-	api   frontend.API
-	qeAPI *field.QuadraticExtensionAPI
+	api frontend.API
 
 	gates              []Gate
 	numGateConstraints uint64
@@ -18,14 +16,12 @@ type EvaluateGatesChip struct {
 
 func NewEvaluateGatesChip(
 	api frontend.API,
-	qeAPI *field.QuadraticExtensionAPI,
 	gates []Gate,
 	numGateConstraints uint64,
 	selectorsInfo SelectorsInfo,
 ) *EvaluateGatesChip {
 	return &EvaluateGatesChip{
-		api:   api,
-		qeAPI: qeAPI,
+		api: api,
 
 		gates:              gates,
 		numGateConstraints: numGateConstraints,

@@ -2,7 +2,6 @@ package plonk
 
 import (
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
@@ -10,8 +9,7 @@ import (
 )
 
 type PlonkChip struct {
-	api   frontend.API                 `gnark:"-"`
-	qeAPI *field.QuadraticExtensionAPI `gnark:"-"`
+	api frontend.API `gnark:"-"`
 
 	commonData common.CommonCircuitData `gnark:"-"`
 
@@ -22,20 +20,18 @@ type PlonkChip struct {
 	evaluateGatesChip *gates.EvaluateGatesChip
 }
 
-func NewPlonkChip(api frontend.API, qeAPI *field.QuadraticExtensionAPI, commonData common.CommonCircuitData) *PlonkChip {
+func NewPlonkChip(api frontend.API, commonData common.CommonCircuitData) *PlonkChip {
 	// TODO:  Should degreeBits be verified that it fits within the field and that degree is within uint64?
 
 	evaluateGatesChip := gates.NewEvaluateGatesChip(
 		api,
-		qeAPI,
 		commonData.Gates,
 		commonData.NumGateConstraints,
 		commonData.SelectorsInfo,
 	)
 
 	return &PlonkChip{
-		api:   api,
-		qeAPI: qeAPI,
+		api: api,
 
 		commonData: commonData,
 

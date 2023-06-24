@@ -2,7 +2,6 @@ package verifier
 
 import (
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
@@ -11,9 +10,7 @@ import (
 )
 
 type VerifierChip struct {
-	api               frontend.API                 `gnark:"-"`
-	fieldAPI          field.FieldAPI               `gnark:"-"`
-	qeAPI             *field.QuadraticExtensionAPI `gnark:"-"`
+	api               frontend.API `gnark:"-"`
 	poseidonChip      *poseidon.PoseidonChip
 	poseidonBN128Chip *poseidon.PoseidonBN128Chip
 	plonkChip         *plonk.PlonkChip
@@ -21,21 +18,16 @@ type VerifierChip struct {
 }
 
 func NewVerifierChip(api frontend.API, commonCircuitData common.CommonCircuitData) *VerifierChip {
-
-	fieldAPI := field.NewFieldAPI(api)
-	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI)
 	poseidonBN128Chip := poseidon.NewPoseidonBN128Chip(api)
 
 	friChip := fri.NewFriChip(api, poseidonBN128Chip, &commonCircuitData.FriParams)
-	plonkChip := plonk.NewPlonkChip(api, qeAPI, commonCircuitData)
+	plonkChip := plonk.NewPlonkChip(api, commonCircuitData)
 
 	// We are using goldilocks poseidon for the challenge computation
 	poseidonChip := poseidon.NewPoseidonChip(api)
 
 	return &VerifierChip{
 		api:               api,
-		fieldAPI:          fieldAPI,
-		qeAPI:             qeAPI,
 		poseidonChip:      poseidonChip,
 		poseidonBN128Chip: poseidonBN128Chip,
 		plonkChip:         plonkChip,
@@ -55,7 +47,7 @@ func (c *VerifierChip) GetChallenges(
 ) common.ProofChallenges {
 	config := commonData.Config
 	numChallenges := config.NumChallenges
-	challenger := plonk.NewChallengerChip(c.api, c.fieldAPI, c.poseidonChip, c.poseidonBN128Chip)
+	challenger := plonk.NewChallengerChip(c.api, c.poseidonChip, c.poseidonBN128Chip)
 
 	var circuitDigest = verifierData.CircuitDigest
 

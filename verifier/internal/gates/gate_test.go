@@ -4,10 +4,10 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/gates"
@@ -715,7 +715,7 @@ func TestGates(t *testing.T) {
 	testCase := func(testGate gates.Gate, expectedConstraints []gl.QuadraticExtensionVariable) {
 		circuit := &TestGateCircuit{testGate: testGate, ExpectedConstraints: expectedConstraints}
 		witness := &TestGateCircuit{testGate: testGate, ExpectedConstraints: expectedConstraints}
-		err := test.IsSolved(circuit, witness, field.TEST_CURVE.ScalarField())
+		err := test.IsSolved(circuit, witness, ecc.BN254.ScalarField())
 		assert.NoError(err)
 	}
 

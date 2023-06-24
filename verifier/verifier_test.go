@@ -8,7 +8,6 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/test"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
@@ -54,7 +53,7 @@ func TestStepVerifier(t *testing.T) {
 			PublicInputs:       proofWithPis2.PublicInputs,
 		}
 
-		err := test.IsSolved(&circuit, &witness, field.TEST_CURVE.ScalarField())
+		err := test.IsSolved(&circuit, &witness, ecc.BN254.ScalarField())
 		assert.NoError(err)
 	}
 	testCase()

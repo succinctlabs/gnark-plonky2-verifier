@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
@@ -42,15 +41,15 @@ func (g *MultiplicationExtensionGate) Id() string {
 }
 
 func (g *MultiplicationExtensionGate) wiresIthMultiplicand0(i uint64) Range {
-	return Range{3 * field.D * i, 3*field.D*i + field.D}
+	return Range{3 * gl.D * i, 3*gl.D*i + gl.D}
 }
 
 func (g *MultiplicationExtensionGate) wiresIthMultiplicand1(i uint64) Range {
-	return Range{3*field.D*i + field.D, 3*field.D*i + 2*field.D}
+	return Range{3*gl.D*i + gl.D, 3*gl.D*i + 2*gl.D}
 }
 
 func (g *MultiplicationExtensionGate) wiresIthOutput(i uint64) Range {
-	return Range{3*field.D*i + 2*field.D, 3*field.D*i + 3*field.D}
+	return Range{3*gl.D*i + 2*gl.D, 3*gl.D*i + 3*gl.D}
 }
 
 func (g *MultiplicationExtensionGate) EvalUnfiltered(
@@ -69,7 +68,7 @@ func (g *MultiplicationExtensionGate) EvalUnfiltered(
 		computed_output := glApi.ScalarMulExtensionAlgebra(const0, mul)
 
 		diff := glApi.SubExtensionAlgebra(output, computed_output)
-		for j := 0; j < field.D; j++ {
+		for j := 0; j < gl.D; j++ {
 			constraints = append(constraints, diff[j])
 		}
 	}

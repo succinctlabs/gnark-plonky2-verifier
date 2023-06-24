@@ -3,9 +3,9 @@ package plonk_test
 import (
 	"testing"
 
+	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/plonk"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/utils"
@@ -26,11 +26,8 @@ func (circuit *TestPlonkCircuit) Define(api frontend.API) error {
 	publicInputsHash := verifierChip.GetPublicInputsHash(proofWithPis.PublicInputs)
 	proofChallenges := verifierChip.GetChallenges(proofWithPis.Proof, publicInputsHash, commonCircuitData, verifierOnlyCircuitData)
 
-	fieldAPI := field.NewFieldAPI(api)
-	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI)
 	plonkChip := plonk.NewPlonkChip(
 		api,
-		qeAPI,
 		commonCircuitData,
 	)
 
@@ -48,7 +45,7 @@ func TestPlonkDecodeBlock(t *testing.T) {
 			verifierOnlyCircuitDataFilename: "../../data/decode_block/verifier_only_circuit_data.json",
 		}
 		witness := TestPlonkCircuit{}
-		err := test.IsSolved(&circuit, &witness, field.TEST_CURVE.ScalarField())
+		err := test.IsSolved(&circuit, &witness, ecc.BN254.ScalarField())
 		assert.NoError(err)
 	}
 

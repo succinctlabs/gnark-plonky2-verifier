@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
@@ -31,7 +30,7 @@ type ReducingExtensionGate struct {
 	numCoeffs uint64
 }
 
-const START_COEFFS_REDUCING_EXTENSION_GATE = 3 * field.D
+const START_COEFFS_REDUCING_EXTENSION_GATE = 3 * gl.D
 
 func NewReducingExtensionGate(numCoeffs uint64) *ReducingExtensionGate {
 	return &ReducingExtensionGate{
@@ -44,23 +43,23 @@ func (g *ReducingExtensionGate) Id() string {
 }
 
 func (g *ReducingExtensionGate) wiresOutput() Range {
-	return Range{0, field.D}
+	return Range{0, gl.D}
 }
 
 func (g *ReducingExtensionGate) wiresAlpha() Range {
-	return Range{field.D, 2 * field.D}
+	return Range{gl.D, 2 * gl.D}
 }
 
 func (g *ReducingExtensionGate) wiresOldAcc() Range {
-	return Range{2 * field.D, 3 * field.D}
+	return Range{2 * gl.D, 3 * gl.D}
 }
 
 func (g *ReducingExtensionGate) wiresCoeff(i uint64) Range {
-	return Range{START_COEFFS_REDUCING_EXTENSION_GATE + field.D*i, START_COEFFS_REDUCING_EXTENSION_GATE + field.D*(i+1)}
+	return Range{START_COEFFS_REDUCING_EXTENSION_GATE + gl.D*i, START_COEFFS_REDUCING_EXTENSION_GATE + gl.D*(i+1)}
 }
 
 func (g *ReducingExtensionGate) startAccs() uint64 {
-	return START_COEFFS_REDUCING_EXTENSION_GATE + g.numCoeffs*field.D
+	return START_COEFFS_REDUCING_EXTENSION_GATE + g.numCoeffs*gl.D
 }
 
 func (g *ReducingExtensionGate) wiresAccs(i uint64) Range {
@@ -72,7 +71,7 @@ func (g *ReducingExtensionGate) wiresAccs(i uint64) Range {
 		return g.wiresOutput()
 	}
 
-	return Range{g.startAccs() + field.D*i, g.startAccs() + field.D*(i+1)}
+	return Range{g.startAccs() + gl.D*i, g.startAccs() + gl.D*(i+1)}
 }
 
 func (g *ReducingExtensionGate) EvalUnfiltered(
@@ -100,7 +99,7 @@ func (g *ReducingExtensionGate) EvalUnfiltered(
 		tmp := glApi.MulExtensionAlgebra(acc, alpha)
 		tmp = glApi.AddExtensionAlgebra(tmp, coeff)
 		tmp = glApi.SubExtensionAlgebra(tmp, accs[i])
-		for j := uint64(0); j < field.D; j++ {
+		for j := uint64(0); j < gl.D; j++ {
 			constraints = append(constraints, tmp[j])
 		}
 		acc = accs[i]

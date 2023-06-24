@@ -3,11 +3,11 @@ package poseidon
 import (
 	"testing"
 
+	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/consensys/gnark/test"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/utils"
 )
@@ -41,7 +41,7 @@ func TestPoseidonWitness(t *testing.T) {
 	testCase := func(in [12]frontend.Variable, out [12]frontend.Variable) {
 		circuit := TestPoseidonCircuit{In: in, Out: out}
 		witness := TestPoseidonCircuit{In: in, Out: out}
-		err := test.IsSolved(&circuit, &witness, field.TEST_CURVE.ScalarField())
+		err := test.IsSolved(&circuit, &witness, ecc.BN254.ScalarField())
 		assert.NoError(err)
 	}
 
@@ -75,12 +75,12 @@ func TestPoseidonProof(t *testing.T) {
 	circuit := TestPoseidonCircuit{In: in, Out: out}
 	assignment := TestPoseidonCircuit{In: in, Out: out}
 
-	r1cs, err := frontend.Compile(field.TEST_CURVE.ScalarField(), r1cs.NewBuilder, &circuit)
+	r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &circuit)
 	if err != nil {
 		panic(err)
 	}
 
-	witness, err := frontend.NewWitness(&assignment, field.TEST_CURVE.ScalarField())
+	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
 	if err != nil {
 		panic(err)
 	}
@@ -90,7 +90,7 @@ func TestPoseidonProof(t *testing.T) {
 		panic(err)
 	}
 
-	err = test.IsSolved(&circuit, &assignment, field.TEST_CURVE.ScalarField())
+	err = test.IsSolved(&circuit, &assignment, ecc.BN254.ScalarField())
 	if err != nil {
 		panic(err)
 	}

@@ -1,7 +1,6 @@
 package gates
 
 import (
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 )
@@ -30,7 +29,7 @@ func (e *EvaluationVars) RemovePrefix(numSelectors uint64) {
 
 func (e *EvaluationVars) GetLocalExtAlgebra(wireRange Range) gl.QuadraticExtensionAlgebraVariable {
 	// For now, only support degree 2
-	if wireRange.end-wireRange.start != field.D {
+	if wireRange.end-wireRange.start != gl.D {
 		panic("Range must be of size D")
 	}
 

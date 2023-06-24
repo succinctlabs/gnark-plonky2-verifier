@@ -3,9 +3,9 @@ package fri_test
 import (
 	"testing"
 
+	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
@@ -26,11 +26,10 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	verifierOnlyCircuitData := utils.DeserializeVerifierOnlyCircuitData(circuit.verifierOnlyCircuitDataFilename)
 
 	glApi := gl.NewChip(api)
-	fieldAPI := field.NewFieldAPI(api)
 	poseidonChip := poseidon.NewPoseidonChip(api)
 	poseidonBN128Chip := poseidon.NewPoseidonBN128Chip(api)
 	friChip := fri.NewFriChip(api, poseidonBN128Chip, &commonCircuitData.FriParams)
-	challengerChip := plonk.NewChallengerChip(api, fieldAPI, poseidonChip, poseidonBN128Chip)
+	challengerChip := plonk.NewChallengerChip(api, poseidonChip, poseidonBN128Chip)
 
 	challengerChip.ObserveBN128Hash(verifierOnlyCircuitData.CircuitDigest)
 	challengerChip.ObserveHash(poseidonChip.HashNoPad(proofWithPis.PublicInputs))
@@ -120,7 +119,7 @@ func TestDecodeBlockFriVerification(t *testing.T) {
 			commonCircuitDataFilename:       "../../data/dummy_2^14_gates/common_circuit_data.json",
 			verifierOnlyCircuitDataFilename: ".../../data/dummy_2^14_gates/verifier_only_circuit_data.json",
 		}
-		err := test.IsSolved(&circuit, &witness, field.TEST_CURVE.ScalarField())
+		err := test.IsSolved(&circuit, &witness, ecc.BN254.ScalarField())
 		assert.NoError(err)
 	}
 

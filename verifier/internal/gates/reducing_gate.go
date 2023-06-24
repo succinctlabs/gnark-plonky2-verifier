@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 )
 
@@ -31,7 +30,7 @@ type ReducingGate struct {
 	numCoeffs uint64
 }
 
-const START_COEFFS_REDUCING_GATE = 3 * field.D
+const START_COEFFS_REDUCING_GATE = 3 * gl.D
 
 func NewReducingGate(numCoeffs uint64) *ReducingGate {
 	return &ReducingGate{
@@ -44,15 +43,15 @@ func (g *ReducingGate) Id() string {
 }
 
 func (g *ReducingGate) wiresOutput() Range {
-	return Range{0, field.D}
+	return Range{0, gl.D}
 }
 
 func (g *ReducingGate) wiresAlpha() Range {
-	return Range{field.D, 2 * field.D}
+	return Range{gl.D, 2 * gl.D}
 }
 
 func (g *ReducingGate) wiresOldAcc() Range {
-	return Range{2 * field.D, 3 * field.D}
+	return Range{2 * gl.D, 3 * gl.D}
 }
 
 func (g *ReducingGate) wiresCoeff() Range {
@@ -72,7 +71,7 @@ func (g *ReducingGate) wiresAccs(i uint64) Range {
 		return g.wiresOutput()
 	}
 
-	return Range{g.startAccs() + field.D*i, g.startAccs() + field.D*(i+1)}
+	return Range{g.startAccs() + gl.D*i, g.startAccs() + gl.D*(i+1)}
 }
 
 func (g *ReducingGate) EvalUnfiltered(
@@ -98,14 +97,14 @@ func (g *ReducingGate) EvalUnfiltered(
 	acc := oldAcc
 	for i := uint64(0); i < g.numCoeffs; i++ {
 		var coeff gl.QuadraticExtensionAlgebraVariable
-		for j := 0; j < field.D; j++ {
+		for j := 0; j < gl.D; j++ {
 			coeff[j] = gl.ZeroExtension()
 		}
 		coeff[0] = coeffs[i]
 		tmp := glApi.MulExtensionAlgebra(acc, alpha)
 		tmp = glApi.AddExtensionAlgebra(tmp, coeff)
 		tmp = glApi.SubExtensionAlgebra(tmp, accs[i])
-		for j := 0; j < field.D; j++ {
+		for j := 0; j < gl.D; j++ {
 			constraints = append(constraints, tmp[j])
 		}
 		acc = accs[i]

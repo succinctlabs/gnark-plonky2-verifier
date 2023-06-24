@@ -333,3 +333,20 @@ func PrimitiveRootOfUnity(nLog uint64) goldilocks.Element {
 	}
 	return res
 }
+
+func TwoAdicSubgroup(nLog uint64) []goldilocks.Element {
+	if nLog > TWO_ADICITY {
+		panic("nLog is greater than GOLDILOCKS_TWO_ADICITY")
+	}
+
+	var res []goldilocks.Element
+	rootOfUnity := PrimitiveRootOfUnity(nLog)
+	res = append(res, goldilocks.NewElement(1))
+
+	for i := 0; i < (1 << nLog); i++ {
+		lastElement := res[len(res)-1]
+		res = append(res, *lastElement.Mul(&lastElement, &rootOfUnity))
+	}
+
+	return res
+}

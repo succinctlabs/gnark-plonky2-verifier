@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
@@ -12,8 +11,7 @@ import (
 )
 
 type ChallengerChip struct {
-	api               frontend.API   `gnark:"-"`
-	field             field.FieldAPI `gnark:"-"`
+	api               frontend.API `gnark:"-"`
 	poseidonChip      *poseidon.PoseidonChip
 	poseidonBN128Chip *poseidon.PoseidonBN128Chip
 	spongeState       [poseidon.SPONGE_WIDTH]gl.Variable
@@ -21,7 +19,7 @@ type ChallengerChip struct {
 	outputBuffer      []gl.Variable
 }
 
-func NewChallengerChip(api frontend.API, fieldAPI field.FieldAPI, poseidonChip *poseidon.PoseidonChip, poseidonBN128Chip *poseidon.PoseidonBN128Chip) *ChallengerChip {
+func NewChallengerChip(api frontend.API, poseidonChip *poseidon.PoseidonChip, poseidonBN128Chip *poseidon.PoseidonBN128Chip) *ChallengerChip {
 	var spongeState [poseidon.SPONGE_WIDTH]gl.Variable
 	var inputBuffer []gl.Variable
 	var outputBuffer []gl.Variable
@@ -32,7 +30,6 @@ func NewChallengerChip(api frontend.API, fieldAPI field.FieldAPI, poseidonChip *
 
 	return &ChallengerChip{
 		api:               api,
-		field:             fieldAPI,
 		poseidonChip:      poseidonChip,
 		poseidonBN128Chip: poseidonBN128Chip,
 		spongeState:       spongeState,

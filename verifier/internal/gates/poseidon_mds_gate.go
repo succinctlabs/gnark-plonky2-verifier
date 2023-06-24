@@ -4,7 +4,6 @@ import (
 	"regexp"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/gl"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 )
@@ -31,14 +30,14 @@ func (g *PoseidonMdsGate) WireInput(i uint64) Range {
 	if i >= poseidon.SPONGE_WIDTH {
 		panic("Input less than sponge width")
 	}
-	return Range{i * field.D, (i + 1) * field.D}
+	return Range{i * gl.D, (i + 1) * gl.D}
 }
 
 func (g *PoseidonMdsGate) WireOutput(i uint64) Range {
 	if i >= poseidon.SPONGE_WIDTH {
 		panic("Input less than sponge width")
 	}
-	return Range{(poseidon.SPONGE_WIDTH + i) * field.D, (poseidon.SPONGE_WIDTH + i + 1) * field.D}
+	return Range{(poseidon.SPONGE_WIDTH + i) * gl.D, (poseidon.SPONGE_WIDTH + i + 1) * gl.D}
 }
 
 func (g *PoseidonMdsGate) mdsRowShfAlgebra(

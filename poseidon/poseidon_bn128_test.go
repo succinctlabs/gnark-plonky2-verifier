@@ -3,9 +3,9 @@ package poseidon
 import (
 	"testing"
 
+	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
 	"github.com/succinctlabs/gnark-plonky2-verifier/utils"
 )
 
@@ -34,7 +34,7 @@ func TestPoseidonBN128(t *testing.T) {
 	testCaseFn := func(in [spongeWidth]frontend.Variable, out [spongeWidth]frontend.Variable) {
 		circuit := TestPoseidonBN128Circuit{In: in, Out: out}
 		witness := TestPoseidonBN128Circuit{In: in, Out: out}
-		err := test.IsSolved(&circuit, &witness, field.TEST_CURVE.ScalarField())
+		err := test.IsSolved(&circuit, &witness, ecc.BN254.ScalarField())
 		assert.NoError(err)
 	}
 
