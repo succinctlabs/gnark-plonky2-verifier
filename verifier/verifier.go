@@ -12,43 +12,39 @@ import (
 
 type VerifierChip struct {
 	api               frontend.API `gnark:"-"`
-	poseidonChip      *poseidon.GoldilocksChip
+	poseidonGlChip    *poseidon.GoldilocksChip
 	poseidonBN254Chip *poseidon.BN254Chip
 	plonkChip         *plonk.PlonkChip
 	friChip           *fri.Chip
 }
 
 func NewVerifierChip(api frontend.API, commonCircuitData common.CommonCircuitData) *VerifierChip {
-	poseidonBN254Chip := poseidon.NewPoseidonBN254Chip(api)
-
-	friChip := fri.NewChip(api, poseidonBN254Chip, &commonCircuitData.FriParams)
+	friChip := fri.NewChip(api, &commonCircuitData.FriParams)
 	plonkChip := plonk.NewPlonkChip(api, commonCircuitData)
-
-	// We are using goldilocks poseidon for the challenge computation
-	poseidonChip := poseidon.NewPoseidonChip(api)
-
+	poseidonGlChip := poseidon.NewGoldilocksChip(api)
+	poseidonBN254Chip := poseidon.NewBN254Chip(api)
 	return &VerifierChip{
 		api:               api,
-		poseidonChip:      poseidonChip,
+		poseidonGlChip:    poseidonGlChip,
 		poseidonBN254Chip: poseidonBN254Chip,
 		plonkChip:         plonkChip,
 		friChip:           friChip,
 	}
 }
 
-func (c *VerifierChip) GetPublicInputsHash(publicInputs []gl.Variable) poseidon.PoseidonHashOut {
-	return c.poseidonChip.HashNoPad(publicInputs)
+func (c *VerifierChip) GetPublicInputsHash(publicInputs []gl.Variable) poseidon.GoldilocksHashOut {
+	return c.poseidonGlChip.HashNoPad(publicInputs)
 }
 
 func (c *VerifierChip) GetChallenges(
 	proof common.Proof,
-	publicInputsHash poseidon.PoseidonHashOut,
+	publicInputsHash poseidon.GoldilocksHashOut,
 	commonData common.CommonCircuitData,
 	verifierData common.VerifierOnlyCircuitData,
 ) common.ProofChallenges {
 	config := commonData.Config
 	numChallenges := config.NumChallenges
-	challenger := challenger.NewChip(c.api, c.poseidonChip, c.poseidonBN254Chip)
+	challenger := challenger.NewChip(c.api)
 
 	var circuitDigest = verifierData.CircuitDigest
 

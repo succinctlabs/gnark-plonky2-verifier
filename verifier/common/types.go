@@ -5,18 +5,18 @@ import (
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 )
 
-type MerkleCap = []poseidon.PoseidonBN254HashOut
+type MerkleCap = []poseidon.BN254HashOut
 
 func NewMerkleCap(capHeight uint64) MerkleCap {
-	return make([]poseidon.PoseidonBN254HashOut, 1<<capHeight)
+	return make([]poseidon.BN254HashOut, 1<<capHeight)
 }
 
 type MerkleProof struct {
-	Siblings []poseidon.PoseidonBN254HashOut // Length = CircuitConfig.FriConfig.DegreeBits + CircuitConfig.FriConfig.RateBits - CircuitConfig.FriConfig.CapHeight
+	Siblings []poseidon.BN254HashOut // Length = CircuitConfig.FriConfig.DegreeBits + CircuitConfig.FriConfig.RateBits - CircuitConfig.FriConfig.CapHeight
 }
 
 func NewMerkleProof(merkleProofLen uint64) MerkleProof {
-	return MerkleProof{Siblings: make([]poseidon.PoseidonBN254HashOut, merkleProofLen)}
+	return MerkleProof{Siblings: make([]poseidon.BN254HashOut, merkleProofLen)}
 }
 
 type EvalProof struct {

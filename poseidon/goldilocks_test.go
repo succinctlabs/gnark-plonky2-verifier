@@ -18,12 +18,12 @@ type TestPoseidonCircuit struct {
 }
 
 func (circuit *TestPoseidonCircuit) Define(api frontend.API) error {
-	var input PoseidonState
+	var input GoldilocksState
 	for i := 0; i < 12; i++ {
 		input[i] = gl.NewVariable(circuit.In[i])
 	}
 
-	poseidonChip := NewPoseidonChip(api)
+	poseidonChip := NewGoldilocksChip(api)
 	output := poseidonChip.Poseidon(input)
 
 	glApi := gl.NewChip(api)

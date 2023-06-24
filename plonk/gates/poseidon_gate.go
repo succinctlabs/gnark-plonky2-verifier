@@ -96,7 +96,7 @@ func (g *PoseidonGate) EvalUnfiltered(
 	glApi := gl.NewChip(api)
 	constraints := []gl.QuadraticExtensionVariable{}
 
-	poseidonChip := poseidon.NewPoseidonChip(api)
+	poseidonChip := poseidon.NewGoldilocksChip(api)
 
 	// Assert that `swap` is binary.
 	swap := vars.localWires[g.WireSwap()]

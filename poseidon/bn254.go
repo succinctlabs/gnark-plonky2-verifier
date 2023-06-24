@@ -25,9 +25,9 @@ type BN254Chip struct {
 }
 
 type BN254State = [BN254_SPONGE_WIDTH]frontend.Variable
-type PoseidonBN254HashOut = frontend.Variable
+type BN254HashOut = frontend.Variable
 
-func NewPoseidonBN254Chip(api frontend.API) *BN254Chip {
+func NewBN254Chip(api frontend.API) *BN254Chip {
 	return &BN254Chip{api: api, gl: *gl.NewChip(api)}
 }
 
@@ -39,7 +39,7 @@ func (c *BN254Chip) Poseidon(state BN254State) BN254State {
 	return state
 }
 
-func (c *BN254Chip) HashNoPad(input []gl.Variable) PoseidonBN254HashOut {
+func (c *BN254Chip) HashNoPad(input []gl.Variable) BN254HashOut {
 	state := BN254State{
 		frontend.Variable(0),
 		frontend.Variable(0),
@@ -66,10 +66,10 @@ func (c *BN254Chip) HashNoPad(input []gl.Variable) PoseidonBN254HashOut {
 		state = c.Poseidon(state)
 	}
 
-	return PoseidonBN254HashOut(state[0])
+	return BN254HashOut(state[0])
 }
 
-func (c *BN254Chip) HashOrNoop(input []gl.Variable) PoseidonBN254HashOut {
+func (c *BN254Chip) HashOrNoop(input []gl.Variable) BN254HashOut {
 	if len(input) <= 3 {
 		returnVal := frontend.Variable(0)
 
@@ -78,13 +78,13 @@ func (c *BN254Chip) HashOrNoop(input []gl.Variable) PoseidonBN254HashOut {
 			returnVal = c.api.Add(returnVal, c.api.Mul(inputElement, alpha.Exp(alpha, big.NewInt(int64(i)), nil)))
 		}
 
-		return PoseidonBN254HashOut(returnVal)
+		return BN254HashOut(returnVal)
 	} else {
 		return c.HashNoPad(input)
 	}
 }
 
-func (c *BN254Chip) TwoToOne(left PoseidonBN254HashOut, right PoseidonBN254HashOut) PoseidonBN254HashOut {
+func (c *BN254Chip) TwoToOne(left BN254HashOut, right BN254HashOut) BN254HashOut {
 	var inputs BN254State
 	inputs[0] = frontend.Variable(0)
 	inputs[1] = frontend.Variable(0)
@@ -94,7 +94,7 @@ func (c *BN254Chip) TwoToOne(left PoseidonBN254HashOut, right PoseidonBN254HashO
 	return state[0]
 }
 
-func (c *BN254Chip) ToVec(hash PoseidonBN254HashOut) []gl.Variable {
+func (c *BN254Chip) ToVec(hash BN254HashOut) []gl.Variable {
 	bits := c.api.ToBinary(hash)
 
 	returnElements := []gl.Variable{}

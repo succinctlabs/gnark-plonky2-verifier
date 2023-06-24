@@ -15,7 +15,7 @@ type TestPoseidonBN254Circuit struct {
 }
 
 func (circuit *TestPoseidonBN254Circuit) Define(api frontend.API) error {
-	poseidonChip := NewPoseidonBN254Chip(api)
+	poseidonChip := NewBN254Chip(api)
 	output := poseidonChip.Poseidon(circuit.In)
 
 	for i := 0; i < BN254_SPONGE_WIDTH; i++ {

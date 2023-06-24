@@ -19,15 +19,15 @@ type Chip struct {
 	outputBuffer      []gl.Variable
 }
 
-func NewChip(api frontend.API, poseidonChip *poseidon.GoldilocksChip, poseidonBN254Chip *poseidon.BN254Chip) *Chip {
+func NewChip(api frontend.API) *Chip {
 	var spongeState [poseidon.SPONGE_WIDTH]gl.Variable
 	var inputBuffer []gl.Variable
 	var outputBuffer []gl.Variable
-
 	for i := 0; i < poseidon.SPONGE_WIDTH; i++ {
 		spongeState[i] = gl.Zero()
 	}
-
+	poseidonChip := poseidon.NewGoldilocksChip(api)
+	poseidonBN254Chip := poseidon.NewBN254Chip(api)
 	return &Chip{
 		api:               api,
 		poseidonChip:      poseidonChip,
@@ -52,17 +52,17 @@ func (c *Chip) ObserveElements(elements []gl.Variable) {
 	}
 }
 
-func (c *Chip) ObserveHash(hash poseidon.PoseidonHashOut) {
+func (c *Chip) ObserveHash(hash poseidon.GoldilocksHashOut) {
 	elements := c.poseidonChip.ToVec(hash)
 	c.ObserveElements(elements)
 }
 
-func (c *Chip) ObserveBN254Hash(hash poseidon.PoseidonBN254HashOut) {
+func (c *Chip) ObserveBN254Hash(hash poseidon.BN254HashOut) {
 	elements := c.poseidonBN254Chip.ToVec(hash)
 	c.ObserveElements(elements)
 }
 
-func (c *Chip) ObserveCap(cap []poseidon.PoseidonBN254HashOut) {
+func (c *Chip) ObserveCap(cap []poseidon.BN254HashOut) {
 	for i := 0; i < len(cap); i++ {
 		c.ObserveBN254Hash(cap[i])
 	}
@@ -108,7 +108,7 @@ func (c *Chip) GetExtensionChallenge() gl.QuadraticExtensionVariable {
 	return gl.QuadraticExtensionVariable{values[0], values[1]}
 }
 
-func (c *Chip) GetHash() poseidon.PoseidonHashOut {
+func (c *Chip) GetHash() poseidon.GoldilocksHashOut {
 	return [4]gl.Variable{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
 }
 

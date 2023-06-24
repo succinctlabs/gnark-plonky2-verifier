@@ -149,7 +149,7 @@ type VerifierOnlyCircuitDataRaw struct {
 
 func DeserializeMerkleCap(merkleCapRaw []string) common.MerkleCap {
 	n := len(merkleCapRaw)
-	merkleCap := make([]poseidon.PoseidonBN254HashOut, n)
+	merkleCap := make([]poseidon.BN254HashOut, n)
 	for i := 0; i < n; i++ {
 		capBigInt, _ := new(big.Int).SetString(merkleCapRaw[i], 10)
 		merkleCap[i] = frontend.Variable(capBigInt)
@@ -160,7 +160,7 @@ func DeserializeMerkleCap(merkleCapRaw []string) common.MerkleCap {
 func DeserializeMerkleProof(merkleProofRaw struct{ Siblings []interface{} }) common.MerkleProof {
 	n := len(merkleProofRaw.Siblings)
 	var mp common.MerkleProof
-	mp.Siblings = make([]poseidon.PoseidonBN254HashOut, n)
+	mp.Siblings = make([]poseidon.BN254HashOut, n)
 	for i := 0; i < n; i++ {
 		element := merkleProofRaw.Siblings[i].(struct{ Elements []uint64 })
 		mp.Siblings[i] = utils.Uint64ArrayToFArray(element.Elements)
@@ -188,13 +188,13 @@ func DeserializeOpeningSet(openingSetRaw struct {
 	}
 }
 
-func StringArrayToHashBN254Array(rawHashes []string) []poseidon.PoseidonBN254HashOut {
-	hashes := []poseidon.PoseidonBN254HashOut{}
+func StringArrayToHashBN254Array(rawHashes []string) []poseidon.BN254HashOut {
+	hashes := []poseidon.BN254HashOut{}
 
 	for i := 0; i < len(rawHashes); i++ {
 		hashBigInt, _ := new(big.Int).SetString(rawHashes[i], 10)
 		hashVar := frontend.Variable(hashBigInt)
-		hashes = append(hashes, poseidon.PoseidonBN254HashOut(hashVar))
+		hashes = append(hashes, poseidon.BN254HashOut(hashVar))
 	}
 
 	return hashes
@@ -431,6 +431,6 @@ func DeserializeVerifierOnlyCircuitData(path string) common.VerifierOnlyCircuitD
 	verifierOnlyCircuitData.ConstantSigmasCap = DeserializeMerkleCap(raw.ConstantsSigmasCap)
 	circuitDigestBigInt, _ := new(big.Int).SetString(raw.CircuitDigest, 10)
 	circuitDigestVar := frontend.Variable(circuitDigestBigInt)
-	verifierOnlyCircuitData.CircuitDigest = poseidon.PoseidonBN254HashOut(circuitDigestVar)
+	verifierOnlyCircuitData.CircuitDigest = poseidon.BN254HashOut(circuitDigestVar)
 	return verifierOnlyCircuitData
 }

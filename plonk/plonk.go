@@ -195,7 +195,7 @@ func (p *PlonkChip) evalVanishingPoly(
 func (p *PlonkChip) Verify(
 	proofChallenges common.ProofChallenges,
 	openings common.OpeningSet,
-	publicInputsHash poseidon.PoseidonHashOut,
+	publicInputsHash poseidon.GoldilocksHashOut,
 ) {
 	glApi := gl.NewChip(p.api)
 

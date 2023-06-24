@@ -162,7 +162,7 @@ var localWires = []gl.QuadraticExtensionVariable{
 	{gl.NewVariable("4826313026336060985"), gl.NewVariable("3597777099127511952")},
 }
 
-var publicInputsHash = poseidon.PoseidonHashOut{
+var publicInputsHash = poseidon.GoldilocksHashOut{
 	gl.Zero(),
 	gl.Zero(),
 	gl.Zero(),

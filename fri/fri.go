@@ -14,19 +14,17 @@ import (
 )
 
 type Chip struct {
-	api frontend.API `gnark:"-"`
-	gl  gl.Chip      `gnark:"-"`
-
+	api               frontend.API `gnark:"-"`
+	gl                gl.Chip      `gnark:"-"`
 	poseidonBN254Chip *poseidon.BN254Chip
-
-	friParams *common.FriParams `gnark:"-"`
+	friParams         *common.FriParams `gnark:"-"`
 }
 
 func NewChip(
 	api frontend.API,
-	poseidonBN254Chip *poseidon.BN254Chip,
 	friParams *common.FriParams,
 ) *Chip {
+	poseidonBN254Chip := poseidon.NewBN254Chip(api)
 	return &Chip{
 		api:               api,
 		poseidonBN254Chip: poseidonBN254Chip,
@@ -87,7 +85,7 @@ func (f *Chip) verifyMerkleProofToCapWithCapIndex(
 	}
 
 	const NUM_LEAF_LOOKUPS = 4
-	var leafLookups [NUM_LEAF_LOOKUPS]poseidon.PoseidonBN254HashOut
+	var leafLookups [NUM_LEAF_LOOKUPS]poseidon.BN254HashOut
 	// First create the "leaf" lookup2 circuits
 	// The will use the least significant bits of the capIndexBits array
 	for i := 0; i < NUM_LEAF_LOOKUPS; i++ {
@@ -427,9 +425,8 @@ func (f *Chip) verifyQueryRound(
 			leafLookups[3],
 		)
 
-		glApi := gl.NewChip(f.api)
-		glApi.AssertIsEqual(newEval[0], oldEval[0])
-		glApi.AssertIsEqual(newEval[1], oldEval[1])
+		f.gl.AssertIsEqual(newEval[0], oldEval[0])
+		f.gl.AssertIsEqual(newEval[1], oldEval[1])
 
 		oldEval = f.computeEvaluation(
 			subgroupX,
@@ -464,9 +461,8 @@ func (f *Chip) verifyQueryRound(
 	subgroupX_QE = subgroupX.ToQuadraticExtension()
 	finalPolyEval := f.finalPolyEval(proof.FinalPoly, subgroupX_QE)
 
-	glApi := gl.NewChip(f.api)
-	glApi.AssertIsEqual(oldEval[0], finalPolyEval[0])
-	glApi.AssertIsEqual(oldEval[1], finalPolyEval[1])
+	f.gl.AssertIsEqual(oldEval[0], finalPolyEval[0])
+	f.gl.AssertIsEqual(oldEval[1], finalPolyEval[1])
 }
 
 func (f *Chip) VerifyFriProof(

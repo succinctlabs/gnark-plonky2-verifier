@@ -26,10 +26,9 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	verifierOnlyCircuitData := utils.DeserializeVerifierOnlyCircuitData(circuit.verifierOnlyCircuitDataFilename)
 
 	glApi := gl.NewChip(api)
-	poseidonChip := poseidon.NewPoseidonChip(api)
-	poseidonBN254Chip := poseidon.NewPoseidonBN254Chip(api)
-	friChip := fri.NewChip(api, poseidonBN254Chip, &commonCircuitData.FriParams)
-	challengerChip := challenger.NewChip(api, poseidonChip, poseidonBN254Chip)
+	poseidonChip := poseidon.NewGoldilocksChip(api)
+	friChip := fri.NewChip(api, &commonCircuitData.FriParams)
+	challengerChip := challenger.NewChip(api)
 
 	challengerChip.ObserveBN254Hash(verifierOnlyCircuitData.CircuitDigest)
 	challengerChip.ObserveHash(poseidonChip.HashNoPad(proofWithPis.PublicInputs))

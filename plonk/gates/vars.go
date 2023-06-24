@@ -8,13 +8,13 @@ import (
 type EvaluationVars struct {
 	localConstants   []gl.QuadraticExtensionVariable
 	localWires       []gl.QuadraticExtensionVariable
-	publicInputsHash poseidon.PoseidonHashOut
+	publicInputsHash poseidon.GoldilocksHashOut
 }
 
 func NewEvaluationVars(
 	localConstants []gl.QuadraticExtensionVariable,
 	localWires []gl.QuadraticExtensionVariable,
-	publicInputsHash poseidon.PoseidonHashOut,
+	publicInputsHash poseidon.GoldilocksHashOut,
 ) *EvaluationVars {
 	return &EvaluationVars{
 		localConstants:   localConstants,
