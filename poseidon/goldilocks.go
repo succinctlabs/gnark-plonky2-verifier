@@ -300,11 +300,12 @@ func (c *GoldilocksChip) mdsPartialLayerFast(state GoldilocksState, r int) Goldi
 	for i := 1; i < 12; i++ {
 		if i < SPONGE_WIDTH {
 			t := FAST_PARTIAL_ROUND_W_HATS_VARS[r][i-1]
-			dSum = c.gl.MulAdd(state[i], gl.NewVariable(t), dSum)
+			dSum = c.gl.MulAddNoReduce(state[i], gl.NewVariable(t), dSum)
 		}
 	}
 
-	d := c.gl.MulAdd(state[0], gl.NewVariable(MDS0TO0_VAR), dSum)
+	d := c.gl.MulAddNoReduce(state[0], gl.NewVariable(MDS0TO0_VAR), dSum)
+	d = c.gl.Reduce(d)
 
 	var result GoldilocksState
 	for i := 0; i < SPONGE_WIDTH; i++ {
@@ -316,8 +317,12 @@ func (c *GoldilocksChip) mdsPartialLayerFast(state GoldilocksState, r int) Goldi
 	for i := 1; i < 12; i++ {
 		if i < SPONGE_WIDTH {
 			t := FAST_PARTIAL_ROUND_VS[r][i-1]
-			result[i] = c.gl.MulAdd(state[0], gl.NewVariable(t), state[i])
+			result[i] = c.gl.MulAddNoReduce(state[0], gl.NewVariable(t), state[i])
 		}
+	}
+
+	for i := 0; i < len(state); i++ {
+		result[i] = c.gl.Reduce(result[i])
 	}
 
 	return result
