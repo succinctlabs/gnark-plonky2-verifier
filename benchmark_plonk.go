@@ -42,7 +42,7 @@ func (circuit *BenchmarkPlonky2VerifierCircuitPlonk) Define(api frontend.API) er
 }
 
 func compileCircuitPlonk(plonky2Circuit string, profileCircuit bool, serialize bool, outputSolidity bool) (constraint.ConstraintSystem, plonk.ProvingKey, plonk.VerifyingKey) {
-	circuit := BenchmarkPlonky2VerifierCircuit{
+	circuit := BenchmarkPlonky2VerifierCircuitPlonk{
 		plonky2CircuitName: plonky2Circuit,
 	}
 	proofWithPis := verifier.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
@@ -112,7 +112,7 @@ func createProofPlonk(plonky2Circuit string, r1cs constraint.ConstraintSystem, p
 	proofWithPis := verifier.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
 
 	// Witness
-	assignment := &BenchmarkPlonky2VerifierCircuit{
+	assignment := &BenchmarkPlonky2VerifierCircuitPlonk{
 		Proof:        proofWithPis.Proof,
 		PublicInputs: proofWithPis.PublicInputs,
 	}
