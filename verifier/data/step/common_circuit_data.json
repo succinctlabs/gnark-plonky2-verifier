@@ -94,7 +94,7 @@
     "quotient_degree_factor": 8,
     "num_gate_constraints": 123,
     "num_constants": 6,
-    "num_public_inputs": 1350,
+    "num_public_inputs": 36,
     "k_is": [
         1,
         7,
