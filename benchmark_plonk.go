@@ -16,7 +16,7 @@ import (
 	"github.com/consensys/gnark/backend/plonk"
 	"github.com/consensys/gnark/constraint"
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/gnark/frontend/cs/r1cs"
+	"github.com/consensys/gnark/frontend/cs/scs"
 	"github.com/consensys/gnark/profile"
 	"github.com/consensys/gnark/test"
 )
@@ -53,7 +53,7 @@ func compileCircuitPlonk(plonky2Circuit string, profileCircuit bool, serialize b
 	if profileCircuit {
 		p = profile.Start()
 	}
-	r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &circuit)
+	r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), scs.NewBuilder, &circuit)
 	if err != nil {
 		fmt.Println("error in building circuit", err)
 		os.Exit(1)
