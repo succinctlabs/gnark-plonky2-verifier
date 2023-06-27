@@ -58,8 +58,8 @@ func (p *Chip) SubExtensionNoReduce(a, b QuadraticExtensionVariable) QuadraticEx
 // Multiplies quadratic extension variable in the Goldilocks field.
 func (p *Chip) MulExtension(a, b QuadraticExtensionVariable) QuadraticExtensionVariable {
 	product := p.MulExtensionNoReduce(a, b)
-	product[0] = p.ReduceWithMaxBits(product[0], 140)
-	product[1] = p.ReduceWithMaxBits(product[1], 140)
+	product[0] = p.Reduce(product[0])
+	product[1] = p.Reduce(product[1])
 	return product
 }
 
@@ -73,13 +73,12 @@ func (p *Chip) MulExtensionNoReduce(a, b QuadraticExtensionVariable) QuadraticEx
 }
 
 // Multiplies two operands a and b and adds to c in the Goldilocks extension field. a * b + c must
-// be less than 140 bits.
+// be less than RANGE_CHECK_NB_BITS bits.
 func (p *Chip) MulAddExtension(a, b, c QuadraticExtensionVariable) QuadraticExtensionVariable {
 	product := p.MulExtensionNoReduce(a, b)
 	sum := p.AddExtensionNoReduce(product, c)
-
-	sum[0] = p.ReduceWithMaxBits(sum[0], 140)
-	sum[1] = p.ReduceWithMaxBits(sum[1], 140)
+	sum[0] = p.Reduce(sum[0])
+	sum[1] = p.Reduce(sum[1])
 	return sum
 }
 
@@ -90,12 +89,12 @@ func (p *Chip) MulAddExtensionNoReduce(a, b, c QuadraticExtensionVariable) Quadr
 }
 
 // Multiplies two operands a and b and adds to c in the Goldilocks extension field. a * b - c must
-// be less than 140 bits.
+// be less than RANGE_CHECK_NB_BITS bits.
 func (p *Chip) SubMulExtension(a, b, c QuadraticExtensionVariable) QuadraticExtensionVariable {
 	difference := p.SubExtensionNoReduce(a, b)
 	product := p.MulExtensionNoReduce(difference, c)
-	product[0] = p.ReduceWithMaxBits(product[0], 140)
-	product[1] = p.ReduceWithMaxBits(product[1], 140)
+	product[0] = p.Reduce(product[0])
+	product[1] = p.Reduce(product[1])
 	return product
 }
 
@@ -131,7 +130,6 @@ func (p *Chip) InverseExtension(a QuadraticExtensionVariable) QuadraticExtension
 	a0IsZero := p.api.IsZero(a[0].Limb)
 	a1IsZero := p.api.IsZero(a[1].Limb)
 	p.api.AssertIsEqual(p.api.Mul(a0IsZero, a1IsZero), frontend.Variable(0))
-
 	aPowRMinus1 := QuadraticExtensionVariable{
 		a[0],
 		p.Mul(a[1], NewVariable(DTH_ROOT)),

@@ -693,17 +693,17 @@ func (circuit *TestGateCircuit) Define(api frontend.API) error {
 	commonCircuitData := verifier.DeserializeCommonCircuitData("../../data/decode_block/common_circuit_data.json")
 	numSelectors := commonCircuitData.SelectorsInfo.NumSelectors()
 
-	glAPI := gl.NewChip(api)
+	glApi := gl.NewChip(api)
 
 	vars := gates.NewEvaluationVars(localConstants[numSelectors:], localWires, publicInputsHash)
 
-	constraints := circuit.testGate.EvalUnfiltered(api, *vars)
+	constraints := circuit.testGate.EvalUnfiltered(api, *glApi, *vars)
 
 	if len(constraints) != len(circuit.ExpectedConstraints) {
 		return errors.New("gate constraints length mismatch")
 	}
 	for i := 0; i < len(constraints); i++ {
-		glAPI.AssertIsEqualExtension(constraints[i], circuit.ExpectedConstraints[i])
+		glApi.AssertIsEqualExtension(constraints[i], circuit.ExpectedConstraints[i])
 	}
 
 	return nil

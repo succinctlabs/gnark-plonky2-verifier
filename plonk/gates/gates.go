@@ -10,7 +10,11 @@ import (
 
 type Gate interface {
 	Id() string
-	EvalUnfiltered(api frontend.API, vars EvaluationVars) []gl.QuadraticExtensionVariable
+	EvalUnfiltered(
+		api frontend.API,
+		glApi gl.Chip,
+		vars EvaluationVars,
+	) []gl.QuadraticExtensionVariable
 }
 
 var gateRegexHandlers = map[*regexp.Regexp]func(parameters map[string]string) Gate{

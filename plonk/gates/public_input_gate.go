@@ -31,9 +31,9 @@ func (g *PublicInputGate) WiresPublicInputsHash() []uint64 {
 
 func (g *PublicInputGate) EvalUnfiltered(
 	api frontend.API,
+	glApi gl.Chip,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
-	glApi := gl.NewChip(api)
 	constraints := []gl.QuadraticExtensionVariable{}
 
 	wires := g.WiresPublicInputsHash()

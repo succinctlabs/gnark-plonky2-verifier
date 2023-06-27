@@ -65,9 +65,9 @@ func (g *ExponentiationGate) wireIntermediateValue(i uint64) uint64 {
 
 func (g *ExponentiationGate) EvalUnfiltered(
 	api frontend.API,
+	glApi gl.Chip,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
-	glApi := gl.NewChip(api)
 	base := vars.localWires[g.wireBase()]
 
 	var powerBits []gl.QuadraticExtensionVariable

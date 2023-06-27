@@ -54,9 +54,9 @@ func (g *MultiplicationExtensionGate) wiresIthOutput(i uint64) Range {
 
 func (g *MultiplicationExtensionGate) EvalUnfiltered(
 	api frontend.API,
+	glApi gl.Chip,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
-	glApi := gl.NewChip(api)
 	const0 := vars.localConstants[0]
 	constraints := []gl.QuadraticExtensionVariable{}
 	for i := uint64(0); i < g.numOps; i++ {

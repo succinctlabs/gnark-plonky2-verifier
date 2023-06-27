@@ -91,9 +91,9 @@ func (g *PoseidonGate) WiresEnd() uint64 {
 
 func (g *PoseidonGate) EvalUnfiltered(
 	api frontend.API,
+	glApi gl.Chip,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
-	glApi := gl.NewChip(api)
 	constraints := []gl.QuadraticExtensionVariable{}
 
 	poseidonChip := poseidon.NewGoldilocksChip(api)
