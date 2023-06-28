@@ -104,7 +104,7 @@ func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, 
 	return r1cs, pk, vk
 }
 
-func createProof(serializedProofWithPI string, r1cs constraint.ConstraintSystem, pk groth16.ProvingKey, vk groth16.VerifyingKey, serialize bool) groth16.Proof {
+func createProof(serializedProofWithPI string, r1cs constraint.ConstraintSystem, pk groth16.ProvingKey, vk groth16.VerifyingKey, serialize bool) []byte {
 	proofWithPis := utils.DeserializeProofWithPublicInputs(serializedProofWithPI)
 
 	// Witness
@@ -173,7 +173,7 @@ func createProof(serializedProofWithPI string, r1cs constraint.ConstraintSystem,
 	println("c[0] is ", c[0].String())
 	println("c[1] is ", c[1].String())
 
-	return proof
+	return proofBytes
 }
 
 func generateProof(conn net.Conn, r1cs constraint.ConstraintSystem, pk groth16.ProvingKey, vk groth16.VerifyingKey) {
@@ -200,7 +200,9 @@ func generateProof(conn net.Conn, r1cs constraint.ConstraintSystem, pk groth16.P
 	}
 
 	println("totalRead is ", len(serializedProof))
-	createProof(string(serializedProof), r1cs, pk, vk, false)
+	proofBytes := createProof(string(serializedProof), r1cs, pk, vk, false)
+
+	conn.Write(proofBytes)
 }
 
 func main() {
