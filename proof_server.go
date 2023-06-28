@@ -125,8 +125,8 @@ func createProof(serializedProofWithPI string, r1cs constraint.ConstraintSystem,
 	fmt.Println("Creating proof", time.Now())
 	proof, err := groth16.Prove(r1cs, pk, witness)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		println("Error in creating proof", err)
+		return nil
 	}
 	if serialize {
 		fProof, _ := os.Create("proof.proof")
@@ -137,8 +137,8 @@ func createProof(serializedProofWithPI string, r1cs constraint.ConstraintSystem,
 	fmt.Println("Verifying proof", time.Now())
 	err = groth16.Verify(proof, vk, publicWitness)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		println("Error in verifying proof", err)
+		return nil
 	}
 
 	const fpSize = 4 * 8
