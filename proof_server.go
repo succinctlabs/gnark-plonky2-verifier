@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"math/big"
 	"net"
@@ -179,20 +180,27 @@ func generateProof(conn net.Conn, r1cs constraint.ConstraintSystem, pk groth16.P
 	log.Printf("Client connected [%s]", conn.RemoteAddr().Network())
 	defer conn.Close()
 
-	const MAX_PROOF_SIZE = 500000
-	buf := make([]byte, MAX_PROOF_SIZE)
-	n, err := conn.Read(buf)
-	if err != nil {
-		log.Printf("Error reading from socket: %s", err)
-		return
+	serializedProof := []byte{}
+
+	totalRead := 0
+	for true {
+		buf := make([]byte, 8192)
+		n, err := conn.Read(buf)
+		totalRead += n
+		serializedProof = append(serializedProof, buf[:n]...)
+
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			log.Printf("Error reading from socket: %s", err)
+			return
+		}
 	}
 
-	if n == MAX_PROOF_SIZE {
-		log.Printf("Proof too large")
-		return
-	}
-
-	createProof(string(buf), r1cs, pk, vk, false)
+	println("totalRead is ", len(serializedProof))
+	createProof(string(serializedProof), r1cs, pk, vk, false)
 }
 
 func main() {
