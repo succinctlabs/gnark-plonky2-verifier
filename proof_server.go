@@ -199,6 +199,7 @@ func main() {
 	const SockAddr = "/tmp/echo.sock"
 
 	r1cs, pk, vk := compileCircuit("step", false, false, false)
+	println("Done compiling circuit")
 
 	if err := os.RemoveAll(SockAddr); err != nil {
 		log.Fatal(err)
