@@ -18,7 +18,7 @@ type TestPlonkCircuit struct {
 }
 
 func (circuit *TestPlonkCircuit) Define(api frontend.API) error {
-	proofWithPis := utils.DeserializeProofWithPublicInputs(circuit.proofWithPIsFilename)
+	proofWithPis := utils.DeserializeProofWithPublicInputsFromFile(circuit.proofWithPIsFilename)
 	commonCircuitData := utils.DeserializeCommonCircuitData(circuit.commonCircuitDataFilename)
 	verifierOnlyCircuitData := utils.DeserializeVerifierOnlyCircuitData(circuit.verifierOnlyCircuitDataFilename)
 

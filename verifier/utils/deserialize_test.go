@@ -6,7 +6,7 @@ import (
 )
 
 func TestDeserializeProofWithPublicInputs(t *testing.T) {
-	proofWithPis := DeserializeProofWithPublicInputs("../data/decode_block/proof_with_public_inputs.json")
+	proofWithPis := DeserializeProofWithPublicInputsFromFile("../data/decode_block/proof_with_public_inputs.json")
 	fmt.Printf("%+v\n", proofWithPis)
 	panic("look at stdout")
 }

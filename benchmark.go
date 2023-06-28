@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"math/big"
 	"os"
 	"time"
@@ -45,7 +46,7 @@ func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, 
 	circuit := BenchmarkPlonky2VerifierCircuit{
 		plonky2CircuitName: plonky2Circuit,
 	}
-	proofWithPis := utils.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
+	proofWithPis := utils.DeserializeProofWithPublicInputsFromFile("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
 	circuit.Proof = proofWithPis.Proof
 	circuit.PublicInputs = proofWithPis.PublicInputs
 
@@ -103,8 +104,8 @@ func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, 
 	return r1cs, pk, vk
 }
 
-func createProof(plonky2Circuit string, r1cs constraint.ConstraintSystem, pk groth16.ProvingKey, vk groth16.VerifyingKey, serialize bool) groth16.Proof {
-	proofWithPis := utils.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
+func createProof(serializedProofWithPI string, r1cs constraint.ConstraintSystem, pk groth16.ProvingKey, vk groth16.VerifyingKey, serialize bool) groth16.Proof {
+	proofWithPis := utils.DeserializeProofWithPublicInputs(serializedProofWithPI)
 
 	// Witness
 	assignment := &BenchmarkPlonky2VerifierCircuit{
@@ -189,5 +190,14 @@ func main() {
 	}
 
 	r1cs, pk, vk := compileCircuit(*plonky2Circuit, *profileCircuit, *serialize, *outputSolidity)
-	createProof(*plonky2Circuit, r1cs, pk, vk, *serialize)
+
+	jsonFile, err := os.Open("./verifier/data/" + *plonky2Circuit + "/proof_with_public_inputs.json")
+	if err != nil {
+		panic(err)
+	}
+
+	defer jsonFile.Close()
+	serializedProof, _ := io.ReadAll(jsonFile)
+
+	createProof(string(serializedProof), r1cs, pk, vk, *serialize)
 }

@@ -120,7 +120,7 @@ func TestChallengerWitness(t *testing.T) {
 	assert := test.NewAssert(t)
 
 	testCase := func() {
-		proofWithPis := utils.DeserializeProofWithPublicInputs("../../data/decode_block/proof_with_public_inputs.json")
+		proofWithPis := utils.DeserializeProofWithPublicInputsFromFile("../../data/decode_block/proof_with_public_inputs.json")
 		verifierData := utils.DeserializeVerifierOnlyCircuitData("../../data/decode_block/verifier_only_circuit_data.json")
 
 		circuit := TestChallengerCircuit{
@@ -155,7 +155,7 @@ func TestChallengerWitness(t *testing.T) {
 }
 
 func TestChallengerProver(t *testing.T) {
-	proofWithPis := utils.DeserializeProofWithPublicInputs("../../data/decode_block/proof_with_public_inputs.json")
+	proofWithPis := utils.DeserializeProofWithPublicInputsFromFile("../../data/decode_block/proof_with_public_inputs.json")
 	verifierData := utils.DeserializeVerifierOnlyCircuitData("../../data/decode_block/verifier_only_circuit_data.json")
 
 	circuit := TestChallengerCircuit{
@@ -172,7 +172,7 @@ func TestChallengerProver(t *testing.T) {
 		PowWitness:                proofWithPis.Proof.OpeningProof.PowWitness,
 	}
 
-	proofWithPis = utils.DeserializeProofWithPublicInputs("../../data/decode_block/proof_with_public_inputs.json")
+	proofWithPis = utils.DeserializeProofWithPublicInputsFromFile("../../data/decode_block/proof_with_public_inputs.json")
 	verifierData = utils.DeserializeVerifierOnlyCircuitData("../../data/decode_block/verifier_only_circuit_data.json")
 
 	assignment := TestChallengerCircuit{

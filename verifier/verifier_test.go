@@ -39,14 +39,14 @@ func TestStepVerifier(t *testing.T) {
 
 	testCase := func() {
 		plonky2Circuit := "step"
-		proofWithPis := utils.DeserializeProofWithPublicInputs("./data/" + plonky2Circuit + "/proof_with_public_inputs.json")
+		proofWithPis := utils.DeserializeProofWithPublicInputsFromFile("./data/" + plonky2Circuit + "/proof_with_public_inputs.json")
 		circuit := TestVerifierCircuit{
 			plonky2CircuitName: plonky2Circuit,
 			Proof:              proofWithPis.Proof,
 			PublicInputs:       proofWithPis.PublicInputs,
 		}
 
-		proofWithPis2 := utils.DeserializeProofWithPublicInputs("./data/" + plonky2Circuit + "/proof_with_public_inputs.json")
+		proofWithPis2 := utils.DeserializeProofWithPublicInputsFromFile("./data/" + plonky2Circuit + "/proof_with_public_inputs.json")
 		witness := TestVerifierCircuit{
 			plonky2CircuitName: plonky2Circuit,
 			Proof:              proofWithPis2.Proof,
@@ -63,14 +63,14 @@ func TestStepVerifier2(t *testing.T) {
 	assert := test.NewAssert(t)
 
 	plonky2Circuit := "step"
-	proofWithPis := utils.DeserializeProofWithPublicInputs("./data/" + plonky2Circuit + "/proof_with_public_inputs.json")
+	proofWithPis := utils.DeserializeProofWithPublicInputsFromFile("./data/" + plonky2Circuit + "/proof_with_public_inputs.json")
 	circuit := TestVerifierCircuit{
 		plonky2CircuitName: plonky2Circuit,
 		Proof:              proofWithPis.Proof,
 		PublicInputs:       proofWithPis.PublicInputs,
 	}
 
-	proofWithPis2 := utils.DeserializeProofWithPublicInputs("./data/" + plonky2Circuit + "/proof_with_public_inputs.json")
+	proofWithPis2 := utils.DeserializeProofWithPublicInputsFromFile("./data/" + plonky2Circuit + "/proof_with_public_inputs.json")
 	witness := TestVerifierCircuit{
 		plonky2CircuitName: plonky2Circuit,
 		Proof:              proofWithPis2.Proof,

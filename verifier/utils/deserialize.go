@@ -249,7 +249,7 @@ func DeserializeFriProof(openingProofRaw struct {
 	return openingProof
 }
 
-func DeserializeProofWithPublicInputs(path string) common.ProofWithPublicInputs {
+func DeserializeProofWithPublicInputsFromFile(path string) common.ProofWithPublicInputs {
 	jsonFile, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -258,8 +258,12 @@ func DeserializeProofWithPublicInputs(path string) common.ProofWithPublicInputs 
 	defer jsonFile.Close()
 	rawBytes, _ := io.ReadAll(jsonFile)
 
+	return DeserializeProofWithPublicInputs(string(rawBytes))
+}
+
+func DeserializeProofWithPublicInputs(serializedProofWithPI string) common.ProofWithPublicInputs {
 	var raw ProofWithPublicInputsRaw
-	err = json.Unmarshal(rawBytes, &raw)
+	err := json.Unmarshal([]byte(serializedProofWithPI), &raw)
 	if err != nil {
 		panic(err)
 	}
