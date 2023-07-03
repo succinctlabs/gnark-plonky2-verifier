@@ -222,7 +222,7 @@ func main() {
 	defer l.Close()
 
 	for {
-		// Accept new connections, dispatching them to echoServer
+		// Accept new connections, dispatching them to generateProof
 		// in a goroutine.
 		conn, err := l.Accept()
 		if err != nil {

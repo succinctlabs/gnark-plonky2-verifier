@@ -1,6 +1,6 @@
 {
     "config": {
-        "num_wires": 136,
+        "num_wires": 135,
         "num_routed_wires": 80,
         "num_constants": 2,
         "use_base_arithmetic_gate": true,
@@ -46,12 +46,12 @@
         "PoseidonMdsGate(PhantomData<plonky2_field::goldilocks_field::GoldilocksField>)<WIDTH=12>",
         "PublicInputGate",
         "BaseSumGate { num_limbs: 63 } + Base: 2",
-        "ReducingExtensionGate { num_coeffs: 33 }",
-        "ReducingGate { num_coeffs: 44 }",
+        "ReducingExtensionGate { num_coeffs: 32 }",
+        "ReducingGate { num_coeffs: 43 }",
         "ArithmeticExtensionGate { num_ops: 10 }",
         "ArithmeticGate { num_ops: 20 }",
         "MulExtensionGate { num_ops: 13 }",
-        "ExponentiationGate { num_power_bits: 67, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>",
+        "ExponentiationGate { num_power_bits: 66, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>",
         "RandomAccessGate { bits: 4, num_copies: 4, num_extra_constants: 2, _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>",
         "CosetInterpolationGate { subgroup_bits: 4, degree: 6, barycentric_weights: [17293822565076172801, 18374686475376656385, 18446744069413535745, 281474976645120, 17592186044416, 18446744069414584577, 18446744000695107601, 18446744065119617025, 1152921504338411520, 72057594037927936, 18446744069415632897, 18446462594437939201, 18446726477228539905, 18446744069414584065, 68719476720, 4294967296], _phantom: PhantomData<plonky2_field::goldilocks_field::GoldilocksField> }<D=2>",
         "PoseidonGate(PhantomData<plonky2_field::goldilocks_field::GoldilocksField>)<WIDTH=12>"
