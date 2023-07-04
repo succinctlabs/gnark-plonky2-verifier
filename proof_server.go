@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"log"
 	"math/big"
 	"net"
@@ -189,7 +188,7 @@ func generateProof(conn net.Conn, r1cs constraint.ConstraintSystem, pk groth16.P
 		totalRead += n
 		serializedProof = append(serializedProof, buf[:n]...)
 
-		if err == io.EOF {
+		if serializedProof[len(serializedProof)-1] == 0x1e {
 			break
 		}
 
