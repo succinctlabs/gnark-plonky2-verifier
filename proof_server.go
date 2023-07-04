@@ -203,8 +203,13 @@ func generateProof(conn net.Conn, r1cs constraint.ConstraintSystem, pk groth16.P
 	proofBytes := createProof(string(serializedProof), r1cs, pk, vk, false)
 
 	println("Sending proof to client. proofBytes len is ", len(proofBytes))
-	conn.Write(proofBytes)
-	println("Sent proof to client")
+	bytesWritten, err := conn.Write(proofBytes)
+	if err != nil {
+		log.Printf("Error writing to socket: %s", err)
+		return
+	}
+
+	println("Sent proof to client. bytesWritten is ", bytesWritten)
 }
 
 func main() {
