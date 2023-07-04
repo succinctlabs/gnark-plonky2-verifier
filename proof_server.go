@@ -202,7 +202,9 @@ func generateProof(conn net.Conn, r1cs constraint.ConstraintSystem, pk groth16.P
 	println("totalRead is ", len(serializedProof))
 	proofBytes := createProof(string(serializedProof), r1cs, pk, vk, false)
 
+	println("Sending proof to client. proofBytes len is ", len(proofBytes))
 	conn.Write(proofBytes)
+	println("Sent proof to client")
 }
 
 func main() {
