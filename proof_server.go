@@ -193,6 +193,7 @@ func generateProof(conn net.Conn, r1cs constraint.ConstraintSystem, pk groth16.P
 
 		println("last byte is ", hex.EncodeToString(serializedProof[len(serializedProof)-1:len(serializedProof)]))
 		if serializedProof[len(serializedProof)-1] == 0x1e {
+			serializedProof = serializedProof[:len(serializedProof)-1]
 			break
 		}
 
