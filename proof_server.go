@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
@@ -187,11 +186,8 @@ func generateProof(conn net.Conn, r1cs constraint.ConstraintSystem, pk groth16.P
 		buf := make([]byte, 8192)
 		n, err := conn.Read(buf)
 		totalRead += n
-		println("read from socket.  totalRead is ", totalRead, "err is ", err)
-
 		serializedProof = append(serializedProof, buf[:n]...)
 
-		println("last byte is ", hex.EncodeToString(serializedProof[len(serializedProof)-1:len(serializedProof)]))
 		if serializedProof[len(serializedProof)-1] == 0x1e {
 			serializedProof = serializedProof[:len(serializedProof)-1]
 			break
