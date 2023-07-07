@@ -38,7 +38,7 @@ func TestStepVerifier(t *testing.T) {
 	assert := test.NewAssert(t)
 
 	testCase := func() {
-		plonky2Circuit := "step"
+		plonky2Circuit := "step_demo"
 		proofWithPis := utils.DeserializeProofWithPublicInputsFromFile("./data/" + plonky2Circuit + "/proof_with_public_inputs.json")
 		circuit := TestVerifierCircuit{
 			plonky2CircuitName: plonky2Circuit,
@@ -62,7 +62,7 @@ func TestStepVerifier(t *testing.T) {
 func TestStepVerifier2(t *testing.T) {
 	assert := test.NewAssert(t)
 
-	plonky2Circuit := "step"
+	plonky2Circuit := "step_demo"
 	proofWithPis := utils.DeserializeProofWithPublicInputsFromFile("./data/" + plonky2Circuit + "/proof_with_public_inputs.json")
 	circuit := TestVerifierCircuit{
 		plonky2CircuitName: plonky2Circuit,
