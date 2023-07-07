@@ -215,7 +215,7 @@ func generateProof(conn net.Conn, r1cs constraint.ConstraintSystem, pk groth16.P
 func main() {
 	const SockAddr = "/tmp/echo.sock"
 
-	r1cs, pk, vk := compileCircuit("step", false, false, true)
+	r1cs, pk, vk := compileCircuit("step_demo", false, false, true)
 	println("Done compiling circuit")
 
 	if err := os.RemoveAll(SockAddr); err != nil {
