@@ -169,7 +169,7 @@ func (p *Chip) Reduce(x Variable) Variable {
 	//
 	// 		MODULUS * quotient + remainder = x
 	//
-	// Must check that offset \in [0, MODULUS) and carry \in [0, 2^RANGE_CHECK_NB_BITS) to ensure
+	// Must check that remainder \in [0, MODULUS) and quotient \in [0, 2^RANGE_CHECK_NB_BITS) to ensure
 	// that this computation does not overflow. We use 2^130 to reduce the cost of the range check
 	// and because 2^RANGE_CHECK_NB_BITS * 2^64 = 2^194 < p < 2^254.
 
