@@ -2,63 +2,53 @@ package verifier
 
 import (
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/field"
+	"github.com/succinctlabs/gnark-plonky2-verifier/challenger"
+	"github.com/succinctlabs/gnark-plonky2-verifier/fri"
+	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
+	"github.com/succinctlabs/gnark-plonky2-verifier/plonk"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/common"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/fri"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier/internal/plonk"
+	"github.com/succinctlabs/gnark-plonky2-verifier/types"
 )
 
 type VerifierChip struct {
-	api               frontend.API                 `gnark:"-"`
-	fieldAPI          field.FieldAPI               `gnark:"-"`
-	qeAPI             *field.QuadraticExtensionAPI `gnark:"-"`
-	poseidonChip      *poseidon.PoseidonChip
-	poseidonBN128Chip *poseidon.PoseidonBN128Chip
+	api               frontend.API `gnark:"-"`
+	poseidonGlChip    *poseidon.GoldilocksChip
+	poseidonBN254Chip *poseidon.BN254Chip
 	plonkChip         *plonk.PlonkChip
-	friChip           *fri.FriChip
+	friChip           *fri.Chip
 }
 
-func NewVerifierChip(api frontend.API, commonCircuitData common.CommonCircuitData) *VerifierChip {
-
-	fieldAPI := field.NewFieldAPI(api)
-	qeAPI := field.NewQuadraticExtensionAPI(api, fieldAPI)
-	poseidonBN128Chip := poseidon.NewPoseidonBN128Chip(api, fieldAPI)
-
-	friChip := fri.NewFriChip(api, fieldAPI, qeAPI, poseidonBN128Chip, &commonCircuitData.FriParams)
-	plonkChip := plonk.NewPlonkChip(api, qeAPI, commonCircuitData)
-
-	// We are using goldilocks poseidon for the challenge computation
-	poseidonChip := poseidon.NewPoseidonChip(api, fieldAPI, qeAPI)
-
+func NewVerifierChip(api frontend.API, commonCircuitData types.CommonCircuitData) *VerifierChip {
+	friChip := fri.NewChip(api, &commonCircuitData.FriParams)
+	plonkChip := plonk.NewPlonkChip(api, commonCircuitData)
+	poseidonGlChip := poseidon.NewGoldilocksChip(api)
+	poseidonBN254Chip := poseidon.NewBN254Chip(api)
 	return &VerifierChip{
 		api:               api,
-		fieldAPI:          fieldAPI,
-		qeAPI:             qeAPI,
-		poseidonChip:      poseidonChip,
-		poseidonBN128Chip: poseidonBN128Chip,
+		poseidonGlChip:    poseidonGlChip,
+		poseidonBN254Chip: poseidonBN254Chip,
 		plonkChip:         plonkChip,
 		friChip:           friChip,
 	}
 }
 
-func (c *VerifierChip) GetPublicInputsHash(publicInputs []field.F) poseidon.PoseidonHashOut {
-	return c.poseidonChip.HashNoPad(publicInputs)
+func (c *VerifierChip) GetPublicInputsHash(publicInputs []gl.Variable) poseidon.GoldilocksHashOut {
+	return c.poseidonGlChip.HashNoPad(publicInputs)
 }
 
 func (c *VerifierChip) GetChallenges(
-	proof common.Proof,
-	publicInputsHash poseidon.PoseidonHashOut,
-	commonData common.CommonCircuitData,
-	verifierData common.VerifierOnlyCircuitData,
-) common.ProofChallenges {
+	proof types.Proof,
+	publicInputsHash poseidon.GoldilocksHashOut,
+	commonData types.CommonCircuitData,
+	verifierData types.VerifierOnlyCircuitData,
+) types.ProofChallenges {
 	config := commonData.Config
 	numChallenges := config.NumChallenges
-	challenger := plonk.NewChallengerChip(c.api, c.fieldAPI, c.poseidonChip, c.poseidonBN128Chip)
+	challenger := challenger.NewChip(c.api)
 
 	var circuitDigest = verifierData.CircuitDigest
 
-	challenger.ObserveBN128Hash(circuitDigest)
+	challenger.ObserveBN254Hash(circuitDigest)
 	challenger.ObserveHash(publicInputsHash)
 	challenger.ObserveCap(proof.WiresCap)
 	plonkBetas := challenger.GetNChallenges(numChallenges)
@@ -70,9 +60,9 @@ func (c *VerifierChip) GetChallenges(
 	challenger.ObserveCap(proof.QuotientPolysCap)
 	plonkZeta := challenger.GetExtensionChallenge()
 
-	challenger.ObserveOpenings(fri.ToFriOpenings(proof.Openings))
+	challenger.ObserveOpenings(fri.ToOpenings(proof.Openings))
 
-	return common.ProofChallenges{
+	return types.ProofChallenges{
 		PlonkBetas:  plonkBetas,
 		PlonkGammas: plonkGammas,
 		PlonkAlphas: plonkAlphas,
@@ -154,7 +144,13 @@ func (c *VerifierChip) generateProofInput(commonData common.CommonCircuitData) c
 }
 */
 
-func (c *VerifierChip) Verify(proof common.Proof, publicInputs []field.F, verifierData common.VerifierOnlyCircuitData, commonData common.CommonCircuitData) {
+func (c *VerifierChip) Verify(
+	proof types.Proof,
+	publicInputs []gl.Variable,
+	verifierData types.VerifierOnlyCircuitData,
+	commonData types.CommonCircuitData,
+) {
+	glApi := gl.NewChip(c.api)
 	// TODO: Need to range check all the proof and public input elements to make sure they are within goldilocks field
 
 	// Generate the parts of the witness that is for the plonky2 proof input
@@ -163,7 +159,7 @@ func (c *VerifierChip) Verify(proof common.Proof, publicInputs []field.F, verifi
 
 	c.plonkChip.Verify(proofChallenges, proof.Openings, publicInputsHash)
 
-	initialMerkleCaps := []common.MerkleCap{
+	initialMerkleCaps := []types.FriMerkleCap{
 		verifierData.ConstantSigmasCap,
 		proof.WiresCap,
 		proof.PlonkZsPartialProductsCap,
@@ -172,26 +168,26 @@ func (c *VerifierChip) Verify(proof common.Proof, publicInputs []field.F, verifi
 
 	// Seems like there is a bug in the emulated field code.
 	// Add ZERO to all of the fri challenges values to reduce them.
-	proofChallenges.PlonkZeta[0] = c.fieldAPI.Add(proofChallenges.PlonkZeta[0], field.ZERO_F)
-	proofChallenges.PlonkZeta[1] = c.fieldAPI.Add(proofChallenges.PlonkZeta[1], field.ZERO_F)
+	proofChallenges.PlonkZeta[0] = glApi.Add(proofChallenges.PlonkZeta[0], gl.Zero())
+	proofChallenges.PlonkZeta[1] = glApi.Add(proofChallenges.PlonkZeta[1], gl.Zero())
 
-	proofChallenges.FriChallenges.FriAlpha[0] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriAlpha[0], field.ZERO_F)
-	proofChallenges.FriChallenges.FriAlpha[1] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriAlpha[1], field.ZERO_F)
+	proofChallenges.FriChallenges.FriAlpha[0] = glApi.Add(proofChallenges.FriChallenges.FriAlpha[0], gl.Zero())
+	proofChallenges.FriChallenges.FriAlpha[1] = glApi.Add(proofChallenges.FriChallenges.FriAlpha[1], gl.Zero())
 
 	for i := 0; i < len(proofChallenges.FriChallenges.FriBetas); i++ {
-		proofChallenges.FriChallenges.FriBetas[i][0] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriBetas[i][0], field.ZERO_F)
-		proofChallenges.FriChallenges.FriBetas[i][1] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriBetas[i][1], field.ZERO_F)
+		proofChallenges.FriChallenges.FriBetas[i][0] = glApi.Add(proofChallenges.FriChallenges.FriBetas[i][0], gl.Zero())
+		proofChallenges.FriChallenges.FriBetas[i][1] = glApi.Add(proofChallenges.FriChallenges.FriBetas[i][1], gl.Zero())
 	}
 
-	proofChallenges.FriChallenges.FriPowResponse = c.fieldAPI.Add(proofChallenges.FriChallenges.FriPowResponse, field.ZERO_F)
+	proofChallenges.FriChallenges.FriPowResponse = glApi.Add(proofChallenges.FriChallenges.FriPowResponse, gl.Zero())
 
 	for i := 0; i < len(proofChallenges.FriChallenges.FriQueryIndices); i++ {
-		proofChallenges.FriChallenges.FriQueryIndices[i] = c.fieldAPI.Add(proofChallenges.FriChallenges.FriQueryIndices[i], field.ZERO_F)
+		proofChallenges.FriChallenges.FriQueryIndices[i] = glApi.Add(proofChallenges.FriChallenges.FriQueryIndices[i], gl.Zero())
 	}
 
 	c.friChip.VerifyFriProof(
-		fri.GetFriInstance(&commonData, c.qeAPI, proofChallenges.PlonkZeta, commonData.DegreeBits),
-		fri.ToFriOpenings(proof.Openings),
+		fri.GetInstance(&commonData, glApi, proofChallenges.PlonkZeta, commonData.DegreeBits),
+		fri.ToOpenings(proof.Openings),
 		&proofChallenges.FriChallenges,
 		initialMerkleCaps,
 		&proof.OpeningProof,
