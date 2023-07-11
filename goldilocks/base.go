@@ -193,7 +193,7 @@ func (p *Chip) ReduceWithMaxBits(x Variable, maxNbBits uint64) Variable {
 	//
 	// 		MODULUS * quotient + remainder = x
 	//
-	// Must check that offset \in [0, MODULUS) and carry \in [0, 2^maxNbBits) to ensure that this
+	// Must check that remainder \in [0, MODULUS) and quotient \in [0, 2^maxNbBits) to ensure that this
 	// computation does not overflow.
 
 	result, err := p.api.Compiler().NewHint(ReduceHint, 2, x.Limb)
