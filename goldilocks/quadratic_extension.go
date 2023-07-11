@@ -88,7 +88,7 @@ func (p *Chip) MulAddExtensionNoReduce(a, b, c QuadraticExtensionVariable) Quadr
 	return sum
 }
 
-// Multiplies two operands a and b and adds to c in the Goldilocks extension field. a * b - c must
+// Multiplies two operands a and b and subtracts to c in the Goldilocks extension field. a * b - c must
 // be less than RANGE_CHECK_NB_BITS bits.
 func (p *Chip) SubMulExtension(a, b, c QuadraticExtensionVariable) QuadraticExtensionVariable {
 	difference := p.SubExtensionNoReduce(a, b)
