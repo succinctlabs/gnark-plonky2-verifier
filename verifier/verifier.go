@@ -226,25 +226,6 @@ func (c *VerifierChip) Verify(
 		proof.QuotientPolysCap,
 	}
 
-	// Seems like there is a bug in the emulated field code.
-	// Add ZERO to all of the fri challenges values to reduce them.
-	proofChallenges.PlonkZeta[0] = c.glChip.Add(proofChallenges.PlonkZeta[0], gl.Zero())
-	proofChallenges.PlonkZeta[1] = c.glChip.Add(proofChallenges.PlonkZeta[1], gl.Zero())
-
-	proofChallenges.FriChallenges.FriAlpha[0] = c.glChip.Add(proofChallenges.FriChallenges.FriAlpha[0], gl.Zero())
-	proofChallenges.FriChallenges.FriAlpha[1] = c.glChip.Add(proofChallenges.FriChallenges.FriAlpha[1], gl.Zero())
-
-	for i := 0; i < len(proofChallenges.FriChallenges.FriBetas); i++ {
-		proofChallenges.FriChallenges.FriBetas[i][0] = c.glChip.Add(proofChallenges.FriChallenges.FriBetas[i][0], gl.Zero())
-		proofChallenges.FriChallenges.FriBetas[i][1] = c.glChip.Add(proofChallenges.FriChallenges.FriBetas[i][1], gl.Zero())
-	}
-
-	proofChallenges.FriChallenges.FriPowResponse = c.glChip.Add(proofChallenges.FriChallenges.FriPowResponse, gl.Zero())
-
-	for i := 0; i < len(proofChallenges.FriChallenges.FriQueryIndices); i++ {
-		proofChallenges.FriChallenges.FriQueryIndices[i] = c.glChip.Add(proofChallenges.FriChallenges.FriQueryIndices[i], gl.Zero())
-	}
-
 	c.friChip.VerifyFriProof(
 		fri.GetInstance(&commonData, c.glChip, proofChallenges.PlonkZeta, commonData.DegreeBits),
 		fri.ToOpenings(proof.Openings),
