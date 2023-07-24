@@ -4,6 +4,7 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/challenger"
 	"github.com/succinctlabs/gnark-plonky2-verifier/fri"
+	"github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/plonk"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
@@ -11,20 +12,23 @@ import (
 )
 
 type VerifierChip struct {
-	api               frontend.API `gnark:"-"`
-	poseidonGlChip    *poseidon.GoldilocksChip
-	poseidonBN254Chip *poseidon.BN254Chip
-	plonkChip         *plonk.PlonkChip
-	friChip           *fri.Chip
+	api               frontend.API             `gnark:"-"`
+	glChip            *goldilocks.Chip         `gnark:"-"`
+	poseidonGlChip    *poseidon.GoldilocksChip `gnark:"-"`
+	poseidonBN254Chip *poseidon.BN254Chip      `gnark:"-"`
+	plonkChip         *plonk.PlonkChip         `gnark:"-"`
+	friChip           *fri.Chip                `gnark:"-"`
 }
 
 func NewVerifierChip(api frontend.API, commonCircuitData types.CommonCircuitData) *VerifierChip {
+	glChip := goldilocks.NewChip(api)
 	friChip := fri.NewChip(api, &commonCircuitData.FriParams)
 	plonkChip := plonk.NewPlonkChip(api, commonCircuitData)
 	poseidonGlChip := poseidon.NewGoldilocksChip(api)
 	poseidonBN254Chip := poseidon.NewBN254Chip(api)
 	return &VerifierChip{
 		api:               api,
+		glChip:            glChip,
 		poseidonGlChip:    poseidonGlChip,
 		poseidonBN254Chip: poseidonBN254Chip,
 		plonkChip:         plonkChip,
@@ -144,14 +148,70 @@ func (c *VerifierChip) generateProofInput(commonData common.CommonCircuitData) c
 }
 */
 
+func (c *VerifierChip) rangeCheckProof(proof types.Proof) {
+	// Need to verify the plonky2 proof's openings, openings proof (other than the sibling elements), fri's final poly, pow witness.
+
+	// Note that this is NOT range checking the public inputs (first 32 elements should be no more than 8 bits and the last 4 elements should be no more than 64 bits).  Since this is currently being inputted via the smart contract,
+	// we will assume that caller is doing that check.
+
+	// Range check the proof's openings.
+	for _, constant := range proof.Openings.Constants {
+		c.glChip.RangeCheckQEVariable(constant)
+	}
+
+	for _, plonkSigma := range proof.Openings.PlonkSigmas {
+		c.glChip.RangeCheckQEVariable(plonkSigma)
+	}
+
+	for _, wire := range proof.Openings.Wires {
+		c.glChip.RangeCheckQEVariable(wire)
+	}
+
+	for _, plonkZ := range proof.Openings.PlonkZs {
+		c.glChip.RangeCheckQEVariable(plonkZ)
+	}
+
+	for _, plonkZNext := range proof.Openings.PlonkZsNext {
+		c.glChip.RangeCheckQEVariable(plonkZNext)
+	}
+
+	for _, partialProduct := range proof.Openings.PartialProducts {
+		c.glChip.RangeCheckQEVariable(partialProduct)
+	}
+
+	for _, quotientPoly := range proof.Openings.QuotientPolys {
+		c.glChip.RangeCheckQEVariable(quotientPoly)
+	}
+
+	// Range check the openings proof.
+	for _, queryRound := range proof.OpeningProof.QueryRoundProofs {
+		for _, initialTreesElement := range queryRound.InitialTreesProof.EvalsProofs[0].Elements {
+			c.glChip.RangeCheck(initialTreesElement)
+		}
+
+		for _, queryStep := range queryRound.Steps {
+			for _, eval := range queryStep.Evals {
+				c.glChip.RangeCheckQEVariable(eval)
+			}
+		}
+	}
+
+	// Range check the fri's final poly.
+	for _, coeff := range proof.OpeningProof.FinalPoly.Coeffs {
+		c.glChip.RangeCheckQEVariable(coeff)
+	}
+
+	// Range check the pow witness.
+	c.glChip.RangeCheck(proof.OpeningProof.PowWitness)
+}
+
 func (c *VerifierChip) Verify(
 	proof types.Proof,
 	publicInputs []gl.Variable,
 	verifierData types.VerifierOnlyCircuitData,
 	commonData types.CommonCircuitData,
 ) {
-	glApi := gl.NewChip(c.api)
-	// TODO: Need to range check all the proof and public input elements to make sure they are within goldilocks field
+	c.rangeCheckProof(proof)
 
 	// Generate the parts of the witness that is for the plonky2 proof input
 	publicInputsHash := c.GetPublicInputsHash(publicInputs)
@@ -168,25 +228,25 @@ func (c *VerifierChip) Verify(
 
 	// Seems like there is a bug in the emulated field code.
 	// Add ZERO to all of the fri challenges values to reduce them.
-	proofChallenges.PlonkZeta[0] = glApi.Add(proofChallenges.PlonkZeta[0], gl.Zero())
-	proofChallenges.PlonkZeta[1] = glApi.Add(proofChallenges.PlonkZeta[1], gl.Zero())
+	proofChallenges.PlonkZeta[0] = c.glChip.Add(proofChallenges.PlonkZeta[0], gl.Zero())
+	proofChallenges.PlonkZeta[1] = c.glChip.Add(proofChallenges.PlonkZeta[1], gl.Zero())
 
-	proofChallenges.FriChallenges.FriAlpha[0] = glApi.Add(proofChallenges.FriChallenges.FriAlpha[0], gl.Zero())
-	proofChallenges.FriChallenges.FriAlpha[1] = glApi.Add(proofChallenges.FriChallenges.FriAlpha[1], gl.Zero())
+	proofChallenges.FriChallenges.FriAlpha[0] = c.glChip.Add(proofChallenges.FriChallenges.FriAlpha[0], gl.Zero())
+	proofChallenges.FriChallenges.FriAlpha[1] = c.glChip.Add(proofChallenges.FriChallenges.FriAlpha[1], gl.Zero())
 
 	for i := 0; i < len(proofChallenges.FriChallenges.FriBetas); i++ {
-		proofChallenges.FriChallenges.FriBetas[i][0] = glApi.Add(proofChallenges.FriChallenges.FriBetas[i][0], gl.Zero())
-		proofChallenges.FriChallenges.FriBetas[i][1] = glApi.Add(proofChallenges.FriChallenges.FriBetas[i][1], gl.Zero())
+		proofChallenges.FriChallenges.FriBetas[i][0] = c.glChip.Add(proofChallenges.FriChallenges.FriBetas[i][0], gl.Zero())
+		proofChallenges.FriChallenges.FriBetas[i][1] = c.glChip.Add(proofChallenges.FriChallenges.FriBetas[i][1], gl.Zero())
 	}
 
-	proofChallenges.FriChallenges.FriPowResponse = glApi.Add(proofChallenges.FriChallenges.FriPowResponse, gl.Zero())
+	proofChallenges.FriChallenges.FriPowResponse = c.glChip.Add(proofChallenges.FriChallenges.FriPowResponse, gl.Zero())
 
 	for i := 0; i < len(proofChallenges.FriChallenges.FriQueryIndices); i++ {
-		proofChallenges.FriChallenges.FriQueryIndices[i] = glApi.Add(proofChallenges.FriChallenges.FriQueryIndices[i], gl.Zero())
+		proofChallenges.FriChallenges.FriQueryIndices[i] = c.glChip.Add(proofChallenges.FriChallenges.FriQueryIndices[i], gl.Zero())
 	}
 
 	c.friChip.VerifyFriProof(
-		fri.GetInstance(&commonData, glApi, proofChallenges.PlonkZeta, commonData.DegreeBits),
+		fri.GetInstance(&commonData, c.glChip, proofChallenges.PlonkZeta, commonData.DegreeBits),
 		fri.ToOpenings(proof.Openings),
 		&proofChallenges.FriChallenges,
 		initialMerkleCaps,
