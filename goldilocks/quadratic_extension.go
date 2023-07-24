@@ -233,7 +233,7 @@ func (p *Chip) AssertIsEqualExtension(
 	p.AssertIsEqual(a[1], b[1])
 }
 
-func (p *Chip) RangeCheckQEVariable(a QuadraticExtensionVariable) {
+func (p *Chip) RangeCheckQE(a QuadraticExtensionVariable) {
 	p.RangeCheck(a[0])
 	p.RangeCheck(a[1])
 }

@@ -155,31 +155,31 @@ func (c *VerifierChip) rangeCheckProof(proof types.Proof) {
 
 	// Range check the proof's openings.
 	for _, constant := range proof.Openings.Constants {
-		c.glChip.RangeCheckQEVariable(constant)
+		c.glChip.RangeCheckQE(constant)
 	}
 
 	for _, plonkSigma := range proof.Openings.PlonkSigmas {
-		c.glChip.RangeCheckQEVariable(plonkSigma)
+		c.glChip.RangeCheckQE(plonkSigma)
 	}
 
 	for _, wire := range proof.Openings.Wires {
-		c.glChip.RangeCheckQEVariable(wire)
+		c.glChip.RangeCheckQE(wire)
 	}
 
 	for _, plonkZ := range proof.Openings.PlonkZs {
-		c.glChip.RangeCheckQEVariable(plonkZ)
+		c.glChip.RangeCheckQE(plonkZ)
 	}
 
 	for _, plonkZNext := range proof.Openings.PlonkZsNext {
-		c.glChip.RangeCheckQEVariable(plonkZNext)
+		c.glChip.RangeCheckQE(plonkZNext)
 	}
 
 	for _, partialProduct := range proof.Openings.PartialProducts {
-		c.glChip.RangeCheckQEVariable(partialProduct)
+		c.glChip.RangeCheckQE(partialProduct)
 	}
 
 	for _, quotientPoly := range proof.Openings.QuotientPolys {
-		c.glChip.RangeCheckQEVariable(quotientPoly)
+		c.glChip.RangeCheckQE(quotientPoly)
 	}
 
 	// Range check the openings proof.
@@ -190,14 +190,14 @@ func (c *VerifierChip) rangeCheckProof(proof types.Proof) {
 
 		for _, queryStep := range queryRound.Steps {
 			for _, eval := range queryStep.Evals {
-				c.glChip.RangeCheckQEVariable(eval)
+				c.glChip.RangeCheckQE(eval)
 			}
 		}
 	}
 
 	// Range check the fri's final poly.
 	for _, coeff := range proof.OpeningProof.FinalPoly.Coeffs {
-		c.glChip.RangeCheckQEVariable(coeff)
+		c.glChip.RangeCheckQE(coeff)
 	}
 
 	// Range check the pow witness.
