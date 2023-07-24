@@ -4,7 +4,6 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/gnark-plonky2-verifier/challenger"
 	"github.com/succinctlabs/gnark-plonky2-verifier/fri"
-	"github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/plonk"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
@@ -13,7 +12,7 @@ import (
 
 type VerifierChip struct {
 	api               frontend.API             `gnark:"-"`
-	glChip            *goldilocks.Chip         `gnark:"-"`
+	glChip            *gl.Chip                 `gnark:"-"`
 	poseidonGlChip    *poseidon.GoldilocksChip `gnark:"-"`
 	poseidonBN254Chip *poseidon.BN254Chip      `gnark:"-"`
 	plonkChip         *plonk.PlonkChip         `gnark:"-"`
@@ -21,7 +20,7 @@ type VerifierChip struct {
 }
 
 func NewVerifierChip(api frontend.API, commonCircuitData types.CommonCircuitData) *VerifierChip {
-	glChip := goldilocks.NewChip(api)
+	glChip := gl.NewChip(api)
 	friChip := fri.NewChip(api, &commonCircuitData.FriParams)
 	plonkChip := plonk.NewPlonkChip(api, commonCircuitData)
 	poseidonGlChip := poseidon.NewGoldilocksChip(api)
