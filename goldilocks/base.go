@@ -169,9 +169,10 @@ func (p *Chip) Reduce(x Variable) Variable {
 	//
 	// 		MODULUS * quotient + remainder = x
 	//
-	// Must check that remainder \in [0, MODULUS) and quotient \in [0, 2^RANGE_CHECK_NB_BITS) to ensure
-	// that this computation does not overflow. We use 2^140 to reduce the cost of the range check
-	// and because 2^RANGE_CHECK_NB_BITS * 2^64 = 2^194 < p < 2^254.
+	// Must check that offset \in [0, MODULUS) and carry \in [0, 2^RANGE_CHECK_NB_BITS) to ensure
+	// that this computation does not overflow. We use 2^RANGE_CHECK_NB_BITS to reduce the cost of the range check
+	//
+	// In other words, we assume that we at most compute a a dot product with dimension at most RANGE_CHECK_NB_BITS - 128.
 
 	result, err := p.api.Compiler().NewHint(ReduceHint, 2, x.Limb)
 	if err != nil {

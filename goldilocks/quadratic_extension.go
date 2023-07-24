@@ -232,8 +232,11 @@ func (p *Chip) AssertIsEqualExtension(
 	p.AssertIsEqual(a[0], b[0])
 	p.AssertIsEqual(a[1], b[1])
 }
+<<<<<<< HEAD
 
 func (p *Chip) RangeCheckQE(a QuadraticExtensionVariable) {
 	p.RangeCheck(a[0])
 	p.RangeCheck(a[1])
 }
+=======
+>>>>>>> main
