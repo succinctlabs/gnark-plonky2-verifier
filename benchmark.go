@@ -40,7 +40,7 @@ func (circuit *BenchmarkPlonky2VerifierCircuit) Define(api frontend.API) error {
 	return nil
 }
 
-func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, outputSolidity bool) (constraint.ConstraintSystem, groth16.ProvingKey, groth16.VerifyingKey) {
+func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, outputSolidity bool, dummy bool) (constraint.ConstraintSystem, groth16.ProvingKey, groth16.VerifyingKey) {
 	circuit := BenchmarkPlonky2VerifierCircuit{
 		plonky2CircuitName: plonky2Circuit,
 	}
@@ -76,6 +76,15 @@ func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, 
 			fR1CS.Close()
 		}
 	*/
+
+	if dummy {
+		pk, err := groth16.DummySetup(r1cs)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		return r1cs, pk, nil
+	}
 
 	fmt.Println("Running circuit setup", time.Now())
 	pk, vk, err := groth16.Setup(r1cs)
@@ -132,11 +141,15 @@ func createProof(plonky2Circuit string, r1cs constraint.ConstraintSystem, pk gro
 		fProof.Close()
 	}
 
-	fmt.Println("Verifying proof", time.Now())
-	err = groth16.Verify(proof, vk, publicWitness)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+	if vk != nil {
+		fmt.Println("Verifying proof", time.Now())
+		err = groth16.Verify(proof, vk, publicWitness)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	} else {
+		fmt.Println("Skipping verification because provided vk was nil")
 	}
 
 	const fpSize = 4 * 8
@@ -179,6 +192,7 @@ func main() {
 	profileCircuit := flag.Bool("profile", false, "profile the circuit")
 	serialize := flag.Bool("serialize", false, "serialize the circuit")
 	outputSolidity := flag.Bool("solidity", false, "output solidity code for the circuit")
+	dummySetup := flag.Bool("dummy", false, "use dummy setup")
 
 	flag.Parse()
 
@@ -187,6 +201,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	r1cs, pk, vk := compileCircuit(*plonky2Circuit, *profileCircuit, *serialize, *outputSolidity)
+	if *dummySetup {
+		fmt.Println("DO NOT USE DUMMY SETUP BECAUSE IT CURRENTLY DOES NOT WORK")
+	}
+
+	r1cs, pk, vk := compileCircuit(*plonky2Circuit, *profileCircuit, *serialize, *outputSolidity, *dummySetup)
 	createProof(*plonky2Circuit, r1cs, pk, vk, *serialize)
 }
