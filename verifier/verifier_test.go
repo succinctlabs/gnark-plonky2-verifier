@@ -86,6 +86,31 @@ func TestStepVerifier2(t *testing.T) {
 	)
 }
 
+func TestWrapperVerifier(t *testing.T) {
+	assert := test.NewAssert(t)
+
+	testCase := func() {
+		plonky2Circuit := "wrapper"
+		proofWithPis := verifier.DeserializeProofWithPublicInputs("./data/" + plonky2Circuit + "/proof_with_public_inputs.json")
+		circuit := TestVerifierCircuit{
+			plonky2CircuitName: plonky2Circuit,
+			Proof:              proofWithPis.Proof,
+			PublicInputs:       proofWithPis.PublicInputs,
+		}
+
+		proofWithPis2 := verifier.DeserializeProofWithPublicInputs("./data/" + plonky2Circuit + "/proof_with_public_inputs.json")
+		witness := TestVerifierCircuit{
+			plonky2CircuitName: plonky2Circuit,
+			Proof:              proofWithPis2.Proof,
+			PublicInputs:       proofWithPis2.PublicInputs,
+		}
+
+		err := test.IsSolved(&circuit, &witness, ecc.BN254.ScalarField())
+		assert.NoError(err)
+	}
+	testCase()
+}
+
 type testCircuit struct {
 	Arr      [2]emulated.Element[emulated.Secp256k1Fp]
 	Expected emulated.Element[emulated.Secp256k1Fp]
