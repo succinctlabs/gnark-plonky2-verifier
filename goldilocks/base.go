@@ -19,8 +19,8 @@ import (
 	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/constraint/solver"
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/gnark/std/math/bits"
 	"github.com/consensys/gnark/std/math/emulated"
+	"github.com/consensys/gnark/std/rangecheck"
 )
 
 // The multiplicative group generator of the field.
@@ -307,7 +307,8 @@ func (p *Chip) RangeCheck(x Variable) {
 	// checks that if the bits[0:31] (in big-endian) are all 1, then bits[32:64] are all zero.
 
 	// First decompose x into 64 bits.  The bits will be in little-endian order.
-	_ = bits.ToBinary(p.api, x.Limb, bits.WithNbDigits(64))
+	rangeChecker := rangecheck.New(p.api)
+	rangeChecker.Check(x.Limb, 64)
 
 	result, err := p.api.Compiler().NewHint(SplitLimbsHint, 2, x.Limb)
 	if err != nil {
