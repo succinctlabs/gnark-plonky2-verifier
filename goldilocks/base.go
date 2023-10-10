@@ -13,6 +13,7 @@ package goldilocks
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/consensys/gnark-crypto/field/goldilocks"
@@ -45,6 +46,7 @@ func init() {
 	solver.RegisterHint(MulAddHint)
 	solver.RegisterHint(ReduceHint)
 	solver.RegisterHint(InverseHint)
+	solver.RegisterHint(SplitLimbsHint)
 }
 
 // A type alias used to represent Goldilocks field elements.
@@ -257,6 +259,22 @@ func InverseHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
 	return nil
 }
 
+// The hint used to compute split a 64-bit variable into two 32-bit limbs.
+func SplitLimbsHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
+	if len(inputs) != 1 {
+		panic("SplitLimbsHint expects 1 input operand")
+	}
+
+	input := inputs[0]
+
+	two_32 := big.NewInt(int64(math.Pow(2, 32)))
+
+	results[0] = new(big.Int).Quo(input, two_32)
+	results[1] = new(big.Int).Rem(input, two_32)
+
+	return nil
+}
+
 // Computes a field element raised to some power.
 func (p *Chip) Exp(x Variable, k *big.Int) Variable {
 	if k.IsUint64() && k.Uint64() == 0 {
@@ -289,39 +307,20 @@ func (p *Chip) RangeCheck(x Variable) {
 	// checks that if the bits[0:31] (in big-endian) are all 1, then bits[32:64] are all zero.
 
 	// First decompose x into 64 bits.  The bits will be in little-endian order.
-	bits := bits.ToBinary(p.api, x.Limb, bits.WithNbDigits(64))
+	_ = bits.ToBinary(p.api, x.Limb, bits.WithNbDigits(64))
 
-	// Those bits should compose back to x.
-	reconstructedX := frontend.Variable(0)
-	c := uint64(1)
-	for i := 0; i < 64; i++ {
-		reconstructedX = p.api.Add(reconstructedX, p.api.Mul(bits[i], c))
-		c = c << 1
-		p.api.AssertIsBoolean(bits[i])
-	}
-	p.api.AssertIsEqual(x.Limb, reconstructedX)
-
-	mostSigBits32Sum := frontend.Variable(0)
-	for i := 32; i < 64; i++ {
-		mostSigBits32Sum = p.api.Add(mostSigBits32Sum, bits[i])
+	result, err := p.api.Compiler().NewHint(SplitLimbsHint, 2, x.Limb)
+	if err != nil {
+		panic(err)
 	}
 
-	leastSigBits32Sum := frontend.Variable(0)
-	for i := 0; i < 32; i++ {
-		leastSigBits32Sum = p.api.Add(leastSigBits32Sum, bits[i])
-	}
-
-	// If mostSigBits32Sum < 32, then we know that:
-	//
-	// 		x < (2^63 + ... + 2^32 + 0 * 2^31 + ... + 0 * 2^0)
-	//
-	// which equals to 2^64 - 2^32. So in that case, we don't need to do any more checks. If
-	// mostSigBits32Sum == 32, then we need to check that x == 2^64 - 2^32 (max GL value).
-	shouldCheck := p.api.IsZero(p.api.Sub(mostSigBits32Sum, 32))
+	mostSigBits := NewVariable(result[0])
+	leastSigBits := NewVariable(result[1])
+	shouldCheck := p.api.IsZero(p.api.Sub(mostSigBits.Limb, uint64(math.Pow(2, 32))-1))
 	p.api.AssertIsEqual(
 		p.api.Select(
 			shouldCheck,
-			leastSigBits32Sum,
+			leastSigBits.Limb,
 			frontend.Variable(0),
 		),
 		frontend.Variable(0),
