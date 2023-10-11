@@ -4,6 +4,6 @@ import (
 	"testing"
 )
 
-func TestDeserializeCommonCircuitData(t *testing.T) {
-	DeserializeCommonCircuitData("../testdata/decode_block/common_circuit_data.json")
+func TestReadCommonCircuitData(t *testing.T) {
+	ReadCommonCircuitData("../testdata/decode_block/common_circuit_data.json")
 }

@@ -58,7 +58,7 @@ type CommonCircuitDataRaw struct {
 	NumPartialProducts   uint64   `json:"num_partial_products"`
 }
 
-func DeserializeCommonCircuitData(path string) CommonCircuitData {
+func ReadCommonCircuitData(path string) CommonCircuitData {
 	jsonFile, err := os.Open(path)
 	if err != nil {
 		panic(err)

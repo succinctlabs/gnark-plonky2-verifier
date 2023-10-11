@@ -112,7 +112,7 @@ func TestDecodeBlockFriVerification(t *testing.T) {
 	verifierOnlyCircuitDataFilename := "../testdata/decode_block/verifier_only_circuit_data.json"
 
 	proofWithPis := variables.DeserializeProofWithPublicInputs(types.ReadProofWithPublicInputs(proofWithPIsFilename))
-	commonCircuitData := types.DeserializeCommonCircuitData(commonCircuitDataFilename)
+	commonCircuitData := types.ReadCommonCircuitData(commonCircuitDataFilename)
 	verifierOnlyCircuitData := variables.DeserializeVerifierOnlyCircuitData(types.ReadVerifierOnlyCircuitData(verifierOnlyCircuitDataFilename))
 
 	testCase := func() {

@@ -690,7 +690,7 @@ type TestGateCircuit struct {
 }
 
 func (circuit *TestGateCircuit) Define(api frontend.API) error {
-	commonCircuitData := types.DeserializeCommonCircuitData("../../testdata/decode_block/common_circuit_data.json")
+	commonCircuitData := types.ReadCommonCircuitData("../../testdata/decode_block/common_circuit_data.json")
 	numSelectors := commonCircuitData.SelectorsInfo.NumSelectors()
 
 	glApi := gl.New(api)
