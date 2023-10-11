@@ -56,7 +56,7 @@ func (g *ConstantGate) WireOutput(i uint64) uint64 {
 
 func (g *ConstantGate) EvalUnfiltered(
 	api frontend.API,
-	glApi gl.GoldilocksApi,
+	glApi gl.Chip,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
 	constraints := []gl.QuadraticExtensionVariable{}

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
-	"github.com/succinctlabs/gnark-plonky2-verifier/types"
+	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -22,7 +22,7 @@ import (
 )
 
 type BenchmarkPlonky2VerifierCircuitPlonk struct {
-	Proof        types.Proof
+	Proof        variables.Proof
 	PublicInputs []gl.Variable `gnark:",public"`
 
 	verifierChip       *verifier.VerifierChip `gnark:"-"`

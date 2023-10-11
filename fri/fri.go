@@ -10,30 +10,30 @@ import (
 	"github.com/consensys/gnark/frontend"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
-	"github.com/succinctlabs/gnark-plonky2-verifier/types"
+	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
 )
 
 type Chip struct {
-	api               frontend.API     `gnark:"-"`
-	gl                gl.GoldilocksApi `gnark:"-"`
+	api               frontend.API `gnark:"-"`
+	gl                gl.Chip      `gnark:"-"`
 	poseidonBN254Chip *poseidon.BN254Chip
-	friParams         *types.FriParams `gnark:"-"`
+	friParams         *variables.FriParams `gnark:"-"`
 }
 
 func NewChip(
 	api frontend.API,
-	friParams *types.FriParams,
+	friParams *variables.FriParams,
 ) *Chip {
 	poseidonBN254Chip := poseidon.NewBN254Chip(api)
 	return &Chip{
 		api:               api,
 		poseidonBN254Chip: poseidonBN254Chip,
 		friParams:         friParams,
-		gl:                *gl.NewGoldilocksApi(api),
+		gl:                *gl.New(api),
 	}
 }
 
-func (f *Chip) assertLeadingZeros(powWitness gl.Variable, friConfig types.FriConfig) {
+func (f *Chip) assertLeadingZeros(powWitness gl.Variable, friConfig variables.FriConfig) {
 	// Asserts that powWitness'es big-endian bit representation has at least `leading_zeros` leading zeros.
 	// Note that this is assuming that the Goldilocks field is being used.  Specfically that the
 	// field is 64 bits long
@@ -61,8 +61,8 @@ func (f *Chip) verifyMerkleProofToCapWithCapIndex(
 	leafData []gl.Variable,
 	leafIndexBits []frontend.Variable,
 	capIndexBits []frontend.Variable,
-	merkleCap types.FriMerkleCap,
-	proof *types.FriMerkleProof,
+	merkleCap variables.FriMerkleCap,
+	proof *variables.FriMerkleProof,
 ) {
 	currentDigest := f.poseidonBN254Chip.HashOrNoop(leafData)
 	for i, sibling := range proof.Siblings {
@@ -100,7 +100,7 @@ func (f *Chip) verifyMerkleProofToCapWithCapIndex(
 	f.api.AssertIsEqual(currentDigest, merkleCapEntry)
 }
 
-func (f *Chip) verifyInitialProof(xIndexBits []frontend.Variable, proof *types.FriInitialTreeProof, initialMerkleCaps []types.FriMerkleCap, capIndexBits []frontend.Variable) {
+func (f *Chip) verifyInitialProof(xIndexBits []frontend.Variable, proof *variables.FriInitialTreeProof, initialMerkleCaps []variables.FriMerkleCap, capIndexBits []frontend.Variable) {
 	if len(proof.EvalsProofs) != len(initialMerkleCaps) {
 		panic("length of eval proofs in fri proof should equal length of initial merkle caps")
 	}
@@ -187,7 +187,7 @@ func (f *Chip) calculateSubgroupX(
 
 func (f *Chip) friCombineInitial(
 	instance InstanceInfo,
-	proof types.FriInitialTreeProof,
+	proof variables.FriInitialTreeProof,
 	friAlpha gl.QuadraticExtensionVariable,
 	subgroupX_QE gl.QuadraticExtensionVariable,
 	precomputedReducedEval []gl.QuadraticExtensionVariable,
@@ -228,7 +228,7 @@ func (f *Chip) friCombineInitial(
 	return sum
 }
 
-func (f *Chip) finalPolyEval(finalPoly types.PolynomialCoeffs, point gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
+func (f *Chip) finalPolyEval(finalPoly variables.PolynomialCoeffs, point gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
 	ret := gl.ZeroExtension()
 	for i := len(finalPoly.Coeffs) - 1; i >= 0; i-- {
 		ret = f.gl.MulAddExtension(ret, point, finalPoly.Coeffs[i])
@@ -355,14 +355,14 @@ func (f *Chip) computeEvaluation(
 
 func (f *Chip) verifyQueryRound(
 	instance InstanceInfo,
-	challenges *types.FriChallenges,
+	challenges *variables.FriChallenges,
 	precomputedReducedEval []gl.QuadraticExtensionVariable,
-	initialMerkleCaps []types.FriMerkleCap,
-	proof *types.FriProof,
+	initialMerkleCaps []variables.FriMerkleCap,
+	proof *variables.FriProof,
 	xIndex gl.Variable,
 	n uint64,
 	nLog uint64,
-	roundProof *types.FriQueryRound,
+	roundProof *variables.FriQueryRound,
 ) {
 	f.assertNoncanonicalIndicesOK()
 	xIndex = f.gl.Reduce(xIndex)
@@ -468,9 +468,9 @@ func (f *Chip) verifyQueryRound(
 func (f *Chip) VerifyFriProof(
 	instance InstanceInfo,
 	openings Openings,
-	friChallenges *types.FriChallenges,
-	initialMerkleCaps []types.FriMerkleCap,
-	friProof *types.FriProof,
+	friChallenges *variables.FriChallenges,
+	initialMerkleCaps []variables.FriMerkleCap,
+	friProof *variables.FriProof,
 ) {
 	// TODO:  Check fri config
 	/* if let Some(max_arity_bits) = params.max_arity_bits() {

@@ -25,7 +25,7 @@ func OneExtensionAlgebra() QuadraticExtensionAlgebraVariable {
 	return OneExtension().ToQuadraticExtensionAlgebra()
 }
 
-func (p *GoldilocksApi) AddExtensionAlgebra(
+func (p *Chip) AddExtensionAlgebra(
 	a QuadraticExtensionAlgebraVariable,
 	b QuadraticExtensionAlgebraVariable,
 ) QuadraticExtensionAlgebraVariable {
@@ -36,7 +36,7 @@ func (p *GoldilocksApi) AddExtensionAlgebra(
 	return sum
 }
 
-func (p *GoldilocksApi) SubExtensionAlgebra(
+func (p *Chip) SubExtensionAlgebra(
 	a QuadraticExtensionAlgebraVariable,
 	b QuadraticExtensionAlgebraVariable,
 ) QuadraticExtensionAlgebraVariable {
@@ -47,7 +47,7 @@ func (p *GoldilocksApi) SubExtensionAlgebra(
 	return diff
 }
 
-func (p GoldilocksApi) MulExtensionAlgebra(
+func (p Chip) MulExtensionAlgebra(
 	a QuadraticExtensionAlgebraVariable,
 	b QuadraticExtensionAlgebraVariable,
 ) QuadraticExtensionAlgebraVariable {
@@ -74,7 +74,7 @@ func (p GoldilocksApi) MulExtensionAlgebra(
 	return product
 }
 
-func (p *GoldilocksApi) ScalarMulExtensionAlgebra(
+func (p *Chip) ScalarMulExtensionAlgebra(
 	a QuadraticExtensionVariable,
 	b QuadraticExtensionAlgebraVariable,
 ) QuadraticExtensionAlgebraVariable {
@@ -85,7 +85,7 @@ func (p *GoldilocksApi) ScalarMulExtensionAlgebra(
 	return product
 }
 
-func (p *GoldilocksApi) PartialInterpolateExtAlgebra(
+func (p *Chip) PartialInterpolateExtAlgebra(
 	domain []goldilocks.Element,
 	values []QuadraticExtensionAlgebraVariable,
 	barycentricWeights []goldilocks.Element,

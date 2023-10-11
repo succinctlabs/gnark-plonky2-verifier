@@ -693,7 +693,7 @@ func (circuit *TestGateCircuit) Define(api frontend.API) error {
 	commonCircuitData := verifier.DeserializeCommonCircuitData("../../data/decode_block/common_circuit_data.json")
 	numSelectors := commonCircuitData.SelectorsInfo.NumSelectors()
 
-	glApi := gl.NewGoldilocksApi(api)
+	glApi := gl.New(api)
 
 	vars := gates.NewEvaluationVars(localConstants[numSelectors:], localWires, publicInputsHash)
 

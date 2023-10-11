@@ -116,7 +116,7 @@ func (g *RandomAccessGate) WireBit(i uint64, copy uint64) uint64 {
 
 func (g *RandomAccessGate) EvalUnfiltered(
 	api frontend.API,
-	glApi gl.GoldilocksApi,
+	glApi gl.Chip,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
 	two := gl.NewVariable(2).ToQuadraticExtension()

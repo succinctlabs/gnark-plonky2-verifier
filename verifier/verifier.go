@@ -7,20 +7,20 @@ import (
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/plonk"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
-	"github.com/succinctlabs/gnark-plonky2-verifier/types"
+	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
 )
 
 type VerifierChip struct {
 	api               frontend.API             `gnark:"-"`
-	glChip            *gl.GoldilocksApi        `gnark:"-"`
+	glChip            *gl.Chip                 `gnark:"-"`
 	poseidonGlChip    *poseidon.GoldilocksChip `gnark:"-"`
 	poseidonBN254Chip *poseidon.BN254Chip      `gnark:"-"`
 	plonkChip         *plonk.PlonkChip         `gnark:"-"`
 	friChip           *fri.Chip                `gnark:"-"`
 }
 
-func NewVerifierChip(api frontend.API, commonCircuitData types.CommonCircuitData) *VerifierChip {
-	glChip := gl.NewGoldilocksApi(api)
+func NewVerifierChip(api frontend.API, commonCircuitData variables.CommonCircuitData) *VerifierChip {
+	glChip := gl.New(api)
 	friChip := fri.NewChip(api, &commonCircuitData.FriParams)
 	plonkChip := plonk.NewPlonkChip(api, commonCircuitData)
 	poseidonGlChip := poseidon.NewGoldilocksChip(api)
@@ -40,11 +40,11 @@ func (c *VerifierChip) GetPublicInputsHash(publicInputs []gl.Variable) poseidon.
 }
 
 func (c *VerifierChip) GetChallenges(
-	proof types.Proof,
+	proof variables.Proof,
 	publicInputsHash poseidon.GoldilocksHashOut,
-	commonData types.CommonCircuitData,
-	verifierData types.VerifierOnlyCircuitData,
-) types.ProofChallenges {
+	commonData variables.CommonCircuitData,
+	verifierData variables.VerifierOnlyCircuitData,
+) variables.ProofChallenges {
 	config := commonData.Config
 	numChallenges := config.NumChallenges
 	challenger := challenger.NewChip(c.api)
@@ -65,7 +65,7 @@ func (c *VerifierChip) GetChallenges(
 
 	challenger.ObserveOpenings(fri.ToOpenings(proof.Openings))
 
-	return types.ProofChallenges{
+	return variables.ProofChallenges{
 		PlonkBetas:  plonkBetas,
 		PlonkGammas: plonkGammas,
 		PlonkAlphas: plonkAlphas,
@@ -147,7 +147,7 @@ func (c *VerifierChip) generateProofInput(commonData common.CommonCircuitData) c
 }
 */
 
-func (c *VerifierChip) rangeCheckProof(proof types.Proof) {
+func (c *VerifierChip) rangeCheckProof(proof variables.Proof) {
 	// Need to verify the plonky2 proof's openings, openings proof (other than the sibling elements), fri's final poly, pow witness.
 
 	// Note that this is NOT range checking the public inputs (first 32 elements should be no more than 8 bits and the last 4 elements should be no more than 64 bits).  Since this is currently being inputted via the smart contract,
@@ -205,10 +205,10 @@ func (c *VerifierChip) rangeCheckProof(proof types.Proof) {
 }
 
 func (c *VerifierChip) Verify(
-	proof types.Proof,
+	proof variables.Proof,
 	publicInputs []gl.Variable,
-	verifierData types.VerifierOnlyCircuitData,
-	commonData types.CommonCircuitData,
+	verifierData variables.VerifierOnlyCircuitData,
+	commonData variables.CommonCircuitData,
 ) {
 	c.rangeCheckProof(proof)
 
@@ -218,7 +218,7 @@ func (c *VerifierChip) Verify(
 
 	c.plonkChip.Verify(proofChallenges, proof.Openings, publicInputsHash)
 
-	initialMerkleCaps := []types.FriMerkleCap{
+	initialMerkleCaps := []variables.FriMerkleCap{
 		verifierData.ConstantSigmasCap,
 		proof.WiresCap,
 		proof.PlonkZsPartialProductsCap,

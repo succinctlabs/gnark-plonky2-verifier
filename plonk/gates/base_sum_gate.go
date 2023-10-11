@@ -65,7 +65,7 @@ func (g *BaseSumGate) limbs() []uint64 {
 
 func (g *BaseSumGate) EvalUnfiltered(
 	api frontend.API,
-	glApi gl.GoldilocksApi,
+	glApi gl.Chip,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
 	sum := vars.localWires[BASESUM_GATE_WIRE_SUM]

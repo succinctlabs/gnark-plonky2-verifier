@@ -19,7 +19,7 @@ type TestGoldilocksRangeCheckCircuit struct {
 }
 
 func (c *TestGoldilocksRangeCheckCircuit) Define(api frontend.API) error {
-	glApi := NewGoldilocksApi(api)
+	glApi := New(api)
 	glApi.RangeCheck(NewVariable(c.X))
 	return nil
 }
@@ -48,7 +48,7 @@ type TestGoldilocksRangeCheckBenchmarkCircuit struct {
 }
 
 func (c *TestGoldilocksRangeCheckBenchmarkCircuit) Define(api frontend.API) error {
-	glApi := NewGoldilocksApi(api)
+	glApi := New(api)
 	for _, x := range c.X {
 		glApi.RangeCheck(NewVariable(x))
 		glApi.Reduce(NewVariable(x))
@@ -88,7 +88,7 @@ type TestGoldilocksMulAddCircuit struct {
 }
 
 func (c *TestGoldilocksMulAddCircuit) Define(api frontend.API) error {
-	glApi := NewGoldilocksApi(api)
+	glApi := New(api)
 	calculateValue := glApi.MulAdd(NewVariable(c.X), NewVariable(c.Y), NewVariable(c.Z))
 	api.AssertIsEqual(calculateValue.Limb, c.ExpectedResult)
 	return nil

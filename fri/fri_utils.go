@@ -2,7 +2,7 @@ package fri
 
 import (
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
-	"github.com/succinctlabs/gnark-plonky2-verifier/types"
+	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
 )
 
 type OpeningBatch struct {
@@ -13,7 +13,7 @@ type Openings struct {
 	Batches []OpeningBatch
 }
 
-func ToOpenings(c types.OpeningSet) Openings {
+func ToOpenings(c variables.OpeningSet) Openings {
 	values := c.Constants                         // num_constants + 1
 	values = append(values, c.PlonkSigmas...)     // num_routed_wires
 	values = append(values, c.Wires...)           // num_wires
@@ -70,7 +70,7 @@ var QUOTIENT = PlonkOracle{
 	blinding: true,
 }
 
-func polynomialInfoFromRange(c *types.CommonCircuitData, oracleIdx uint64, startPolyIdx uint64, endPolyIdx uint64) []PolynomialInfo {
+func polynomialInfoFromRange(c *variables.CommonCircuitData, oracleIdx uint64, startPolyIdx uint64, endPolyIdx uint64) []PolynomialInfo {
 	returnArr := make([]PolynomialInfo, 0)
 	for i := startPolyIdx; i < endPolyIdx; i++ {
 		returnArr = append(returnArr,
@@ -84,7 +84,7 @@ func polynomialInfoFromRange(c *types.CommonCircuitData, oracleIdx uint64, start
 }
 
 // Range of the sigma polynomials in the `constants_sigmas_commitment`.
-func sigmasRange(c *types.CommonCircuitData) []uint64 {
+func sigmasRange(c *variables.CommonCircuitData) []uint64 {
 	returnArr := make([]uint64, 0)
 	for i := c.NumConstants; i <= c.NumConstants+c.Config.NumRoutedWires; i++ {
 		returnArr = append(returnArr, i)
@@ -93,20 +93,20 @@ func sigmasRange(c *types.CommonCircuitData) []uint64 {
 	return returnArr
 }
 
-func numPreprocessedPolys(c *types.CommonCircuitData) uint64 {
+func numPreprocessedPolys(c *variables.CommonCircuitData) uint64 {
 	sigmasRange := sigmasRange(c)
 	return sigmasRange[len(sigmasRange)-1]
 }
 
-func numZSPartialProductsPolys(c *types.CommonCircuitData) uint64 {
+func numZSPartialProductsPolys(c *variables.CommonCircuitData) uint64 {
 	return c.Config.NumChallenges * (1 + c.NumPartialProducts)
 }
 
-func numQuotientPolys(c *types.CommonCircuitData) uint64 {
+func numQuotientPolys(c *variables.CommonCircuitData) uint64 {
 	return c.Config.NumChallenges * c.QuotientDegreeFactor
 }
 
-func friPreprocessedPolys(c *types.CommonCircuitData) []PolynomialInfo {
+func friPreprocessedPolys(c *variables.CommonCircuitData) []PolynomialInfo {
 	return polynomialInfoFromRange(
 		c,
 		CONSTANTS_SIGMAS.index,
@@ -115,12 +115,12 @@ func friPreprocessedPolys(c *types.CommonCircuitData) []PolynomialInfo {
 	)
 }
 
-func friWirePolys(c *types.CommonCircuitData) []PolynomialInfo {
+func friWirePolys(c *variables.CommonCircuitData) []PolynomialInfo {
 	numWirePolys := c.Config.NumWires
 	return polynomialInfoFromRange(c, WIRES.index, 0, numWirePolys)
 }
 
-func friZSPartialProductsPolys(c *types.CommonCircuitData) []PolynomialInfo {
+func friZSPartialProductsPolys(c *variables.CommonCircuitData) []PolynomialInfo {
 	return polynomialInfoFromRange(
 		c,
 		ZS_PARTIAL_PRODUCTS.index,
@@ -129,7 +129,7 @@ func friZSPartialProductsPolys(c *types.CommonCircuitData) []PolynomialInfo {
 	)
 }
 
-func friQuotientPolys(c *types.CommonCircuitData) []PolynomialInfo {
+func friQuotientPolys(c *variables.CommonCircuitData) []PolynomialInfo {
 	return polynomialInfoFromRange(
 		c,
 		QUOTIENT.index,
@@ -138,7 +138,7 @@ func friQuotientPolys(c *types.CommonCircuitData) []PolynomialInfo {
 	)
 }
 
-func friZSPolys(c *types.CommonCircuitData) []PolynomialInfo {
+func friZSPolys(c *variables.CommonCircuitData) []PolynomialInfo {
 	return polynomialInfoFromRange(
 		c,
 		ZS_PARTIAL_PRODUCTS.index,
@@ -147,7 +147,7 @@ func friZSPolys(c *types.CommonCircuitData) []PolynomialInfo {
 	)
 }
 
-func friOracles(c *types.CommonCircuitData) []OracleInfo {
+func friOracles(c *variables.CommonCircuitData) []OracleInfo {
 	return []OracleInfo{
 		{
 			NumPolys: numPreprocessedPolys(c),
@@ -168,7 +168,7 @@ func friOracles(c *types.CommonCircuitData) []OracleInfo {
 	}
 }
 
-func friAllPolys(c *types.CommonCircuitData) []PolynomialInfo {
+func friAllPolys(c *variables.CommonCircuitData) []PolynomialInfo {
 	returnArr := make([]PolynomialInfo, 0)
 	returnArr = append(returnArr, friPreprocessedPolys(c)...)
 	returnArr = append(returnArr, friWirePolys(c)...)
@@ -178,7 +178,7 @@ func friAllPolys(c *types.CommonCircuitData) []PolynomialInfo {
 	return returnArr
 }
 
-func GetInstance(c *types.CommonCircuitData, glApi *gl.GoldilocksApi, zeta gl.QuadraticExtensionVariable, degreeBits uint64) InstanceInfo {
+func GetInstance(c *variables.CommonCircuitData, glApi *gl.Chip, zeta gl.QuadraticExtensionVariable, degreeBits uint64) InstanceInfo {
 	zetaBatch := BatchInfo{
 		Point:       zeta,
 		Polynomials: friAllPolys(c),

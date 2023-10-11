@@ -16,12 +16,12 @@ type GoldilocksStateExtension = [SPONGE_WIDTH]gl.QuadraticExtensionVariable
 type GoldilocksHashOut = [4]gl.Variable
 
 type GoldilocksChip struct {
-	api frontend.API     `gnark:"-"`
-	gl  gl.GoldilocksApi `gnark:"-"`
+	api frontend.API `gnark:"-"`
+	gl  gl.Chip      `gnark:"-"`
 }
 
 func NewGoldilocksChip(api frontend.API) *GoldilocksChip {
-	return &GoldilocksChip{api: api, gl: *gl.NewGoldilocksApi(api)}
+	return &GoldilocksChip{api: api, gl: *gl.New(api)}
 }
 
 // The permutation function.

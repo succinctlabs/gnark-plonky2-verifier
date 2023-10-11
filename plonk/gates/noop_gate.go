@@ -27,7 +27,7 @@ func (g *NoopGate) Id() string {
 
 func (g *NoopGate) EvalUnfiltered(
 	api frontend.API,
-	glApi gl.GoldilocksApi,
+	glApi gl.Chip,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
 	return []gl.QuadraticExtensionVariable{}

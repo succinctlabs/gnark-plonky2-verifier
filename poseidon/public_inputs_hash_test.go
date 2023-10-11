@@ -18,7 +18,7 @@ type TestPublicInputsHashCircuit struct {
 }
 
 func (circuit *TestPublicInputsHashCircuit) Define(api frontend.API) error {
-	glAPI := gl.NewGoldilocksApi(api)
+	glAPI := gl.New(api)
 
 	// BN254 -> Binary(64) -> F
 	var input [3]gl.Variable

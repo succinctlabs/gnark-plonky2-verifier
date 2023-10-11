@@ -9,12 +9,12 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/test"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
-	"github.com/succinctlabs/gnark-plonky2-verifier/types"
+	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
 )
 
 type TestVerifierCircuit struct {
-	Proof        types.Proof
+	Proof        variables.Proof
 	PublicInputs []gl.Variable `gnark:",public"`
 
 	verifierChip       *verifier.VerifierChip `gnark:"-"`
