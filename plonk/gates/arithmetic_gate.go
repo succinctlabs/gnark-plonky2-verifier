@@ -59,7 +59,7 @@ func (g *ArithmeticGate) WireIthOutput(i uint64) uint64 {
 
 func (g *ArithmeticGate) EvalUnfiltered(
 	api frontend.API,
-	glApi gl.Chip,
+	glApi gl.GoldilocksApi,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
 	const0 := vars.localConstants[0]

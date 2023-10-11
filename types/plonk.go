@@ -25,9 +25,9 @@ func NewOpeningSet(numConstants uint64, numRoutedWires uint64, numWires uint64, 
 }
 
 type ProofChallenges struct {
-	PlonkBetas    []gl.Variable
-	PlonkGammas   []gl.Variable
-	PlonkAlphas   []gl.Variable
+	PlonkBetas    []gl.GoldilocksVariable
+	PlonkGammas   []gl.GoldilocksVariable
+	PlonkAlphas   []gl.GoldilocksVariable
 	PlonkZeta     gl.QuadraticExtensionVariable
 	FriChallenges FriChallenges
 }

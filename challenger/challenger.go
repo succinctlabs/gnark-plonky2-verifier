@@ -14,15 +14,15 @@ type Chip struct {
 	api               frontend.API `gnark:"-"`
 	poseidonChip      *poseidon.GoldilocksChip
 	poseidonBN254Chip *poseidon.BN254Chip
-	spongeState       [poseidon.SPONGE_WIDTH]gl.Variable
-	inputBuffer       []gl.Variable
-	outputBuffer      []gl.Variable
+	spongeState       [poseidon.SPONGE_WIDTH]gl.GoldilocksVariable
+	inputBuffer       []gl.GoldilocksVariable
+	outputBuffer      []gl.GoldilocksVariable
 }
 
 func NewChip(api frontend.API) *Chip {
-	var spongeState [poseidon.SPONGE_WIDTH]gl.Variable
-	var inputBuffer []gl.Variable
-	var outputBuffer []gl.Variable
+	var spongeState [poseidon.SPONGE_WIDTH]gl.GoldilocksVariable
+	var inputBuffer []gl.GoldilocksVariable
+	var outputBuffer []gl.GoldilocksVariable
 	for i := 0; i < poseidon.SPONGE_WIDTH; i++ {
 		spongeState[i] = gl.Zero()
 	}
@@ -38,7 +38,7 @@ func NewChip(api frontend.API) *Chip {
 	}
 }
 
-func (c *Chip) ObserveElement(element gl.Variable) {
+func (c *Chip) ObserveElement(element gl.GoldilocksVariable) {
 	c.outputBuffer = clearBuffer(c.outputBuffer)
 	c.inputBuffer = append(c.inputBuffer, element)
 	if len(c.inputBuffer) == poseidon.SPONGE_RATE {
@@ -46,7 +46,7 @@ func (c *Chip) ObserveElement(element gl.Variable) {
 	}
 }
 
-func (c *Chip) ObserveElements(elements []gl.Variable) {
+func (c *Chip) ObserveElements(elements []gl.GoldilocksVariable) {
 	for i := 0; i < len(elements); i++ {
 		c.ObserveElement(elements[i])
 	}
@@ -84,7 +84,7 @@ func (c *Chip) ObserveOpenings(openings fri.Openings) {
 	}
 }
 
-func (c *Chip) GetChallenge() gl.Variable {
+func (c *Chip) GetChallenge() gl.GoldilocksVariable {
 	if len(c.inputBuffer) != 0 || len(c.outputBuffer) == 0 {
 		c.duplexing()
 	}
@@ -95,8 +95,8 @@ func (c *Chip) GetChallenge() gl.Variable {
 	return challenge
 }
 
-func (c *Chip) GetNChallenges(n uint64) []gl.Variable {
-	challenges := make([]gl.Variable, n)
+func (c *Chip) GetNChallenges(n uint64) []gl.GoldilocksVariable {
+	challenges := make([]gl.GoldilocksVariable, n)
 	for i := uint64(0); i < n; i++ {
 		challenges[i] = c.GetChallenge()
 	}
@@ -109,13 +109,13 @@ func (c *Chip) GetExtensionChallenge() gl.QuadraticExtensionVariable {
 }
 
 func (c *Chip) GetHash() poseidon.GoldilocksHashOut {
-	return [4]gl.Variable{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
+	return [4]gl.GoldilocksVariable{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
 }
 
 func (c *Chip) GetFriChallenges(
 	commitPhaseMerkleCaps []types.FriMerkleCap,
 	finalPoly types.PolynomialCoeffs,
-	powWitness gl.Variable,
+	powWitness gl.GoldilocksVariable,
 	degreeBits uint64,
 	config types.FriConfig,
 ) types.FriChallenges {
@@ -142,8 +142,8 @@ func (c *Chip) GetFriChallenges(
 	}
 }
 
-func clearBuffer(buffer []gl.Variable) []gl.Variable {
-	return make([]gl.Variable, 0)
+func clearBuffer(buffer []gl.GoldilocksVariable) []gl.GoldilocksVariable {
+	return make([]gl.GoldilocksVariable, 0)
 }
 
 func (c *Chip) duplexing() {
@@ -152,7 +152,7 @@ func (c *Chip) duplexing() {
 		panic("something went wrong")
 	}
 
-	glApi := gl.NewChip(c.api)
+	glApi := gl.NewGoldilocksApi(c.api)
 
 	for i := 0; i < len(c.inputBuffer); i++ {
 		c.spongeState[i] = glApi.Reduce(c.inputBuffer[i])

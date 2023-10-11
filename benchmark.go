@@ -22,7 +22,7 @@ import (
 
 type BenchmarkPlonky2VerifierCircuit struct {
 	Proof        types.Proof
-	PublicInputs []gl.Variable `gnark:",public"`
+	PublicInputs []gl.GoldilocksVariable `gnark:",public"`
 
 	verifierChip       *verifier.VerifierChip `gnark:"-"`
 	plonky2CircuitName string                 `gnark:"-"`

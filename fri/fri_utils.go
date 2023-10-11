@@ -178,7 +178,7 @@ func friAllPolys(c *types.CommonCircuitData) []PolynomialInfo {
 	return returnArr
 }
 
-func GetInstance(c *types.CommonCircuitData, glApi *gl.Chip, zeta gl.QuadraticExtensionVariable, degreeBits uint64) InstanceInfo {
+func GetInstance(c *types.CommonCircuitData, glApi *gl.GoldilocksApi, zeta gl.QuadraticExtensionVariable, degreeBits uint64) InstanceInfo {
 	zetaBatch := BatchInfo{
 		Point:       zeta,
 		Polynomials: friAllPolys(c),

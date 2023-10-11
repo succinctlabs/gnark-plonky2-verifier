@@ -20,15 +20,15 @@ const BN254_SPONGE_WIDTH int = 4
 const BN254_SPONGE_RATE int = 3
 
 type BN254Chip struct {
-	api frontend.API `gnark:"-"`
-	gl  gl.Chip      `gnark:"-"`
+	api frontend.API     `gnark:"-"`
+	gl  gl.GoldilocksApi `gnark:"-"`
 }
 
 type BN254State = [BN254_SPONGE_WIDTH]frontend.Variable
 type BN254HashOut = frontend.Variable
 
 func NewBN254Chip(api frontend.API) *BN254Chip {
-	return &BN254Chip{api: api, gl: *gl.NewChip(api)}
+	return &BN254Chip{api: api, gl: *gl.NewGoldilocksApi(api)}
 }
 
 func (c *BN254Chip) Poseidon(state BN254State) BN254State {
@@ -39,7 +39,7 @@ func (c *BN254Chip) Poseidon(state BN254State) BN254State {
 	return state
 }
 
-func (c *BN254Chip) HashNoPad(input []gl.Variable) BN254HashOut {
+func (c *BN254Chip) HashNoPad(input []gl.GoldilocksVariable) BN254HashOut {
 	state := BN254State{
 		frontend.Variable(0),
 		frontend.Variable(0),
@@ -69,7 +69,7 @@ func (c *BN254Chip) HashNoPad(input []gl.Variable) BN254HashOut {
 	return BN254HashOut(state[0])
 }
 
-func (c *BN254Chip) HashOrNoop(input []gl.Variable) BN254HashOut {
+func (c *BN254Chip) HashOrNoop(input []gl.GoldilocksVariable) BN254HashOut {
 	if len(input) <= 3 {
 		returnVal := frontend.Variable(0)
 
@@ -94,10 +94,10 @@ func (c *BN254Chip) TwoToOne(left BN254HashOut, right BN254HashOut) BN254HashOut
 	return state[0]
 }
 
-func (c *BN254Chip) ToVec(hash BN254HashOut) []gl.Variable {
+func (c *BN254Chip) ToVec(hash BN254HashOut) []gl.GoldilocksVariable {
 	bits := c.api.ToBinary(hash)
 
-	returnElements := []gl.Variable{}
+	returnElements := []gl.GoldilocksVariable{}
 
 	// Split into 7 byte chunks, since 8 byte chunks can result in collisions
 	chunkSize := 56

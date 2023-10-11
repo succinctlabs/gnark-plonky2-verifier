@@ -12,7 +12,7 @@ import (
 
 type VerifierChip struct {
 	api               frontend.API             `gnark:"-"`
-	glChip            *gl.Chip                 `gnark:"-"`
+	glChip            *gl.GoldilocksApi        `gnark:"-"`
 	poseidonGlChip    *poseidon.GoldilocksChip `gnark:"-"`
 	poseidonBN254Chip *poseidon.BN254Chip      `gnark:"-"`
 	plonkChip         *plonk.PlonkChip         `gnark:"-"`
@@ -20,7 +20,7 @@ type VerifierChip struct {
 }
 
 func NewVerifierChip(api frontend.API, commonCircuitData types.CommonCircuitData) *VerifierChip {
-	glChip := gl.NewChip(api)
+	glChip := gl.NewGoldilocksApi(api)
 	friChip := fri.NewChip(api, &commonCircuitData.FriParams)
 	plonkChip := plonk.NewPlonkChip(api, commonCircuitData)
 	poseidonGlChip := poseidon.NewGoldilocksChip(api)
@@ -35,7 +35,7 @@ func NewVerifierChip(api frontend.API, commonCircuitData types.CommonCircuitData
 	}
 }
 
-func (c *VerifierChip) GetPublicInputsHash(publicInputs []gl.Variable) poseidon.GoldilocksHashOut {
+func (c *VerifierChip) GetPublicInputsHash(publicInputs []gl.GoldilocksVariable) poseidon.GoldilocksHashOut {
 	return c.poseidonGlChip.HashNoPad(publicInputs)
 }
 
@@ -206,7 +206,7 @@ func (c *VerifierChip) rangeCheckProof(proof types.Proof) {
 
 func (c *VerifierChip) Verify(
 	proof types.Proof,
-	publicInputs []gl.Variable,
+	publicInputs []gl.GoldilocksVariable,
 	verifierData types.VerifierOnlyCircuitData,
 	commonData types.CommonCircuitData,
 ) {

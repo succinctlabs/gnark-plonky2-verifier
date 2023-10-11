@@ -14,8 +14,8 @@ import (
 )
 
 type Chip struct {
-	api               frontend.API `gnark:"-"`
-	gl                gl.Chip      `gnark:"-"`
+	api               frontend.API     `gnark:"-"`
+	gl                gl.GoldilocksApi `gnark:"-"`
 	poseidonBN254Chip *poseidon.BN254Chip
 	friParams         *types.FriParams `gnark:"-"`
 }
@@ -29,11 +29,11 @@ func NewChip(
 		api:               api,
 		poseidonBN254Chip: poseidonBN254Chip,
 		friParams:         friParams,
-		gl:                *gl.NewChip(api),
+		gl:                *gl.NewGoldilocksApi(api),
 	}
 }
 
-func (f *Chip) assertLeadingZeros(powWitness gl.Variable, friConfig types.FriConfig) {
+func (f *Chip) assertLeadingZeros(powWitness gl.GoldilocksVariable, friConfig types.FriConfig) {
 	// Asserts that powWitness'es big-endian bit representation has at least `leading_zeros` leading zeros.
 	// Note that this is assuming that the Goldilocks field is being used.  Specfically that the
 	// field is 64 bits long
@@ -58,7 +58,7 @@ func (f *Chip) fromOpeningsAndAlpha(
 }
 
 func (f *Chip) verifyMerkleProofToCapWithCapIndex(
-	leafData []gl.Variable,
+	leafData []gl.GoldilocksVariable,
 	leafIndexBits []frontend.Variable,
 	capIndexBits []frontend.Variable,
 	merkleCap types.FriMerkleCap,
@@ -139,7 +139,7 @@ func (f *Chip) assertNoncanonicalIndicesOK() {
 func (f *Chip) expFromBitsConstBase(
 	base goldilocks.Element,
 	exponentBits []frontend.Variable,
-) gl.Variable {
+) gl.GoldilocksVariable {
 	product := gl.One()
 	for i, bit := range exponentBits {
 		// If the bit is on, we multiply product by base^pow.
@@ -167,7 +167,7 @@ func (f *Chip) expFromBitsConstBase(
 func (f *Chip) calculateSubgroupX(
 	xIndexBits []frontend.Variable,
 	nLog uint64,
-) gl.Variable {
+) gl.GoldilocksVariable {
 	// Compute x from its index
 	// `subgroup_x` is `subgroup[x_index]`, i.e., the actual field element in the domain.
 	// TODO - Make these as global values
@@ -284,7 +284,7 @@ func (f *Chip) interpolate(
 }
 
 func (f *Chip) computeEvaluation(
-	x gl.Variable,
+	x gl.GoldilocksVariable,
 	xIndexWithinCosetBits []frontend.Variable,
 	arityBits uint64,
 	evals []gl.QuadraticExtensionVariable,
@@ -359,7 +359,7 @@ func (f *Chip) verifyQueryRound(
 	precomputedReducedEval []gl.QuadraticExtensionVariable,
 	initialMerkleCaps []types.FriMerkleCap,
 	proof *types.FriProof,
-	xIndex gl.Variable,
+	xIndex gl.GoldilocksVariable,
 	n uint64,
 	nLog uint64,
 	roundProof *types.FriQueryRound,
@@ -437,7 +437,7 @@ func (f *Chip) verifyQueryRound(
 		)
 
 		// Convert evals (array of QE) to fields by taking their 0th degree coefficients
-		fieldEvals := make([]gl.Variable, 0, 2*len(evals))
+		fieldEvals := make([]gl.GoldilocksVariable, 0, 2*len(evals))
 		for j := 0; j < len(evals); j++ {
 			fieldEvals = append(fieldEvals, evals[j][0])
 			fieldEvals = append(fieldEvals, evals[j][1])

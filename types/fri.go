@@ -47,11 +47,11 @@ func NewFriMerkleProof(merkleProofLen uint64) FriMerkleProof {
 }
 
 type FriEvalProof struct {
-	Elements    []gl.Variable // Length = [CommonCircuitData.Constants + CommonCircuitData.NumRoutedWires, CommonCircuitData.NumWires + CommonCircuitData.FriParams.Hiding ? 4 : 0, CommonCircuitData.NumChallenges * (1 + CommonCircuitData.NumPartialProducts) + salt, CommonCircuitData.NumChallenges * CommonCircuitData.QuotientDegreeFactor + salt]
+	Elements    []gl.GoldilocksVariable // Length = [CommonCircuitData.Constants + CommonCircuitData.NumRoutedWires, CommonCircuitData.NumWires + CommonCircuitData.FriParams.Hiding ? 4 : 0, CommonCircuitData.NumChallenges * (1 + CommonCircuitData.NumPartialProducts) + salt, CommonCircuitData.NumChallenges * CommonCircuitData.QuotientDegreeFactor + salt]
 	MerkleProof FriMerkleProof
 }
 
-func NewFriEvalProof(elements []gl.Variable, merkleProof FriMerkleProof) FriEvalProof {
+func NewFriEvalProof(elements []gl.GoldilocksVariable, merkleProof FriMerkleProof) FriEvalProof {
 	return FriEvalProof{Elements: elements, MerkleProof: merkleProof}
 }
 
@@ -88,12 +88,12 @@ type FriProof struct {
 	CommitPhaseMerkleCaps []FriMerkleCap  // Length = Len(CommonCircuitData.FriParams.ReductionArityBits)
 	QueryRoundProofs      []FriQueryRound // Length = CommonCircuitData.FriConfig.FriParams.NumQueryRounds
 	FinalPoly             PolynomialCoeffs
-	PowWitness            gl.Variable
+	PowWitness            gl.GoldilocksVariable
 }
 
 type FriChallenges struct {
 	FriAlpha        gl.QuadraticExtensionVariable
 	FriBetas        []gl.QuadraticExtensionVariable
-	FriPowResponse  gl.Variable
-	FriQueryIndices []gl.Variable
+	FriPowResponse  gl.GoldilocksVariable
+	FriQueryIndices []gl.GoldilocksVariable
 }

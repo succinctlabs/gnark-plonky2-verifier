@@ -25,7 +25,7 @@ func (circuit *TestPoseidonCircuit) Define(api frontend.API) error {
 	poseidonChip := NewGoldilocksChip(api)
 	output := poseidonChip.Poseidon(input)
 
-	glApi := gl.NewChip(api)
+	glApi := gl.NewGoldilocksApi(api)
 
 	for i := 0; i < 12; i++ {
 		glApi.AssertIsEqual(output[i], gl.NewVariable(circuit.Out[i]))

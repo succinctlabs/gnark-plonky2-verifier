@@ -18,10 +18,10 @@ type TestPublicInputsHashCircuit struct {
 }
 
 func (circuit *TestPublicInputsHashCircuit) Define(api frontend.API) error {
-	glAPI := gl.NewChip(api)
+	glAPI := gl.NewGoldilocksApi(api)
 
 	// BN254 -> Binary(64) -> F
-	var input [3]gl.Variable
+	var input [3]gl.GoldilocksVariable
 	for i := 0; i < 3; i++ {
 		input[i] = gl.NewVariable(api.FromBinary(api.ToBinary(circuit.In[i], 64)...))
 	}

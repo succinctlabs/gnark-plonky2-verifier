@@ -16,7 +16,7 @@ type Proof struct {
 
 type ProofWithPublicInputs struct {
 	Proof        Proof
-	PublicInputs []gl.Variable // Length = CommonCircuitData.NumPublicInputs
+	PublicInputs []gl.GoldilocksVariable // Length = CommonCircuitData.NumPublicInputs
 }
 
 type VerifierOnlyCircuitData struct {
@@ -46,6 +46,6 @@ type CommonCircuitData struct {
 	NumGateConstraints   uint64
 	NumConstants         uint64
 	NumPublicInputs      uint64
-	KIs                  []gl.Variable
+	KIs                  []gl.GoldilocksVariable
 	NumPartialProducts   uint64
 }

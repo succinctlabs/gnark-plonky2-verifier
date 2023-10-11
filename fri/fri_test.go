@@ -25,7 +25,7 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	commonCircuitData := verifier.DeserializeCommonCircuitData(circuit.commonCircuitDataFilename)
 	verifierOnlyCircuitData := verifier.DeserializeVerifierOnlyCircuitData(circuit.verifierOnlyCircuitDataFilename)
 
-	glApi := gl.NewChip(api)
+	glApi := gl.NewGoldilocksApi(api)
 	poseidonChip := poseidon.NewGoldilocksChip(api)
 	friChip := fri.NewChip(api, &commonCircuitData.FriParams)
 	challengerChip := challenger.NewChip(api)

@@ -13,8 +13,8 @@ type PlonkChip struct {
 
 	commonData types.CommonCircuitData `gnark:"-"`
 
-	DEGREE        gl.Variable                   `gnark:"-"`
-	DEGREE_BITS_F gl.Variable                   `gnark:"-"`
+	DEGREE        gl.GoldilocksVariable         `gnark:"-"`
+	DEGREE_BITS_F gl.GoldilocksVariable         `gnark:"-"`
 	DEGREE_QE     gl.QuadraticExtensionVariable `gnark:"-"`
 
 	evaluateGatesChip *gates.EvaluateGatesChip
@@ -44,7 +44,7 @@ func NewPlonkChip(api frontend.API, commonData types.CommonCircuitData) *PlonkCh
 }
 
 func (p *PlonkChip) expPowerOf2Extension(x gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
-	glApi := gl.NewChip(p.api)
+	glApi := gl.NewGoldilocksApi(p.api)
 	for i := uint64(0); i < p.commonData.DegreeBits; i++ {
 		x = glApi.MulExtension(x, x)
 	}
@@ -53,7 +53,7 @@ func (p *PlonkChip) expPowerOf2Extension(x gl.QuadraticExtensionVariable) gl.Qua
 
 func (p *PlonkChip) evalL0(x gl.QuadraticExtensionVariable, xPowN gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
 	// L_0(x) = (x^n - 1) / (n * (x - 1))
-	glApi := gl.NewChip(p.api)
+	glApi := gl.NewGoldilocksApi(p.api)
 	evalZeroPoly := glApi.SubExtension(
 		xPowN,
 		gl.OneExtension(),
@@ -74,7 +74,7 @@ func (p *PlonkChip) checkPartialProducts(
 	challengeNum uint64,
 	openings types.OpeningSet,
 ) []gl.QuadraticExtensionVariable {
-	glApi := gl.NewChip(p.api)
+	glApi := gl.NewGoldilocksApi(p.api)
 	numPartProds := p.commonData.NumPartialProducts
 	quotDegreeFactor := p.commonData.QuotientDegreeFactor
 
@@ -110,7 +110,7 @@ func (p *PlonkChip) evalVanishingPoly(
 	openings types.OpeningSet,
 	zetaPowN gl.QuadraticExtensionVariable,
 ) []gl.QuadraticExtensionVariable {
-	glApi := gl.NewChip(p.api)
+	glApi := gl.NewGoldilocksApi(p.api)
 	constraintTerms := p.evaluateGatesChip.EvaluateGateConstraints(vars)
 
 	// Calculate the k[i] * x
@@ -197,7 +197,7 @@ func (p *PlonkChip) Verify(
 	openings types.OpeningSet,
 	publicInputsHash poseidon.GoldilocksHashOut,
 ) {
-	glApi := gl.NewChip(p.api)
+	glApi := gl.NewGoldilocksApi(p.api)
 
 	// Calculate zeta^n
 	zetaPowN := p.expPowerOf2Extension(proofChallenges.PlonkZeta)
