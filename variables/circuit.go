@@ -2,9 +2,7 @@ package variables
 
 import (
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
-	"github.com/succinctlabs/gnark-plonky2-verifier/plonk/gates"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
-	"github.com/succinctlabs/gnark-plonky2-verifier/types"
 )
 
 type Proof struct {
@@ -23,30 +21,4 @@ type ProofWithPublicInputs struct {
 type VerifierOnlyCircuitData struct {
 	ConstantSigmasCap FriMerkleCap
 	CircuitDigest     poseidon.BN254HashOut
-}
-
-type CircuitConfig struct {
-	NumWires                uint64
-	NumRoutedWires          uint64
-	NumConstants            uint64
-	UseBaseArithmeticGate   bool
-	SecurityBits            uint64
-	NumChallenges           uint64
-	ZeroKnowledge           bool
-	MaxQuotientDegreeFactor uint64
-	FriConfig               types.FriConfig
-}
-
-type CommonCircuitData struct {
-	Config               CircuitConfig
-	FriParams            types.FriParams
-	Gates                []gates.Gate
-	SelectorsInfo        gates.SelectorsInfo
-	DegreeBits           uint64
-	QuotientDegreeFactor uint64
-	NumGateConstraints   uint64
-	NumConstants         uint64
-	NumPublicInputs      uint64
-	KIs                  []gl.Variable
-	NumPartialProducts   uint64
 }

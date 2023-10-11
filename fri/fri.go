@@ -18,20 +18,58 @@ type Chip struct {
 	api               frontend.API `gnark:"-"`
 	gl                gl.Chip      `gnark:"-"`
 	poseidonBN254Chip *poseidon.BN254Chip
+	commonData        *types.CommonCircuitData
 	friParams         *types.FriParams `gnark:"-"`
 }
 
 func NewChip(
 	api frontend.API,
+	commonData *types.CommonCircuitData,
 	friParams *types.FriParams,
 ) *Chip {
 	poseidonBN254Chip := poseidon.NewBN254Chip(api)
 	return &Chip{
 		api:               api,
 		poseidonBN254Chip: poseidonBN254Chip,
+		commonData:        commonData,
 		friParams:         friParams,
 		gl:                *gl.New(api),
 	}
+}
+
+func (f *Chip) GetInstance(zeta gl.QuadraticExtensionVariable) InstanceInfo {
+	zetaBatch := BatchInfo{
+		Point:       zeta,
+		Polynomials: friAllPolys(f.commonData),
+	}
+
+	g := gl.PrimitiveRootOfUnity(f.commonData.DegreeBits)
+	zetaNext := f.gl.MulExtension(
+		gl.NewVariable(g.Uint64()).ToQuadraticExtension(),
+		zeta,
+	)
+
+	zetaNextBath := BatchInfo{
+		Point:       zetaNext,
+		Polynomials: friZSPolys(f.commonData),
+	}
+
+	return InstanceInfo{
+		Oracles: friOracles(f.commonData),
+		Batches: []BatchInfo{zetaBatch, zetaNextBath},
+	}
+}
+
+func (f *Chip) ToOpenings(c variables.OpeningSet) Openings {
+	values := c.Constants                         // num_constants + 1
+	values = append(values, c.PlonkSigmas...)     // num_routed_wires
+	values = append(values, c.Wires...)           // num_wires
+	values = append(values, c.PlonkZs...)         // num_challenges
+	values = append(values, c.PartialProducts...) // num_challenges * num_partial_products
+	values = append(values, c.QuotientPolys...)   // num_challenges * quotient_degree_factor
+	zetaBatch := OpeningBatch{Values: values}
+	zetaNextBatch := OpeningBatch{Values: c.PlonkZsNext}
+	return Openings{Batches: []OpeningBatch{zetaBatch, zetaNextBatch}}
 }
 
 func (f *Chip) assertLeadingZeros(powWitness gl.Variable, friConfig types.FriConfig) {

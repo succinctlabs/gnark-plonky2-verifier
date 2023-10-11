@@ -8,51 +8,50 @@ import (
 	"os"
 	"time"
 
-	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
+	"github.com/succinctlabs/gnark-plonky2-verifier/types"
 	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
+	"github.com/consensys/gnark/backend/plonk"
 	"github.com/consensys/gnark/constraint"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
+	"github.com/consensys/gnark/frontend/cs/scs"
 	"github.com/consensys/gnark/profile"
+	"github.com/consensys/gnark/test"
 )
 
-type BenchmarkPlonky2VerifierCircuit struct {
-	Proof        variables.Proof
-	PublicInputs []gl.Variable `gnark:",public"`
+func runBenchmark(plonky2Circuit string, proofSystem string, profileCircuit bool, dummy bool, saveArtifacts bool) {
+	commonCircuitData := types.DeserializeCommonCircuitData("testdata/" + plonky2Circuit + "/common_circuit_data.json")
 
-	verifierChip       *verifier.VerifierChip `gnark:"-"`
-	plonky2CircuitName string                 `gnark:"-"`
-}
+	proofWithPis := variables.DeserializeProofWithPublicInputs(types.ReadProofWithPublicInputs("testdata/" + plonky2Circuit + "/proof_with_public_inputs.json"))
+	verifierOnlyCircuitData := variables.DeserializeVerifierOnlyCircuitData(types.ReadVerifierOnlyCircuitData("testdata/" + plonky2Circuit + "/verifier_only_circuit_data.json"))
 
-func (circuit *BenchmarkPlonky2VerifierCircuit) Define(api frontend.API) error {
-	circuitDirname := "./verifier/data/" + circuit.plonky2CircuitName + "/"
-	commonCircuitData := verifier.DeserializeCommonCircuitData(circuitDirname + "common_circuit_data.json")
-	verifierOnlyCircuitData := verifier.DeserializeVerifierOnlyCircuitData(circuitDirname + "verifier_only_circuit_data.json")
-
-	circuit.verifierChip = verifier.NewVerifierChip(api, commonCircuitData)
-
-	circuit.verifierChip.Verify(circuit.Proof, circuit.PublicInputs, verifierOnlyCircuitData, commonCircuitData)
-
-	return nil
-}
-
-func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, outputSolidity bool, dummy bool) (constraint.ConstraintSystem, groth16.ProvingKey, groth16.VerifyingKey) {
-	circuit := BenchmarkPlonky2VerifierCircuit{
-		plonky2CircuitName: plonky2Circuit,
+	circuit := verifier.ExampleVerifierCircuit{
+		Proof:                   proofWithPis.Proof,
+		PublicInputs:            proofWithPis.PublicInputs,
+		VerifierOnlyCircuitData: verifierOnlyCircuitData,
+		CommonCircuitData:       commonCircuitData,
 	}
-	proofWithPis := verifier.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
-	circuit.Proof = proofWithPis.Proof
-	circuit.PublicInputs = proofWithPis.PublicInputs
 
 	var p *profile.Profile
 	if profileCircuit {
 		p = profile.Start()
 	}
-	r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &circuit)
+
+	var builder frontend.NewBuilder
+	if proofSystem == "plonk" {
+		builder = scs.NewBuilder
+	} else if proofSystem == "groth16" {
+		builder = r1cs.NewBuilder
+	} else {
+		fmt.Println("Please provide a valid proof system to benchmark, we only support plonk and groth16")
+		os.Exit(1)
+	}
+
+	r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), builder, &circuit)
 	if err != nil {
 		fmt.Println("error in building circuit", err)
 		os.Exit(1)
@@ -68,16 +67,116 @@ func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, 
 		println("r1cs.GetNbInternalVariables(): ", r1cs.GetNbInternalVariables())
 	}
 
+	witness := verifier.ExampleVerifierCircuit{
+		Proof:                   proofWithPis.Proof,
+		PublicInputs:            proofWithPis.PublicInputs,
+		VerifierOnlyCircuitData: verifierOnlyCircuitData,
+		CommonCircuitData:       commonCircuitData,
+	}
+
+	if proofSystem == "plonk" {
+		plonkProof(r1cs, witness, dummy, saveArtifacts)
+	} else if proofSystem == "groth16" {
+		groth16Proof(r1cs, witness, dummy, saveArtifacts)
+	} else {
+		panic("Please provide a valid proof system to benchmark, we only support plonk and groth16")
+	}
+}
+
+func plonkProof(r1cs constraint.ConstraintSystem, assignment verifier.ExampleVerifierCircuit, dummy bool, saveArtifacts bool) {
+	var pk plonk.ProvingKey
+	var vk plonk.VerifyingKey
+	var err error
+
 	// Don't serialize the circuit for now, since it takes up too much memory
-	/*
-		if serialize {
-			fR1CS, _ := os.Create("circuit")
-			r1cs.WriteTo(fR1CS)
-			fR1CS.Close()
+	// if saveArtifacts {
+	// 	fR1CS, _ := os.Create("circuit")
+	// 	r1cs.WriteTo(fR1CS)
+	// 	fR1CS.Close()
+	// }
+
+	fmt.Println("Running circuit setup", time.Now())
+	if dummy {
+		panic("dummy setup not supported for plonk")
+	} else {
+		fmt.Println("Using real setup")
+		srs, err := test.NewKZGSRS(r1cs)
+		if err != nil {
+			panic(err)
 		}
-	*/
+		pk, vk, err = plonk.Setup(r1cs, srs)
+	}
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	if saveArtifacts {
+		fPK, _ := os.Create("proving.key")
+		pk.WriteTo(fPK)
+		fPK.Close()
+
+		if vk != nil {
+			fVK, _ := os.Create("verifying.key")
+			vk.WriteTo(fVK)
+			fVK.Close()
+		}
+
+		fSolidity, _ := os.Create("proof.sol")
+		err = vk.ExportSolidity(fSolidity)
+	}
+
+	fmt.Println("Generating witness", time.Now())
+	witness, _ := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
+	publicWitness, _ := witness.Public()
+	if saveArtifacts {
+		fWitness, _ := os.Create("witness")
+		witness.WriteTo(fWitness)
+		fWitness.Close()
+	}
+
+	fmt.Println("Creating proof", time.Now())
+	proof, err := plonk.Prove(r1cs, pk, witness)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	if saveArtifacts {
+		fProof, _ := os.Create("proof.proof")
+		proof.WriteTo(fProof)
+		fProof.Close()
+	}
+
+	if vk == nil {
+		fmt.Println("vk is nil, means you're using dummy setup and we skip verification of proof")
+		return
+	}
+
+	fmt.Println("Verifying proof", time.Now())
+	err = plonk.Verify(proof, vk, publicWitness)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	const fpSize = 4 * 8
+	var buf bytes.Buffer
+	proof.WriteRawTo(&buf)
+	proofBytes := buf.Bytes()
+	fmt.Printf("proofBytes: %v\n", proofBytes)
+}
+
+func groth16Proof(r1cs constraint.ConstraintSystem, assignment verifier.ExampleVerifierCircuit, dummy bool, saveArtifacts bool) {
 	var pk groth16.ProvingKey
 	var vk groth16.VerifyingKey
+	var err error
+
+	// Don't serialize the circuit for now, since it takes up too much memory
+	// if saveArtifacts {
+	// 	fR1CS, _ := os.Create("circuit")
+	// 	r1cs.WriteTo(fR1CS)
+	// 	fR1CS.Close()
+	// }
 
 	fmt.Println("Running circuit setup", time.Now())
 	if dummy {
@@ -92,37 +191,25 @@ func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, 
 		os.Exit(1)
 	}
 
-	if serialize {
+	if saveArtifacts {
 		fPK, _ := os.Create("proving.key")
 		pk.WriteTo(fPK)
 		fPK.Close()
 
-		fVK, _ := os.Create("verifying.key")
-		vk.WriteTo(fVK)
-		fVK.Close()
-	}
+		if vk != nil {
+			fVK, _ := os.Create("verifying.key")
+			vk.WriteTo(fVK)
+			fVK.Close()
+		}
 
-	if outputSolidity {
 		fSolidity, _ := os.Create("proof.sol")
 		err = vk.ExportSolidity(fSolidity)
 	}
 
-	return r1cs, pk, vk
-}
-
-func createProof(plonky2Circuit string, r1cs constraint.ConstraintSystem, pk groth16.ProvingKey, vk groth16.VerifyingKey, serialize bool) groth16.Proof {
-	proofWithPis := verifier.DeserializeProofWithPublicInputs("./verifier/data/" + plonky2Circuit + "/proof_with_public_inputs.json")
-
-	// Witness
-	assignment := &BenchmarkPlonky2VerifierCircuit{
-		Proof:        proofWithPis.Proof,
-		PublicInputs: proofWithPis.PublicInputs,
-	}
-
 	fmt.Println("Generating witness", time.Now())
-	witness, _ := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
+	witness, _ := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
 	publicWitness, _ := witness.Public()
-	if serialize {
+	if saveArtifacts {
 		fWitness, _ := os.Create("witness")
 		witness.WriteTo(fWitness)
 		fWitness.Close()
@@ -134,15 +221,15 @@ func createProof(plonky2Circuit string, r1cs constraint.ConstraintSystem, pk gro
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	if serialize {
+	if saveArtifacts {
 		fProof, _ := os.Create("proof.proof")
 		proof.WriteTo(fProof)
 		fProof.Close()
 	}
 
 	if vk == nil {
-		fmt.Println("vk is nil, means you're using dummy setup and we skip verification step")
-		return proof
+		fmt.Println("vk is nil, means you're using dummy setup and we skip verification of proof")
+		return
 	}
 
 	fmt.Println("Verifying proof", time.Now())
@@ -184,14 +271,14 @@ func createProof(plonky2Circuit string, r1cs constraint.ConstraintSystem, pk gro
 	println("c[0] is ", c[0].String())
 	println("c[1] is ", c[1].String())
 
-	return proof
 }
 
 func main() {
 	plonky2Circuit := flag.String("plonky2-circuit", "", "plonky2 circuit to benchmark")
-	profileCircuit := flag.Bool("profile", false, "profile the circuit")
-	serialize := flag.Bool("serialize", false, "serialize the circuit")
-	outputSolidity := flag.Bool("solidity", false, "output solidity code for the circuit")
+	proofSystem := flag.String("proof-system", "groth16", "proof system to benchmark")
+	profileCircuit := flag.Bool("profile", true, "profile the circuit")
+	dummySetup := flag.Bool("dummy", true, "use dummy setup")
+	saveArtifacts := flag.Bool("save", false, "save circuit artifacts")
 
 	flag.Parse()
 
@@ -200,6 +287,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	r1cs, pk, vk := compileCircuit(*plonky2Circuit, *profileCircuit, *serialize, *outputSolidity, true)
-	createProof(*plonky2Circuit, r1cs, pk, vk, *serialize)
+	if *proofSystem == "plonk" {
+		*dummySetup = false
+	}
+
+	fmt.Printf("Running benchmark for %s circuit with proof system %s\n", *plonky2Circuit, *proofSystem)
+	fmt.Printf("Profiling: %t, DummySetup: %t, SaveArtifacts: %t\n", *profileCircuit, *dummySetup, *saveArtifacts)
+
+	runBenchmark(*plonky2Circuit, *proofSystem, *profileCircuit, *dummySetup, *saveArtifacts)
 }
