@@ -7,6 +7,7 @@ import (
 	"github.com/succinctlabs/gnark-plonky2-verifier/fri"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
+	"github.com/succinctlabs/gnark-plonky2-verifier/types"
 	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
 )
 
@@ -117,7 +118,7 @@ func (c *Chip) GetFriChallenges(
 	finalPoly variables.PolynomialCoeffs,
 	powWitness gl.Variable,
 	degreeBits uint64,
-	config variables.FriConfig,
+	config types.FriConfig,
 ) variables.FriChallenges {
 	numFriQueries := config.NumQueryRounds
 	friAlpha := c.GetExtensionChallenge()

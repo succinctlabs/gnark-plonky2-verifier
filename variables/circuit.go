@@ -4,6 +4,7 @@ import (
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/plonk/gates"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
+	"github.com/succinctlabs/gnark-plonky2-verifier/types"
 )
 
 type Proof struct {
@@ -33,12 +34,12 @@ type CircuitConfig struct {
 	NumChallenges           uint64
 	ZeroKnowledge           bool
 	MaxQuotientDegreeFactor uint64
-	FriConfig               FriConfig
+	FriConfig               types.FriConfig
 }
 
 type CommonCircuitData struct {
 	Config               CircuitConfig
-	FriParams            FriParams
+	FriParams            types.FriParams
 	Gates                []gates.Gate
 	SelectorsInfo        gates.SelectorsInfo
 	DegreeBits           uint64

@@ -297,33 +297,34 @@ func DeserializeProofWithPublicInputs(path string) variables.ProofWithPublicInpu
 	return proofWithPis
 }
 
-func DeserializeProofChallenges(path string) variables.ProofChallenges {
-	jsonFile, err := os.Open(path)
-	if err != nil {
-		panic(err)
-	}
+// TODO: this seemed unused?
+// func DeserializeProofChallenges(path string) variables.ProofChallenges {
+// 	jsonFile, err := os.Open(path)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	defer jsonFile.Close()
-	rawBytes, _ := io.ReadAll(jsonFile)
+// 	defer jsonFile.Close()
+// 	rawBytes, _ := io.ReadAll(jsonFile)
 
-	var raw ProofChallengesRaw
-	err = json.Unmarshal(rawBytes, &raw)
-	if err != nil {
-		panic(err)
-	}
+// 	var raw ProofChallengesRaw
+// 	err = json.Unmarshal(rawBytes, &raw)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	var proofChallenges variables.ProofChallenges
-	proofChallenges.PlonkBetas = gl.Uint64ArrayToVariableArray(raw.PlonkBetas)
-	proofChallenges.PlonkGammas = gl.Uint64ArrayToVariableArray(raw.PlonkGammas)
-	proofChallenges.PlonkAlphas = gl.Uint64ArrayToVariableArray(raw.PlonkAlphas)
-	proofChallenges.PlonkZeta = gl.Uint64ArrayToQuadraticExtension(raw.PlonkZeta)
-	proofChallenges.FriChallenges.FriAlpha = gl.Uint64ArrayToQuadraticExtension(raw.FriChallenges.FriAlpha)
-	proofChallenges.FriChallenges.FriBetas = gl.Uint64ArrayToQuadraticExtensionArray(raw.FriChallenges.FriBetas)
-	proofChallenges.FriChallenges.FriPowResponse = gl.NewVariable(raw.FriChallenges.FriPowResponse)
-	proofChallenges.FriChallenges.FriQueryIndices = gl.Uint64ArrayToVariableArray(raw.FriChallenges.FriQueryIndices)
+// 	var proofChallenges variables.ProofChallenges
+// 	proofChallenges.PlonkBetas = gl.Uint64ArrayToVariableArray(raw.PlonkBetas)
+// 	proofChallenges.PlonkGammas = gl.Uint64ArrayToVariableArray(raw.PlonkGammas)
+// 	proofChallenges.PlonkAlphas = gl.Uint64ArrayToVariableArray(raw.PlonkAlphas)
+// 	proofChallenges.PlonkZeta = gl.Uint64ArrayToQuadraticExtension(raw.PlonkZeta)
+// 	proofChallenges.FriChallenges.FriAlpha = gl.Uint64ArrayToQuadraticExtension(raw.FriChallenges.FriAlpha)
+// 	proofChallenges.FriChallenges.FriBetas = gl.Uint64ArrayToQuadraticExtensionArray(raw.FriChallenges.FriBetas)
+// 	proofChallenges.FriChallenges.FriPowResponse = gl.NewVariable(raw.FriChallenges.FriPowResponse)
+// 	proofChallenges.FriChallenges.FriQueryIndices = gl.Uint64ArrayToVariableArray(raw.FriChallenges.FriQueryIndices)
 
-	return proofChallenges
-}
+// 	return proofChallenges
+// }
 
 func ReductionArityBits(
 	arityBits uint64,
