@@ -67,26 +67,27 @@ func runBenchmark(plonky2Circuit string, proofSystem string, profileCircuit bool
 		println("r1cs.GetNbInternalVariables(): ", r1cs.GetNbInternalVariables())
 	}
 
-	witness := verifier.ExampleVerifierCircuit{
-		Proof:                   proofWithPis.Proof,
-		PublicInputs:            proofWithPis.PublicInputs,
-		VerifierOnlyCircuitData: verifierOnlyCircuitData,
-		CommonCircuitData:       commonCircuitData,
-	}
-
 	if proofSystem == "plonk" {
-		plonkProof(r1cs, witness, dummy, saveArtifacts)
+		plonkProof(r1cs, plonky2Circuit, dummy, saveArtifacts)
 	} else if proofSystem == "groth16" {
-		groth16Proof(r1cs, witness, dummy, saveArtifacts)
+		groth16Proof(r1cs, plonky2Circuit, dummy, saveArtifacts)
 	} else {
 		panic("Please provide a valid proof system to benchmark, we only support plonk and groth16")
 	}
 }
 
-func plonkProof(r1cs constraint.ConstraintSystem, assignment verifier.ExampleVerifierCircuit, dummy bool, saveArtifacts bool) {
+func plonkProof(r1cs constraint.ConstraintSystem, circuitName string, dummy bool, saveArtifacts bool) {
 	var pk plonk.ProvingKey
 	var vk plonk.VerifyingKey
 	var err error
+
+	proofWithPis := variables.DeserializeProofWithPublicInputs(types.ReadProofWithPublicInputs("testdata/" + circuitName + "/proof_with_public_inputs.json"))
+	verifierOnlyCircuitData := variables.DeserializeVerifierOnlyCircuitData(types.ReadVerifierOnlyCircuitData("testdata/" + circuitName + "/verifier_only_circuit_data.json"))
+	assignment := verifier.ExampleVerifierCircuit{
+		Proof:                   proofWithPis.Proof,
+		PublicInputs:            proofWithPis.PublicInputs,
+		VerifierOnlyCircuitData: verifierOnlyCircuitData,
+	}
 
 	// Don't serialize the circuit for now, since it takes up too much memory
 	// if saveArtifacts {
@@ -166,11 +167,18 @@ func plonkProof(r1cs constraint.ConstraintSystem, assignment verifier.ExampleVer
 	fmt.Printf("proofBytes: %v\n", proofBytes)
 }
 
-func groth16Proof(r1cs constraint.ConstraintSystem, assignment verifier.ExampleVerifierCircuit, dummy bool, saveArtifacts bool) {
+func groth16Proof(r1cs constraint.ConstraintSystem, circuitName string, dummy bool, saveArtifacts bool) {
 	var pk groth16.ProvingKey
 	var vk groth16.VerifyingKey
 	var err error
 
+	proofWithPis := variables.DeserializeProofWithPublicInputs(types.ReadProofWithPublicInputs("testdata/" + circuitName + "/proof_with_public_inputs.json"))
+	verifierOnlyCircuitData := variables.DeserializeVerifierOnlyCircuitData(types.ReadVerifierOnlyCircuitData("testdata/" + circuitName + "/verifier_only_circuit_data.json"))
+	assignment := verifier.ExampleVerifierCircuit{
+		Proof:                   proofWithPis.Proof,
+		PublicInputs:            proofWithPis.PublicInputs,
+		VerifierOnlyCircuitData: verifierOnlyCircuitData,
+	}
 	// Don't serialize the circuit for now, since it takes up too much memory
 	// if saveArtifacts {
 	// 	fR1CS, _ := os.Create("circuit")

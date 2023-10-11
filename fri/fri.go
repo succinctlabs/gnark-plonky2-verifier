@@ -15,11 +15,11 @@ import (
 )
 
 type Chip struct {
-	api               frontend.API `gnark:"-"`
-	gl                gl.Chip      `gnark:"-"`
-	poseidonBN254Chip *poseidon.BN254Chip
-	commonData        *types.CommonCircuitData
-	friParams         *types.FriParams `gnark:"-"`
+	api               frontend.API             `gnark:"-"`
+	gl                gl.Chip                  `gnark:"-"`
+	poseidonBN254Chip *poseidon.BN254Chip      `gnark:"-"`
+	commonData        *types.CommonCircuitData `gnark:"-"`
+	friParams         *types.FriParams         `gnark:"-"`
 }
 
 func NewChip(
