@@ -40,7 +40,7 @@ func (circuit *BenchmarkPlonky2VerifierCircuit) Define(api frontend.API) error {
 	return nil
 }
 
-func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, outputSolidity bool) (constraint.ConstraintSystem, groth16.ProvingKey, groth16.VerifyingKey) {
+func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, outputSolidity bool, dummy bool) (constraint.ConstraintSystem, groth16.ProvingKey, groth16.VerifyingKey) {
 	circuit := BenchmarkPlonky2VerifierCircuit{
 		plonky2CircuitName: plonky2Circuit,
 	}
@@ -76,9 +76,17 @@ func compileCircuit(plonky2Circuit string, profileCircuit bool, serialize bool, 
 			fR1CS.Close()
 		}
 	*/
+	var pk groth16.ProvingKey
+	var vk groth16.VerifyingKey
 
 	fmt.Println("Running circuit setup", time.Now())
-	pk, vk, err := groth16.Setup(r1cs)
+	if dummy {
+		fmt.Println("Using dummy setup")
+		pk, err = groth16.DummySetup(r1cs)
+	} else {
+		fmt.Println("Using real setup")
+		pk, vk, err = groth16.Setup(r1cs)
+	}
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -130,6 +138,11 @@ func createProof(plonky2Circuit string, r1cs constraint.ConstraintSystem, pk gro
 		fProof, _ := os.Create("proof.proof")
 		proof.WriteTo(fProof)
 		fProof.Close()
+	}
+
+	if vk == nil {
+		fmt.Println("vk is nil, means you're using dummy setup and we skip verification step")
+		return proof
 	}
 
 	fmt.Println("Verifying proof", time.Now())
@@ -187,6 +200,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	r1cs, pk, vk := compileCircuit(*plonky2Circuit, *profileCircuit, *serialize, *outputSolidity)
+	r1cs, pk, vk := compileCircuit(*plonky2Circuit, *profileCircuit, *serialize, *outputSolidity, true)
 	createProof(*plonky2Circuit, r1cs, pk, vk, *serialize)
 }

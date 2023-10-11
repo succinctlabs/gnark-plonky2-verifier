@@ -323,8 +323,18 @@ func (p *GoldilocksApi) RangeCheck(x GoldilocksVariable) {
 		panic(err)
 	}
 
+	// We check that this is a valid decomposition of the Goldilock's element and range-check each limb.
 	mostSigBits := result[0]
 	leastSigBits := result[1]
+	p.api.AssertIsEqual(
+		p.api.Add(
+			p.api.Mul(mostSigBits, uint64(math.Pow(2, 32))),
+			leastSigBits,
+		),
+		x.Limb,
+	)
+	rangeChecker.Check(mostSigBits, 32)
+	rangeChecker.Check(leastSigBits, 32)
 
 	// If the most significant bits are all 1, then we need to check that the least significant bits are all zero
 	// in order for element to be less than the Goldilock's modulus.
