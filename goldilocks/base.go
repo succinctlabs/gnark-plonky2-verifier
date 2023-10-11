@@ -77,12 +77,14 @@ func NegOne() GoldilocksVariable {
 
 // The chip used for Goldilocks field operations.
 type GoldilocksApi struct {
-	api frontend.API
+	api          frontend.API
+	rangeChecker frontend.Rangechecker
 }
 
 // Creates a new Goldilocks chip.
 func NewGoldilocksApi(api frontend.API) *GoldilocksApi {
-	return &GoldilocksApi{api: api}
+	rangeChecker := rangecheck.New(api)
+	return &GoldilocksApi{api: api, rangeChecker: rangeChecker}
 }
 
 // Adds two field elements such that x + y = z within the Golidlocks field.
@@ -182,8 +184,7 @@ func (p *GoldilocksApi) Reduce(x GoldilocksVariable) GoldilocksVariable {
 	}
 
 	quotient := result[0]
-	rangeCheckNbBits := RANGE_CHECK_NB_BITS
-	p.api.ToBinary(quotient, rangeCheckNbBits)
+	p.rangeChecker.Check(quotient, RANGE_CHECK_NB_BITS)
 
 	remainder := NewVariable(result[1])
 	p.RangeCheck(remainder)
@@ -205,7 +206,7 @@ func (p *GoldilocksApi) ReduceWithMaxBits(x GoldilocksVariable, maxNbBits uint64
 	}
 
 	quotient := result[0]
-	p.api.ToBinary(quotient, int(maxNbBits))
+	p.rangeChecker.Check(quotient, int(maxNbBits))
 
 	remainder := NewVariable(result[1])
 	p.RangeCheck(remainder)

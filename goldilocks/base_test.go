@@ -1,12 +1,16 @@
 package goldilocks
 
 import (
+	"fmt"
 	"math/big"
+	"os"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend"
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/frontend/cs/scs"
+	"github.com/consensys/gnark/profile"
 	"github.com/consensys/gnark/test"
 )
 
@@ -37,6 +41,43 @@ func TestGoldilocksRangeCheck(t *testing.T) {
 	maxValidVal := new(big.Int).Sub(MODULUS, one)
 	witness.X = maxValidVal
 	assert.ProverSucceeded(&circuit, &witness, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16))
+}
+
+type TestGoldilocksRangeCheckBenchmarkCircuit struct {
+	X []frontend.Variable
+}
+
+func (c *TestGoldilocksRangeCheckBenchmarkCircuit) Define(api frontend.API) error {
+	glApi := NewGoldilocksApi(api)
+	for _, x := range c.X {
+		glApi.RangeCheck(NewVariable(x))
+	}
+	return nil
+}
+
+func BenchmarkGoldilocksRangeCheck(b *testing.B) {
+	var sizes = []int{5, 10, 15}
+	for i := 0; i < len(sizes); i++ {
+		var circuit, witness TestGoldilocksRangeCheckBenchmarkCircuit
+		circuit.X = make([]frontend.Variable, 2<<sizes[i])
+		witness.X = make([]frontend.Variable, 2<<sizes[i])
+		for j := 0; j < len(circuit.X); j++ {
+			witness.X[j] = 1
+		}
+		p := profile.Start()
+		r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), scs.NewBuilder, &circuit)
+		if err != nil {
+			fmt.Println("error in building circuit", err)
+			os.Exit(1)
+		}
+		p.Stop()
+		p.Top()
+		println("r1cs.GetNbCoefficients(): ", r1cs.GetNbCoefficients())
+		println("r1cs.GetNbConstraints(): ", r1cs.GetNbConstraints())
+		println("r1cs.GetNbSecretVariables(): ", r1cs.GetNbSecretVariables())
+		println("r1cs.GetNbPublicVariables(): ", r1cs.GetNbPublicVariables())
+		println("r1cs.GetNbInternalVariables(): ", r1cs.GetNbInternalVariables())
+	}
 }
 
 type TestGoldilocksMulAddCircuit struct {
