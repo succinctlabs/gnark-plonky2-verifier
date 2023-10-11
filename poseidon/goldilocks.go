@@ -11,9 +11,9 @@ const MAX_WIDTH = 12
 const SPONGE_WIDTH = 12
 const SPONGE_RATE = 8
 
-type GoldilocksState = [SPONGE_WIDTH]gl.GoldilocksVariable
+type GoldilocksState = [SPONGE_WIDTH]gl.Variable
 type GoldilocksStateExtension = [SPONGE_WIDTH]gl.QuadraticExtensionVariable
-type GoldilocksHashOut = [4]gl.GoldilocksVariable
+type GoldilocksHashOut = [4]gl.Variable
 
 type GoldilocksChip struct {
 	api frontend.API     `gnark:"-"`
@@ -38,7 +38,7 @@ func (c *GoldilocksChip) Poseidon(input GoldilocksState) GoldilocksState {
 
 // The input elements MUST have all it's elements be within Goldilocks field.
 // The returned slice's elements will all be within Goldilocks field.
-func (c *GoldilocksChip) HashNToMNoPad(input []gl.GoldilocksVariable, nbOutputs int) []gl.GoldilocksVariable {
+func (c *GoldilocksChip) HashNToMNoPad(input []gl.Variable, nbOutputs int) []gl.Variable {
 	var state GoldilocksState
 
 	for i := 0; i < SPONGE_WIDTH; i++ {
@@ -54,7 +54,7 @@ func (c *GoldilocksChip) HashNToMNoPad(input []gl.GoldilocksVariable, nbOutputs 
 		state = c.Poseidon(state)
 	}
 
-	var outputs []gl.GoldilocksVariable
+	var outputs []gl.Variable
 
 	for {
 		for i := 0; i < SPONGE_RATE; i++ {
@@ -69,9 +69,9 @@ func (c *GoldilocksChip) HashNToMNoPad(input []gl.GoldilocksVariable, nbOutputs 
 
 // The input elements can be outside of the Goldilocks field.
 // The returned slice's elements will all be within Goldilocks field.
-func (c *GoldilocksChip) HashNoPad(input []gl.GoldilocksVariable) GoldilocksHashOut {
+func (c *GoldilocksChip) HashNoPad(input []gl.Variable) GoldilocksHashOut {
 	var hash GoldilocksHashOut
-	inputVars := []gl.GoldilocksVariable{}
+	inputVars := []gl.Variable{}
 
 	for i := 0; i < len(input); i++ {
 		inputVars = append(inputVars, c.gl.Reduce(input[i]))
@@ -85,7 +85,7 @@ func (c *GoldilocksChip) HashNoPad(input []gl.GoldilocksVariable) GoldilocksHash
 	return hash
 }
 
-func (c *GoldilocksChip) ToVec(hash GoldilocksHashOut) []gl.GoldilocksVariable {
+func (c *GoldilocksChip) ToVec(hash GoldilocksHashOut) []gl.Variable {
 	return hash[:]
 }
 
@@ -135,7 +135,7 @@ func (c *GoldilocksChip) ConstantLayerExtension(state GoldilocksStateExtension, 
 	return state
 }
 
-func (c *GoldilocksChip) sBoxMonomial(x gl.GoldilocksVariable) gl.GoldilocksVariable {
+func (c *GoldilocksChip) sBoxMonomial(x gl.Variable) gl.Variable {
 	x2 := c.gl.MulNoReduce(x, x)
 	x3 := c.gl.MulNoReduce(x, x2)
 	x3 = c.gl.ReduceWithMaxBits(x3, 192)
@@ -169,7 +169,7 @@ func (c *GoldilocksChip) SBoxLayerExtension(state GoldilocksStateExtension) Gold
 	return state
 }
 
-func (c *GoldilocksChip) mdsRowShf(r int, v [SPONGE_WIDTH]gl.GoldilocksVariable) gl.GoldilocksVariable {
+func (c *GoldilocksChip) mdsRowShf(r int, v [SPONGE_WIDTH]gl.Variable) gl.Variable {
 	res := gl.Zero()
 
 	for i := 0; i < 12; i++ {

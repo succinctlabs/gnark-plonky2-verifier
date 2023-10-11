@@ -9,13 +9,13 @@ import (
 const W uint64 = 7
 const DTH_ROOT uint64 = 18446744069414584320
 
-type QuadraticExtensionVariable [2]GoldilocksVariable
+type QuadraticExtensionVariable [2]Variable
 
-func NewQuadraticExtensionVariable(x GoldilocksVariable, y GoldilocksVariable) QuadraticExtensionVariable {
+func NewQuadraticExtensionVariable(x Variable, y Variable) QuadraticExtensionVariable {
 	return QuadraticExtensionVariable{x, y}
 }
 
-func (p GoldilocksVariable) ToQuadraticExtension() QuadraticExtensionVariable {
+func (p Variable) ToQuadraticExtension() QuadraticExtensionVariable {
 	return NewQuadraticExtensionVariable(p, Zero())
 }
 
@@ -101,7 +101,7 @@ func (p *GoldilocksApi) SubMulExtension(a, b, c QuadraticExtensionVariable) Quad
 // Multiplies quadratic extension variable in the Goldilocks field by a scalar.
 func (p *GoldilocksApi) ScalarMulExtension(
 	a QuadraticExtensionVariable,
-	b GoldilocksVariable,
+	b Variable,
 ) QuadraticExtensionVariable {
 	return NewQuadraticExtensionVariable(
 		p.Mul(a[0], b),
@@ -111,7 +111,7 @@ func (p *GoldilocksApi) ScalarMulExtension(
 
 // Computes an inner product over quadratic extension variable vectors in the Goldilocks field.
 func (p *GoldilocksApi) InnerProductExtension(
-	constant GoldilocksVariable,
+	constant Variable,
 	startingAcc QuadraticExtensionVariable,
 	pairs [][2]QuadraticExtensionVariable,
 ) QuadraticExtensionVariable {

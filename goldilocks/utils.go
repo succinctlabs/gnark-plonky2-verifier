@@ -24,8 +24,8 @@ func StrArrayToFrontendVariableArray(input []string) []frontend.Variable {
 	return output
 }
 
-func Uint64ArrayToVariableArray(input []uint64) []GoldilocksVariable {
-	var output []GoldilocksVariable
+func Uint64ArrayToVariableArray(input []uint64) []Variable {
+	var output []Variable
 	for i := 0; i < len(input); i++ {
 		output = append(output, NewVariable(input[i]))
 	}

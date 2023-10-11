@@ -21,7 +21,7 @@ func (circuit *TestPublicInputsHashCircuit) Define(api frontend.API) error {
 	glAPI := gl.NewGoldilocksApi(api)
 
 	// BN254 -> Binary(64) -> F
-	var input [3]gl.GoldilocksVariable
+	var input [3]gl.Variable
 	for i := 0; i < 3; i++ {
 		input[i] = gl.NewVariable(api.FromBinary(api.ToBinary(circuit.In[i], 64)...))
 	}

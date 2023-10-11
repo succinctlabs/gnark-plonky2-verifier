@@ -35,7 +35,7 @@ func NewVerifierChip(api frontend.API, commonCircuitData types.CommonCircuitData
 	}
 }
 
-func (c *VerifierChip) GetPublicInputsHash(publicInputs []gl.GoldilocksVariable) poseidon.GoldilocksHashOut {
+func (c *VerifierChip) GetPublicInputsHash(publicInputs []gl.Variable) poseidon.GoldilocksHashOut {
 	return c.poseidonGlChip.HashNoPad(publicInputs)
 }
 
@@ -206,7 +206,7 @@ func (c *VerifierChip) rangeCheckProof(proof types.Proof) {
 
 func (c *VerifierChip) Verify(
 	proof types.Proof,
-	publicInputs []gl.GoldilocksVariable,
+	publicInputs []gl.Variable,
 	verifierData types.VerifierOnlyCircuitData,
 	commonData types.CommonCircuitData,
 ) {

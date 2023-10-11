@@ -13,8 +13,8 @@ type PlonkChip struct {
 
 	commonData types.CommonCircuitData `gnark:"-"`
 
-	DEGREE        gl.GoldilocksVariable         `gnark:"-"`
-	DEGREE_BITS_F gl.GoldilocksVariable         `gnark:"-"`
+	DEGREE        gl.Variable                   `gnark:"-"`
+	DEGREE_BITS_F gl.Variable                   `gnark:"-"`
 	DEGREE_QE     gl.QuadraticExtensionVariable `gnark:"-"`
 
 	evaluateGatesChip *gates.EvaluateGatesChip
