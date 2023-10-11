@@ -51,6 +51,8 @@ func (c *TestGoldilocksRangeCheckBenchmarkCircuit) Define(api frontend.API) erro
 	glApi := NewGoldilocksApi(api)
 	for _, x := range c.X {
 		glApi.RangeCheck(NewVariable(x))
+		glApi.Reduce(NewVariable(x))
+
 	}
 	return nil
 }
