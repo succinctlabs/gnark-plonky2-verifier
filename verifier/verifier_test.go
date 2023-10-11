@@ -82,7 +82,7 @@ func TestStepVerifier2(t *testing.T) {
 		test.WithBackends(backend.GROTH16),
 		test.WithCurves(ecc.BN254),
 		test.NoFuzzing(),
-		test.NoSerialization(),
+		test.NoSerializationChecks(),
 	)
 }
 
@@ -117,6 +117,6 @@ func TestMain(t *testing.T) {
 		test.WithBackends(backend.GROTH16),
 		test.WithCurves(ecc.BN254),
 		test.NoFuzzing(),
-		test.NoSerialization(),
+		test.NoSerializationChecks(),
 	)
 }
