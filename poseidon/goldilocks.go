@@ -21,7 +21,7 @@ type GoldilocksChip struct {
 }
 
 func NewGoldilocksChip(api frontend.API) *GoldilocksChip {
-	return &GoldilocksChip{api: api, gl: *gl.New(api)}
+	return &GoldilocksChip{api: api, gl: *gl.NewChip(api)}
 }
 
 // The permutation function.

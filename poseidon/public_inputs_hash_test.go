@@ -18,7 +18,7 @@ type TestPublicInputsHashCircuit struct {
 }
 
 func (circuit *TestPublicInputsHashCircuit) Define(api frontend.API) error {
-	glAPI := gl.New(api)
+	glAPI := gl.NewChip(api)
 
 	// BN254 -> Binary(64) -> F
 	var input [3]gl.Variable
@@ -78,6 +78,6 @@ func TestPublicInputsHashWitness2(t *testing.T) {
 		test.WithBackends(backend.GROTH16),
 		test.WithCurves(ecc.BN254),
 		test.NoFuzzing(),
-		test.NoSerializationChecks(),
+		test.NoSerialization(),
 	)
 }

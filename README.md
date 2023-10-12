@@ -1,6 +1,6 @@
-# Gnark Plonky2 Verifier
+# gnark-plonky2-verifier
 
-This is an implementation of a [Plonky2](https://github.com/mir-protocol/plonky2) verifier in Gnark (supports Groth16 and PLONK).
+This is an in-progress implementation of a [Plonky2](https://github.com/mir-protocol/plonky2) verifier in Gnark (supports Groth16 and PLONK). It currently is able to verify some dummy circuits, but not much more as many of the custom gates used in Plonky2 are currently not implemented.
 
 Besides the verifier, there are some Gnark implementation of circuits in this repo that may be useful for other projects:
 

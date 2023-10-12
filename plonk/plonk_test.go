@@ -7,25 +7,23 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
 	"github.com/succinctlabs/gnark-plonky2-verifier/plonk"
-	"github.com/succinctlabs/gnark-plonky2-verifier/types"
-	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
 	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
 )
 
 type TestPlonkCircuit struct {
-	ProofWithPis            variables.ProofWithPublicInputs   `gnark:",public"`
-	VerifierOnlyCircuitData variables.VerifierOnlyCircuitData `gnark:",public"`
-	CommonCircuitData       types.CommonCircuitData
+	proofWithPIsFilename            string `gnark:"-"`
+	commonCircuitDataFilename       string `gnark:"-"`
+	verifierOnlyCircuitDataFilename string `gnark:"-"`
 }
 
 func (circuit *TestPlonkCircuit) Define(api frontend.API) error {
-	commonCircuitData := circuit.CommonCircuitData
-	verifierOnlyCircuitData := circuit.VerifierOnlyCircuitData
-	proofWithPis := circuit.ProofWithPis
+	proofWithPis := verifier.DeserializeProofWithPublicInputs(circuit.proofWithPIsFilename)
+	commonCircuitData := verifier.DeserializeCommonCircuitData(circuit.commonCircuitDataFilename)
+	verifierOnlyCircuitData := verifier.DeserializeVerifierOnlyCircuitData(circuit.verifierOnlyCircuitDataFilename)
 
 	verifierChip := verifier.NewVerifierChip(api, commonCircuitData)
 	publicInputsHash := verifierChip.GetPublicInputsHash(proofWithPis.PublicInputs)
-	proofChallenges := verifierChip.GetChallenges(proofWithPis.Proof, publicInputsHash, verifierOnlyCircuitData)
+	proofChallenges := verifierChip.GetChallenges(proofWithPis.Proof, publicInputsHash, commonCircuitData, verifierOnlyCircuitData)
 
 	plonkChip := plonk.NewPlonkChip(
 		api,
@@ -39,25 +37,13 @@ func (circuit *TestPlonkCircuit) Define(api frontend.API) error {
 func TestPlonkDecodeBlock(t *testing.T) {
 	assert := test.NewAssert(t)
 
-	proofWithPIsFilename := "../testdata/decode_block/proof_with_public_inputs.json"
-	commonCircuitDataFilename := "../testdata/decode_block/common_circuit_data.json"
-	verifierOnlyCircuitDataFilename := "../testdata/decode_block/verifier_only_circuit_data.json"
-
-	proofWithPis := variables.DeserializeProofWithPublicInputs(types.ReadProofWithPublicInputs(proofWithPIsFilename))
-	commonCircuitData := types.ReadCommonCircuitData(commonCircuitDataFilename)
-	verifierOnlyCircuitData := variables.DeserializeVerifierOnlyCircuitData(types.ReadVerifierOnlyCircuitData(verifierOnlyCircuitDataFilename))
-
 	testCase := func() {
 		circuit := TestPlonkCircuit{
-			proofWithPis,
-			verifierOnlyCircuitData,
-			commonCircuitData,
+			proofWithPIsFilename:            "../../data/decode_block/proof_with_public_inputs.json",
+			commonCircuitDataFilename:       "../../data/decode_block/common_circuit_data.json",
+			verifierOnlyCircuitDataFilename: "../../data/decode_block/verifier_only_circuit_data.json",
 		}
-		witness := TestPlonkCircuit{
-			proofWithPis,
-			verifierOnlyCircuitData,
-			commonCircuitData,
-		}
+		witness := TestPlonkCircuit{}
 		err := test.IsSolved(&circuit, &witness, ecc.BN254.ScalarField())
 		assert.NoError(err)
 	}

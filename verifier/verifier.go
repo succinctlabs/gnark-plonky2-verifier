@@ -8,7 +8,6 @@ import (
 	"github.com/succinctlabs/gnark-plonky2-verifier/plonk"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/types"
-	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
 )
 
 type VerifierChip struct {
@@ -18,12 +17,11 @@ type VerifierChip struct {
 	poseidonBN254Chip *poseidon.BN254Chip      `gnark:"-"`
 	plonkChip         *plonk.PlonkChip         `gnark:"-"`
 	friChip           *fri.Chip                `gnark:"-"`
-	commonData        types.CommonCircuitData  `gnark:"-"`
 }
 
 func NewVerifierChip(api frontend.API, commonCircuitData types.CommonCircuitData) *VerifierChip {
-	glChip := gl.New(api)
-	friChip := fri.NewChip(api, &commonCircuitData, &commonCircuitData.FriParams)
+	glChip := gl.NewChip(api)
+	friChip := fri.NewChip(api, &commonCircuitData.FriParams)
 	plonkChip := plonk.NewPlonkChip(api, commonCircuitData)
 	poseidonGlChip := poseidon.NewGoldilocksChip(api)
 	poseidonBN254Chip := poseidon.NewBN254Chip(api)
@@ -34,7 +32,6 @@ func NewVerifierChip(api frontend.API, commonCircuitData types.CommonCircuitData
 		poseidonBN254Chip: poseidonBN254Chip,
 		plonkChip:         plonkChip,
 		friChip:           friChip,
-		commonData:        commonCircuitData,
 	}
 }
 
@@ -43,11 +40,12 @@ func (c *VerifierChip) GetPublicInputsHash(publicInputs []gl.Variable) poseidon.
 }
 
 func (c *VerifierChip) GetChallenges(
-	proof variables.Proof,
+	proof types.Proof,
 	publicInputsHash poseidon.GoldilocksHashOut,
-	verifierData variables.VerifierOnlyCircuitData,
-) variables.ProofChallenges {
-	config := c.commonData.Config
+	commonData types.CommonCircuitData,
+	verifierData types.VerifierOnlyCircuitData,
+) types.ProofChallenges {
+	config := commonData.Config
 	numChallenges := config.NumChallenges
 	challenger := challenger.NewChip(c.api)
 
@@ -65,9 +63,9 @@ func (c *VerifierChip) GetChallenges(
 	challenger.ObserveCap(proof.QuotientPolysCap)
 	plonkZeta := challenger.GetExtensionChallenge()
 
-	challenger.ObserveOpenings(c.friChip.ToOpenings(proof.Openings))
+	challenger.ObserveOpenings(fri.ToOpenings(proof.Openings))
 
-	return variables.ProofChallenges{
+	return types.ProofChallenges{
 		PlonkBetas:  plonkBetas,
 		PlonkGammas: plonkGammas,
 		PlonkAlphas: plonkAlphas,
@@ -76,13 +74,80 @@ func (c *VerifierChip) GetChallenges(
 			proof.OpeningProof.CommitPhaseMerkleCaps,
 			proof.OpeningProof.FinalPoly,
 			proof.OpeningProof.PowWitness,
-			c.commonData.DegreeBits,
+			commonData.DegreeBits,
 			config.FriConfig,
 		),
 	}
 }
 
-func (c *VerifierChip) rangeCheckProof(proof variables.Proof) {
+/*
+func (c *VerifierChip) generateProofInput(commonData common.CommonCircuitData) common.ProofWithPublicInputs {
+	// Generate the parts of the witness that is for the plonky2 proof input
+
+	capHeight := commonData.Config.FriConfig.CapHeight
+
+	friCommitPhaseMerkleCaps := []common.MerkleCap{}
+	for i := 0; i < len(commonData.FriParams.ReductionArityBits); i++ {
+		friCommitPhaseMerkleCaps = append(friCommitPhaseMerkleCaps, common.NewMerkleCap(capHeight))
+	}
+
+	salt := commonData.SaltSize()
+	numLeavesPerOracle := []uint{
+		commonData.NumPreprocessedPolys(),
+		commonData.Config.NumWires + salt,
+		commonData.NumZsPartialProductsPolys() + salt,
+		commonData.NumQuotientPolys() + salt,
+	}
+	friQueryRoundProofs := []common.FriQueryRound{}
+	for i := uint64(0); i < commonData.FriParams.Config.NumQueryRounds; i++ {
+		evalProofs := []common.EvalProof{}
+		merkleProofLen := commonData.FriParams.LDEBits() - capHeight
+		for _, numLeaves := range numLeavesPerOracle {
+			leaves := make([]field.F, numLeaves)
+			merkleProof := common.NewMerkleProof(merkleProofLen)
+			evalProofs = append(evalProofs, common.NewEvalProof(leaves, merkleProof))
+		}
+
+		initialTreesProof := common.NewFriInitialTreeProof(evalProofs)
+		steps := []common.FriQueryStep{}
+		for _, arityBit := range commonData.FriParams.ReductionArityBits {
+			if merkleProofLen < arityBit {
+				panic("merkleProofLen < arityBits")
+			}
+
+			steps = append(steps, common.NewFriQueryStep(arityBit, merkleProofLen))
+		}
+
+		friQueryRoundProofs = append(friQueryRoundProofs, common.NewFriQueryRound(steps, initialTreesProof))
+	}
+
+	proofInput := common.ProofWithPublicInputs{
+		Proof: common.Proof{
+			WiresCap:                  common.NewMerkleCap(capHeight),
+			PlonkZsPartialProductsCap: common.NewMerkleCap(capHeight),
+			QuotientPolysCap:          common.NewMerkleCap(capHeight),
+			Openings: common.NewOpeningSet(
+				commonData.Config.NumConstants,
+				commonData.Config.NumRoutedWires,
+				commonData.Config.NumWires,
+				commonData.Config.NumChallenges,
+				commonData.NumPartialProducts,
+				commonData.QuotientDegreeFactor,
+			),
+			OpeningProof: common.FriProof{
+				CommitPhaseMerkleCaps: friCommitPhaseMerkleCaps,
+				QueryRoundProofs:      friQueryRoundProofs,
+				FinalPoly:             common.NewPolynomialCoeffs(commonData.FriParams.FinalPolyLen()),
+			},
+		},
+		PublicInputs: make([]field.F, commonData.NumPublicInputs),
+	}
+
+	return proofInput
+}
+*/
+
+func (c *VerifierChip) rangeCheckProof(proof types.Proof) {
 	// Need to verify the plonky2 proof's openings, openings proof (other than the sibling elements), fri's final poly, pow witness.
 
 	// Note that this is NOT range checking the public inputs (first 32 elements should be no more than 8 bits and the last 4 elements should be no more than 64 bits).  Since this is currently being inputted via the smart contract,
@@ -140,19 +205,20 @@ func (c *VerifierChip) rangeCheckProof(proof variables.Proof) {
 }
 
 func (c *VerifierChip) Verify(
-	proof variables.Proof,
+	proof types.Proof,
 	publicInputs []gl.Variable,
-	verifierData variables.VerifierOnlyCircuitData,
+	verifierData types.VerifierOnlyCircuitData,
+	commonData types.CommonCircuitData,
 ) {
 	c.rangeCheckProof(proof)
 
 	// Generate the parts of the witness that is for the plonky2 proof input
 	publicInputsHash := c.GetPublicInputsHash(publicInputs)
-	proofChallenges := c.GetChallenges(proof, publicInputsHash, verifierData)
+	proofChallenges := c.GetChallenges(proof, publicInputsHash, commonData, verifierData)
 
 	c.plonkChip.Verify(proofChallenges, proof.Openings, publicInputsHash)
 
-	initialMerkleCaps := []variables.FriMerkleCap{
+	initialMerkleCaps := []types.FriMerkleCap{
 		verifierData.ConstantSigmasCap,
 		proof.WiresCap,
 		proof.PlonkZsPartialProductsCap,
@@ -160,8 +226,8 @@ func (c *VerifierChip) Verify(
 	}
 
 	c.friChip.VerifyFriProof(
-		c.friChip.GetInstance(proofChallenges.PlonkZeta),
-		c.friChip.ToOpenings(proof.Openings),
+		fri.GetInstance(&commonData, c.glChip, proofChallenges.PlonkZeta, commonData.DegreeBits),
+		fri.ToOpenings(proof.Openings),
 		&proofChallenges.FriChallenges,
 		initialMerkleCaps,
 		&proof.OpeningProof,
