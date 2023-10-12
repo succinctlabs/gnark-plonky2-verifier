@@ -1,29 +1,8 @@
 package fri
 
 import (
-	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/types"
 )
-
-type OpeningBatch struct {
-	Values []gl.QuadraticExtensionVariable
-}
-
-type Openings struct {
-	Batches []OpeningBatch
-}
-
-func ToOpenings(c types.OpeningSet) Openings {
-	values := c.Constants                         // num_constants + 1
-	values = append(values, c.PlonkSigmas...)     // num_routed_wires
-	values = append(values, c.Wires...)           // num_wires
-	values = append(values, c.PlonkZs...)         // num_challenges
-	values = append(values, c.PartialProducts...) // num_challenges * num_partial_products
-	values = append(values, c.QuotientPolys...)   // num_challenges * quotient_degree_factor
-	zetaBatch := OpeningBatch{Values: values}
-	zetaNextBatch := OpeningBatch{Values: c.PlonkZsNext}
-	return Openings{Batches: []OpeningBatch{zetaBatch, zetaNextBatch}}
-}
 
 type PolynomialInfo struct {
 	OracleIndex    uint64
@@ -33,16 +12,6 @@ type PolynomialInfo struct {
 type OracleInfo struct {
 	NumPolys uint64
 	Blinding bool
-}
-
-type BatchInfo struct {
-	Point       gl.QuadraticExtensionVariable
-	Polynomials []PolynomialInfo
-}
-
-type InstanceInfo struct {
-	Oracles []OracleInfo
-	Batches []BatchInfo
 }
 
 type PlonkOracle struct {
@@ -176,27 +145,4 @@ func friAllPolys(c *types.CommonCircuitData) []PolynomialInfo {
 	returnArr = append(returnArr, friQuotientPolys(c)...)
 
 	return returnArr
-}
-
-func GetInstance(c *types.CommonCircuitData, glApi *gl.Chip, zeta gl.QuadraticExtensionVariable, degreeBits uint64) InstanceInfo {
-	zetaBatch := BatchInfo{
-		Point:       zeta,
-		Polynomials: friAllPolys(c),
-	}
-
-	g := gl.PrimitiveRootOfUnity(degreeBits)
-	zetaNext := glApi.MulExtension(
-		gl.NewVariable(g.Uint64()).ToQuadraticExtension(),
-		zeta,
-	)
-
-	zetaNextBath := BatchInfo{
-		Point:       zetaNext,
-		Polynomials: friZSPolys(c),
-	}
-
-	return InstanceInfo{
-		Oracles: friOracles(c),
-		Batches: []BatchInfo{zetaBatch, zetaNextBath},
-	}
 }

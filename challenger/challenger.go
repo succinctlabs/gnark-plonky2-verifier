@@ -8,6 +8,7 @@ import (
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/types"
+	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
 )
 
 type Chip struct {
@@ -113,12 +114,12 @@ func (c *Chip) GetHash() poseidon.GoldilocksHashOut {
 }
 
 func (c *Chip) GetFriChallenges(
-	commitPhaseMerkleCaps []types.FriMerkleCap,
-	finalPoly types.PolynomialCoeffs,
+	commitPhaseMerkleCaps []variables.FriMerkleCap,
+	finalPoly variables.PolynomialCoeffs,
 	powWitness gl.Variable,
 	degreeBits uint64,
 	config types.FriConfig,
-) types.FriChallenges {
+) variables.FriChallenges {
 	numFriQueries := config.NumQueryRounds
 	friAlpha := c.GetExtensionChallenge()
 
@@ -134,7 +135,7 @@ func (c *Chip) GetFriChallenges(
 	friPowResponse := c.GetChallenge()
 	friQueryIndices := c.GetNChallenges(numFriQueries)
 
-	return types.FriChallenges{
+	return variables.FriChallenges{
 		FriAlpha:        friAlpha,
 		FriBetas:        friBetas,
 		FriPowResponse:  friPowResponse,
@@ -152,7 +153,7 @@ func (c *Chip) duplexing() {
 		panic("something went wrong")
 	}
 
-	glApi := gl.NewChip(c.api)
+	glApi := gl.New(c.api)
 
 	for i := 0; i < len(c.inputBuffer); i++ {
 		c.spongeState[i] = glApi.Reduce(c.inputBuffer[i])

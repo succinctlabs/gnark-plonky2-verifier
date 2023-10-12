@@ -6,6 +6,7 @@ import (
 	"github.com/succinctlabs/gnark-plonky2-verifier/plonk/gates"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/types"
+	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
 )
 
 type PlonkChip struct {
@@ -13,9 +14,12 @@ type PlonkChip struct {
 
 	commonData types.CommonCircuitData `gnark:"-"`
 
+	// These are global constant variables that we use in this Chip that we save here.
+	// This avoids having to recreate them every time we use them.
 	DEGREE        gl.Variable                   `gnark:"-"`
 	DEGREE_BITS_F gl.Variable                   `gnark:"-"`
 	DEGREE_QE     gl.QuadraticExtensionVariable `gnark:"-"`
+	commonDataKIs []gl.Variable                 `gnark:"-"`
 
 	evaluateGatesChip *gates.EvaluateGatesChip
 }
@@ -23,9 +27,15 @@ type PlonkChip struct {
 func NewPlonkChip(api frontend.API, commonData types.CommonCircuitData) *PlonkChip {
 	// TODO:  Should degreeBits be verified that it fits within the field and that degree is within uint64?
 
+	// Create the gates based on commonData GateIds
+	createdGates := []gates.Gate{}
+	for _, gateId := range commonData.GateIds {
+		createdGates = append(createdGates, gates.GateInstanceFromId(gateId))
+	}
+
 	evaluateGatesChip := gates.NewEvaluateGatesChip(
 		api,
-		commonData.Gates,
+		createdGates,
 		commonData.NumGateConstraints,
 		commonData.SelectorsInfo,
 	)
@@ -38,13 +48,14 @@ func NewPlonkChip(api frontend.API, commonData types.CommonCircuitData) *PlonkCh
 		DEGREE:        gl.NewVariable(1 << commonData.DegreeBits),
 		DEGREE_BITS_F: gl.NewVariable(commonData.DegreeBits),
 		DEGREE_QE:     gl.NewVariable(1 << commonData.DegreeBits).ToQuadraticExtension(),
+		commonDataKIs: gl.Uint64ArrayToVariableArray(commonData.KIs),
 
 		evaluateGatesChip: evaluateGatesChip,
 	}
 }
 
 func (p *PlonkChip) expPowerOf2Extension(x gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
-	glApi := gl.NewChip(p.api)
+	glApi := gl.New(p.api)
 	for i := uint64(0); i < p.commonData.DegreeBits; i++ {
 		x = glApi.MulExtension(x, x)
 	}
@@ -53,7 +64,7 @@ func (p *PlonkChip) expPowerOf2Extension(x gl.QuadraticExtensionVariable) gl.Qua
 
 func (p *PlonkChip) evalL0(x gl.QuadraticExtensionVariable, xPowN gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
 	// L_0(x) = (x^n - 1) / (n * (x - 1))
-	glApi := gl.NewChip(p.api)
+	glApi := gl.New(p.api)
 	evalZeroPoly := glApi.SubExtension(
 		xPowN,
 		gl.OneExtension(),
@@ -72,9 +83,9 @@ func (p *PlonkChip) checkPartialProducts(
 	numerators []gl.QuadraticExtensionVariable,
 	denominators []gl.QuadraticExtensionVariable,
 	challengeNum uint64,
-	openings types.OpeningSet,
+	openings variables.OpeningSet,
 ) []gl.QuadraticExtensionVariable {
-	glApi := gl.NewChip(p.api)
+	glApi := gl.New(p.api)
 	numPartProds := p.commonData.NumPartialProducts
 	quotDegreeFactor := p.commonData.QuotientDegreeFactor
 
@@ -106,18 +117,18 @@ func (p *PlonkChip) checkPartialProducts(
 
 func (p *PlonkChip) evalVanishingPoly(
 	vars gates.EvaluationVars,
-	proofChallenges types.ProofChallenges,
-	openings types.OpeningSet,
+	proofChallenges variables.ProofChallenges,
+	openings variables.OpeningSet,
 	zetaPowN gl.QuadraticExtensionVariable,
 ) []gl.QuadraticExtensionVariable {
-	glApi := gl.NewChip(p.api)
+	glApi := gl.New(p.api)
 	constraintTerms := p.evaluateGatesChip.EvaluateGateConstraints(vars)
 
 	// Calculate the k[i] * x
 	sIDs := make([]gl.QuadraticExtensionVariable, p.commonData.Config.NumRoutedWires)
 
 	for i := uint64(0); i < p.commonData.Config.NumRoutedWires; i++ {
-		sIDs[i] = glApi.ScalarMulExtension(proofChallenges.PlonkZeta, p.commonData.KIs[i])
+		sIDs[i] = glApi.ScalarMulExtension(proofChallenges.PlonkZeta, p.commonDataKIs[i])
 	}
 
 	// Calculate L_0(zeta)
@@ -193,11 +204,11 @@ func (p *PlonkChip) evalVanishingPoly(
 }
 
 func (p *PlonkChip) Verify(
-	proofChallenges types.ProofChallenges,
-	openings types.OpeningSet,
+	proofChallenges variables.ProofChallenges,
+	openings variables.OpeningSet,
 	publicInputsHash poseidon.GoldilocksHashOut,
 ) {
-	glApi := gl.NewChip(p.api)
+	glApi := gl.New(p.api)
 
 	// Calculate zeta^n
 	zetaPowN := p.expPowerOf2Extension(proofChallenges.PlonkZeta)

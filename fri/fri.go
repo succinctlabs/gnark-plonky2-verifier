@@ -11,26 +11,65 @@ import (
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/types"
+	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
 )
 
 type Chip struct {
-	api               frontend.API `gnark:"-"`
-	gl                gl.Chip      `gnark:"-"`
-	poseidonBN254Chip *poseidon.BN254Chip
-	friParams         *types.FriParams `gnark:"-"`
+	api               frontend.API             `gnark:"-"`
+	gl                gl.Chip                  `gnark:"-"`
+	poseidonBN254Chip *poseidon.BN254Chip      `gnark:"-"`
+	commonData        *types.CommonCircuitData `gnark:"-"`
+	friParams         *types.FriParams         `gnark:"-"`
 }
 
 func NewChip(
 	api frontend.API,
+	commonData *types.CommonCircuitData,
 	friParams *types.FriParams,
 ) *Chip {
 	poseidonBN254Chip := poseidon.NewBN254Chip(api)
 	return &Chip{
 		api:               api,
 		poseidonBN254Chip: poseidonBN254Chip,
+		commonData:        commonData,
 		friParams:         friParams,
-		gl:                *gl.NewChip(api),
+		gl:                *gl.New(api),
 	}
+}
+
+func (f *Chip) GetInstance(zeta gl.QuadraticExtensionVariable) InstanceInfo {
+	zetaBatch := BatchInfo{
+		Point:       zeta,
+		Polynomials: friAllPolys(f.commonData),
+	}
+
+	g := gl.PrimitiveRootOfUnity(f.commonData.DegreeBits)
+	zetaNext := f.gl.MulExtension(
+		gl.NewVariable(g.Uint64()).ToQuadraticExtension(),
+		zeta,
+	)
+
+	zetaNextBath := BatchInfo{
+		Point:       zetaNext,
+		Polynomials: friZSPolys(f.commonData),
+	}
+
+	return InstanceInfo{
+		Oracles: friOracles(f.commonData),
+		Batches: []BatchInfo{zetaBatch, zetaNextBath},
+	}
+}
+
+func (f *Chip) ToOpenings(c variables.OpeningSet) Openings {
+	values := c.Constants                         // num_constants + 1
+	values = append(values, c.PlonkSigmas...)     // num_routed_wires
+	values = append(values, c.Wires...)           // num_wires
+	values = append(values, c.PlonkZs...)         // num_challenges
+	values = append(values, c.PartialProducts...) // num_challenges * num_partial_products
+	values = append(values, c.QuotientPolys...)   // num_challenges * quotient_degree_factor
+	zetaBatch := OpeningBatch{Values: values}
+	zetaNextBatch := OpeningBatch{Values: c.PlonkZsNext}
+	return Openings{Batches: []OpeningBatch{zetaBatch, zetaNextBatch}}
 }
 
 func (f *Chip) assertLeadingZeros(powWitness gl.Variable, friConfig types.FriConfig) {
@@ -61,8 +100,8 @@ func (f *Chip) verifyMerkleProofToCapWithCapIndex(
 	leafData []gl.Variable,
 	leafIndexBits []frontend.Variable,
 	capIndexBits []frontend.Variable,
-	merkleCap types.FriMerkleCap,
-	proof *types.FriMerkleProof,
+	merkleCap variables.FriMerkleCap,
+	proof *variables.FriMerkleProof,
 ) {
 	currentDigest := f.poseidonBN254Chip.HashOrNoop(leafData)
 	for i, sibling := range proof.Siblings {
@@ -100,7 +139,7 @@ func (f *Chip) verifyMerkleProofToCapWithCapIndex(
 	f.api.AssertIsEqual(currentDigest, merkleCapEntry)
 }
 
-func (f *Chip) verifyInitialProof(xIndexBits []frontend.Variable, proof *types.FriInitialTreeProof, initialMerkleCaps []types.FriMerkleCap, capIndexBits []frontend.Variable) {
+func (f *Chip) verifyInitialProof(xIndexBits []frontend.Variable, proof *variables.FriInitialTreeProof, initialMerkleCaps []variables.FriMerkleCap, capIndexBits []frontend.Variable) {
 	if len(proof.EvalsProofs) != len(initialMerkleCaps) {
 		panic("length of eval proofs in fri proof should equal length of initial merkle caps")
 	}
@@ -187,7 +226,7 @@ func (f *Chip) calculateSubgroupX(
 
 func (f *Chip) friCombineInitial(
 	instance InstanceInfo,
-	proof types.FriInitialTreeProof,
+	proof variables.FriInitialTreeProof,
 	friAlpha gl.QuadraticExtensionVariable,
 	subgroupX_QE gl.QuadraticExtensionVariable,
 	precomputedReducedEval []gl.QuadraticExtensionVariable,
@@ -228,7 +267,7 @@ func (f *Chip) friCombineInitial(
 	return sum
 }
 
-func (f *Chip) finalPolyEval(finalPoly types.PolynomialCoeffs, point gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
+func (f *Chip) finalPolyEval(finalPoly variables.PolynomialCoeffs, point gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
 	ret := gl.ZeroExtension()
 	for i := len(finalPoly.Coeffs) - 1; i >= 0; i-- {
 		ret = f.gl.MulAddExtension(ret, point, finalPoly.Coeffs[i])
@@ -355,14 +394,14 @@ func (f *Chip) computeEvaluation(
 
 func (f *Chip) verifyQueryRound(
 	instance InstanceInfo,
-	challenges *types.FriChallenges,
+	challenges *variables.FriChallenges,
 	precomputedReducedEval []gl.QuadraticExtensionVariable,
-	initialMerkleCaps []types.FriMerkleCap,
-	proof *types.FriProof,
+	initialMerkleCaps []variables.FriMerkleCap,
+	proof *variables.FriProof,
 	xIndex gl.Variable,
 	n uint64,
 	nLog uint64,
-	roundProof *types.FriQueryRound,
+	roundProof *variables.FriQueryRound,
 ) {
 	f.assertNoncanonicalIndicesOK()
 	xIndex = f.gl.Reduce(xIndex)
@@ -468,9 +507,9 @@ func (f *Chip) verifyQueryRound(
 func (f *Chip) VerifyFriProof(
 	instance InstanceInfo,
 	openings Openings,
-	friChallenges *types.FriChallenges,
-	initialMerkleCaps []types.FriMerkleCap,
-	friProof *types.FriProof,
+	friChallenges *variables.FriChallenges,
+	initialMerkleCaps []variables.FriMerkleCap,
+	friProof *variables.FriProof,
 ) {
 	// TODO:  Check fri config
 	/* if let Some(max_arity_bits) = params.max_arity_bits() {
