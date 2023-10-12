@@ -317,36 +317,32 @@ func (p *Chip) RangeCheck(x Variable) {
 	// in big endian binary. This function will first verify that x is at most 64 bits wide. Then it
 	// checks that if the bits[0:31] (in big-endian) are all 1, then bits[32:64] are all zero.
 
-	// Use the range checker component to range-check the variable.
-	rangeChecker := rangecheck.New(p.api)
-	rangeChecker.Check(x.Limb, 64)
-
 	result, err := p.api.Compiler().NewHint(SplitLimbsHint, 2, x.Limb)
 	if err != nil {
 		panic(err)
 	}
 
 	// We check that this is a valid decomposition of the Goldilock's element and range-check each limb.
-	mostSigBits := result[0]
-	leastSigBits := result[1]
+	mostSigLimb := result[0]
+	leastSigLimb := result[1]
 	p.api.AssertIsEqual(
 		p.api.Add(
-			p.api.Mul(mostSigBits, uint64(math.Pow(2, 32))),
-			leastSigBits,
+			p.api.Mul(mostSigLimb, uint64(math.Pow(2, 32))),
+			leastSigLimb,
 		),
 		x.Limb,
 	)
-	rangeChecker.Check(mostSigBits, 32)
-	rangeChecker.Check(leastSigBits, 32)
+	p.rangeChecker.Check(mostSigLimb, 32)
+	p.rangeChecker.Check(leastSigLimb, 32)
 
 	// If the most significant bits are all 1, then we need to check that the least significant bits are all zero
 	// in order for element to be less than the Goldilock's modulus.
 	// Otherwise, we don't need to do any checks, since we already know that the element is less than the Goldilocks modulus.
-	shouldCheck := p.api.IsZero(p.api.Sub(mostSigBits, uint64(math.Pow(2, 32))-1))
+	shouldCheck := p.api.IsZero(p.api.Sub(mostSigLimb, uint64(math.Pow(2, 32))-1))
 	p.api.AssertIsEqual(
 		p.api.Select(
 			shouldCheck,
-			leastSigBits,
+			leastSigLimb,
 			frontend.Variable(0),
 		),
 		frontend.Variable(0),
