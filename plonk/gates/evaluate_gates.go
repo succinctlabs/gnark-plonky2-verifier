@@ -36,7 +36,7 @@ func (g *EvaluateGatesChip) computeFilter(
 	s gl.QuadraticExtensionVariable,
 	manySelector bool,
 ) gl.QuadraticExtensionVariable {
-	glApi := gl.NewChip(g.api)
+	glApi := gl.New(g.api)
 	product := gl.OneExtension()
 	for i := groupRange.start; i < groupRange.end; i++ {
 		if i == uint64(row) {
@@ -62,7 +62,7 @@ func (g *EvaluateGatesChip) evalFiltered(
 	groupRange Range,
 	numSelectors uint64,
 ) []gl.QuadraticExtensionVariable {
-	glApi := gl.NewChip(g.api)
+	glApi := gl.New(g.api)
 	filter := g.computeFilter(row, groupRange, vars.localConstants[selectorIndex], numSelectors > 1)
 
 	vars.RemovePrefix(numSelectors)
@@ -75,7 +75,7 @@ func (g *EvaluateGatesChip) evalFiltered(
 }
 
 func (g *EvaluateGatesChip) EvaluateGateConstraints(vars EvaluationVars) []gl.QuadraticExtensionVariable {
-	glApi := gl.NewChip(g.api)
+	glApi := gl.New(g.api)
 	constraints := make([]gl.QuadraticExtensionVariable, g.numGateConstraints)
 	for i := range constraints {
 		constraints[i] = gl.ZeroExtension()

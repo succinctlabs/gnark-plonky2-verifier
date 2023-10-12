@@ -15,7 +15,7 @@ type TestQuadraticExtensionMulCircuit struct {
 }
 
 func (c *TestQuadraticExtensionMulCircuit) Define(api frontend.API) error {
-	glApi := NewChip(api)
+	glApi := New(api)
 	actualRes := glApi.MulExtension(c.Operand1, c.Operand2)
 	glApi.AssertIsEqual(actualRes[0], c.ExpectedResult[0])
 	glApi.AssertIsEqual(actualRes[1], c.ExpectedResult[1])
@@ -58,7 +58,7 @@ type TestQuadraticExtensionDivCircuit struct {
 }
 
 func (c *TestQuadraticExtensionDivCircuit) Define(api frontend.API) error {
-	glAPI := NewChip(api)
+	glAPI := New(api)
 	actualRes := glAPI.DivExtension(c.Operand1, c.Operand2)
 	glAPI.AssertIsEqual(actualRes[0], c.ExpectedResult[0])
 	glAPI.AssertIsEqual(actualRes[1], c.ExpectedResult[1])

@@ -45,7 +45,7 @@ func (g *PoseidonMdsGate) mdsRowShfAlgebra(
 	v [poseidon.SPONGE_WIDTH]gl.QuadraticExtensionAlgebraVariable,
 	api frontend.API,
 ) gl.QuadraticExtensionAlgebraVariable {
-	glApi := gl.NewChip(api)
+	glApi := gl.New(api)
 	if r >= poseidon.SPONGE_WIDTH {
 		panic("MDS row index out of range")
 	}

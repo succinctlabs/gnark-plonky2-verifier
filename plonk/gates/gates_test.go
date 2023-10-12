@@ -11,7 +11,7 @@ import (
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/plonk/gates"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
+	"github.com/succinctlabs/gnark-plonky2-verifier/types"
 )
 
 // From recursive_step circuit
@@ -690,10 +690,10 @@ type TestGateCircuit struct {
 }
 
 func (circuit *TestGateCircuit) Define(api frontend.API) error {
-	commonCircuitData := verifier.DeserializeCommonCircuitData("../../data/decode_block/common_circuit_data.json")
+	commonCircuitData := types.ReadCommonCircuitData("../../testdata/decode_block/common_circuit_data.json")
 	numSelectors := commonCircuitData.SelectorsInfo.NumSelectors()
 
-	glApi := gl.NewChip(api)
+	glApi := gl.New(api)
 
 	vars := gates.NewEvaluationVars(localConstants[numSelectors:], localWires, publicInputsHash)
 

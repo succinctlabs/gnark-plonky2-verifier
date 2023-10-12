@@ -11,23 +11,23 @@ import (
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 	"github.com/succinctlabs/gnark-plonky2-verifier/types"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
+	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
 )
 
 type TestFriCircuit struct {
-	proofWithPIsFilename            string `gnark:"-"`
-	commonCircuitDataFilename       string `gnark:"-"`
-	verifierOnlyCircuitDataFilename string `gnark:"-"`
+	ProofWithPis            variables.ProofWithPublicInputs
+	VerifierOnlyCircuitData variables.VerifierOnlyCircuitData
+	CommonCircuitData       types.CommonCircuitData
 }
 
 func (circuit *TestFriCircuit) Define(api frontend.API) error {
-	proofWithPis := verifier.DeserializeProofWithPublicInputs(circuit.proofWithPIsFilename)
-	commonCircuitData := verifier.DeserializeCommonCircuitData(circuit.commonCircuitDataFilename)
-	verifierOnlyCircuitData := verifier.DeserializeVerifierOnlyCircuitData(circuit.verifierOnlyCircuitDataFilename)
+	commonCircuitData := circuit.CommonCircuitData
+	verifierOnlyCircuitData := circuit.VerifierOnlyCircuitData
+	proofWithPis := circuit.ProofWithPis
 
-	glApi := gl.NewChip(api)
+	glApi := gl.New(api)
 	poseidonChip := poseidon.NewGoldilocksChip(api)
-	friChip := fri.NewChip(api, &commonCircuitData.FriParams)
+	friChip := fri.NewChip(api, &commonCircuitData, &commonCircuitData.FriParams)
 	challengerChip := challenger.NewChip(api)
 
 	challengerChip.ObserveBN254Hash(verifierOnlyCircuitData.CircuitDigest)
@@ -46,7 +46,7 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	plonkZeta := challengerChip.GetExtensionChallenge()
 	glApi.AssertIsEqual(plonkZeta[0], gl.NewVariable("3892795992421241388"))
 
-	challengerChip.ObserveOpenings(fri.ToOpenings(proofWithPis.Proof.Openings))
+	challengerChip.ObserveOpenings(friChip.ToOpenings(proofWithPis.Proof.Openings))
 
 	friChallenges := challengerChip.GetFriChallenges(
 		proofWithPis.Proof.OpeningProof.CommitPhaseMerkleCaps,
@@ -67,7 +67,7 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	x = 11890500485816111017
 	api.AssertIsEqual(friChallenges.FriQueryIndices[0].Limb, x)
 
-	initialMerkleCaps := []types.FriMerkleCap{
+	initialMerkleCaps := []variables.FriMerkleCap{
 		verifierOnlyCircuitData.ConstantSigmasCap,
 		proofWithPis.Proof.WiresCap,
 		proofWithPis.Proof.PlonkZsPartialProductsCap,
@@ -94,8 +94,8 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 	}
 
 	friChip.VerifyFriProof(
-		fri.GetInstance(&commonCircuitData, glApi, plonkZeta, commonCircuitData.DegreeBits),
-		fri.ToOpenings(proofWithPis.Proof.Openings),
+		friChip.GetInstance(plonkZeta),
+		friChip.ToOpenings(proofWithPis.Proof.Openings),
 		&friChallenges,
 		initialMerkleCaps,
 		&proofWithPis.Proof.OpeningProof,
@@ -107,16 +107,24 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 func TestDecodeBlockFriVerification(t *testing.T) {
 	assert := test.NewAssert(t)
 
+	proofWithPIsFilename := "../testdata/decode_block/proof_with_public_inputs.json"
+	commonCircuitDataFilename := "../testdata/decode_block/common_circuit_data.json"
+	verifierOnlyCircuitDataFilename := "../testdata/decode_block/verifier_only_circuit_data.json"
+
+	proofWithPis := variables.DeserializeProofWithPublicInputs(types.ReadProofWithPublicInputs(proofWithPIsFilename))
+	commonCircuitData := types.ReadCommonCircuitData(commonCircuitDataFilename)
+	verifierOnlyCircuitData := variables.DeserializeVerifierOnlyCircuitData(types.ReadVerifierOnlyCircuitData(verifierOnlyCircuitDataFilename))
+
 	testCase := func() {
 		circuit := TestFriCircuit{
-			proofWithPIsFilename:            "../../data/decode_block/proof_with_public_inputs.json",
-			commonCircuitDataFilename:       "../../data/decode_block//common_circuit_data.json",
-			verifierOnlyCircuitDataFilename: "../../data/decode_block//verifier_only_circuit_data.json",
+			proofWithPis,
+			verifierOnlyCircuitData,
+			commonCircuitData,
 		}
 		witness := TestFriCircuit{
-			proofWithPIsFilename:            "../../data/dummy_2^14_gates/proof_with_public_inputs.json",
-			commonCircuitDataFilename:       "../../data/dummy_2^14_gates/common_circuit_data.json",
-			verifierOnlyCircuitDataFilename: ".../../data/dummy_2^14_gates/verifier_only_circuit_data.json",
+			proofWithPis,
+			verifierOnlyCircuitData,
+			commonCircuitData,
 		}
 		err := test.IsSolved(&circuit, &witness, ecc.BN254.ScalarField())
 		assert.NoError(err)
