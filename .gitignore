@@ -16,3 +16,6 @@
 
 gnark-ed25519
 gnark.pprof
+
+# Output from pprof visualization
+verifier.png

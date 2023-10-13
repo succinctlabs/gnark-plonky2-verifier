@@ -1,7 +1,11 @@
 package fri
 
 import (
+	"math"
+
+	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/succinctlabs/gnark-plonky2-verifier/types"
+	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
 )
 
 type PolynomialInfo struct {
@@ -145,4 +149,80 @@ func friAllPolys(c *types.CommonCircuitData) []PolynomialInfo {
 	returnArr = append(returnArr, friQuotientPolys(c)...)
 
 	return returnArr
+}
+
+// This does not add any constraints, it's just a sanity check on the friParams
+// It's a 1-1 port of assert_noncanonical_indices_ok from fri::recursive_verifier in plonky2
+func assertNoncanonicalIndicesOK(friParams types.FriParams) {
+	numAmbiguousElems := uint64(math.MaxUint64) - goldilocks.Modulus().Uint64() + 1
+	queryError := friParams.Config.Rate()
+	pAmbiguous := float64(numAmbiguousElems) / float64(goldilocks.Modulus().Uint64())
+	if pAmbiguous >= queryError*1e-5 {
+		panic("A non-negligible portion of field elements are in the range that permits non-canonical encodings. Need to do more analysis or enforce canonical encodings.")
+	}
+}
+
+// This does not add any constraints, it is just a sanity check on the shapes of the proof variable
+// and given FriParams. It's a 1-1 port of validate_fri_proof_shape from fri::validate_shape in plonky2
+func validateFriProofShape(proof *variables.FriProof, instance InstanceInfo, params *types.FriParams) {
+	const SALT_SIZE = 4
+
+	commitPhaseMerkleCaps := proof.CommitPhaseMerkleCaps
+	queryRoundProofs := proof.QueryRoundProofs
+	finalPoly := proof.FinalPoly
+
+	capHeight := params.Config.CapHeight
+	for _, cap := range commitPhaseMerkleCaps {
+		if 1<<capHeight != len(cap) {
+			panic("config cap_height does not match commit_phase_merkle_caps")
+		}
+	}
+
+	for _, queryRound := range queryRoundProofs {
+		initialTreesProof := queryRound.InitialTreesProof
+		steps := queryRound.Steps
+		if len(initialTreesProof.EvalsProofs) != len(instance.Oracles) {
+			panic("eval proofs length is not equal to instance oracles length")
+		}
+		for i, evalProof := range initialTreesProof.EvalsProofs {
+			leaf := evalProof.Elements
+			merkleProof := evalProof.MerkleProof
+			oracle := instance.Oracles[i]
+			salt_size := 0
+			if oracle.Blinding && params.Hiding {
+				salt_size = SALT_SIZE
+			}
+			if len(leaf) != (int(oracle.NumPolys) + salt_size) {
+				panic("eval proof leaf length doesn't match oracle info")
+			}
+			if len(merkleProof.Siblings)+int(capHeight) != params.LdeBits() {
+				panic("length of merkle proof + capHeight doesn't match lde_bits from params")
+			}
+		}
+		if len(steps) != len(params.ReductionArityBits) {
+			panic("length of steps != params.reduction_arity_bits")
+		}
+
+		codewordLenBits := params.LdeBits()
+		for i, step := range steps {
+			evals := step.Evals
+			merkleProof := step.MerkleProof
+			arityBits := params.ReductionArityBits[i]
+
+			arity := 1 << arityBits
+			codewordLenBits -= int(arityBits)
+
+			if len(evals) != arity {
+				panic("len evals doesn't match arity")
+			}
+
+			if len(merkleProof.Siblings)+int(capHeight) != codewordLenBits {
+				panic("len merkleProof doesn't match codewordLenBits")
+			}
+		}
+	}
+
+	if len(finalPoly.Coeffs) != params.FinalPolyLen() {
+		panic("len finalPoly doesn't match params FinalPolyLen")
+	}
 }

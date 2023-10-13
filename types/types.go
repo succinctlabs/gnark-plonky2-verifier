@@ -1,13 +1,17 @@
 package types
 
-import "github.com/succinctlabs/gnark-plonky2-verifier/plonk/gates"
+import (
+	"github.com/succinctlabs/gnark-plonky2-verifier/plonk/gates"
+)
 
 type FriConfig struct {
 	RateBits        uint64
 	CapHeight       uint64
 	ProofOfWorkBits uint64
 	NumQueryRounds  uint64
-	// TODO: add FriReductionStrategy
+	// Note that we do not need `reduction_strategy` of type FriReductionStrategy as the plonky2 FriConfig has.
+	// reduction_strategy is only used for computing `reduction_arity_bits`, which is serialized in the
+	// CommonCircuitData.
 }
 
 func (fc *FriConfig) Rate() float64 {
@@ -19,6 +23,40 @@ type FriParams struct {
 	Hiding             bool
 	DegreeBits         uint64
 	ReductionArityBits []uint64
+}
+
+func (p *FriParams) TotalArities() int {
+	res := 0
+	for _, b := range p.ReductionArityBits {
+		res += int(b)
+	}
+	return res
+}
+
+func (p *FriParams) MaxArityBits() int {
+	res := 0
+	for _, b := range p.ReductionArityBits {
+		if int(b) > res {
+			res = int(b)
+		}
+	}
+	return res
+}
+
+func (p *FriParams) LdeBits() int {
+	return int(p.DegreeBits + p.Config.RateBits)
+}
+
+func (p *FriParams) LdeSize() int {
+	return 1 << p.LdeBits()
+}
+
+func (p *FriParams) FinalPolyBits() int {
+	return int(p.DegreeBits) - p.TotalArities()
+}
+
+func (p *FriParams) FinalPolyLen() int {
+	return int(1 << p.FinalPolyBits())
 }
 
 type CircuitConfig struct {

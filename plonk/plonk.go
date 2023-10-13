@@ -25,8 +25,6 @@ type PlonkChip struct {
 }
 
 func NewPlonkChip(api frontend.API, commonData types.CommonCircuitData) *PlonkChip {
-	// TODO:  Should degreeBits be verified that it fits within the field and that degree is within uint64?
-
 	// Create the gates based on commonData GateIds
 	createdGates := []gates.Gate{}
 	for _, gateId := range commonData.GateIds {

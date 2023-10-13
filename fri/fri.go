@@ -106,11 +106,15 @@ func (f *Chip) verifyMerkleProofToCapWithCapIndex(
 	currentDigest := f.poseidonBN254Chip.HashOrNoop(leafData)
 	for i, sibling := range proof.Siblings {
 		bit := leafIndexBits[i]
-		// TODO: Don't need to do two hashes by using a trick that the plonky2 verifier circuit does
-		// https://github.com/mir-protocol/plonky2/blob/973624f12d2d12d74422b3ea051358b9eaacb050/plonky2/src/gates/poseidon.rs#L298
-		leftHash := f.poseidonBN254Chip.TwoToOne(sibling, currentDigest)
-		rightHash := f.poseidonBN254Chip.TwoToOne(currentDigest, sibling)
-		currentDigest = f.api.Select(bit, leftHash, rightHash)
+
+		var inputs poseidon.BN254State
+		inputs[0] = frontend.Variable(0)
+		inputs[1] = frontend.Variable(0)
+		inputs[2] = f.api.Select(bit, sibling, currentDigest)
+		inputs[3] = f.api.Select(bit, currentDigest, sibling)
+		state := f.poseidonBN254Chip.Poseidon(inputs)
+
+		currentDigest = state[0]
 	}
 
 	// We assume that the cap_height is 4.  Create two levels of the Lookup2 circuit
@@ -152,29 +156,6 @@ func (f *Chip) verifyInitialProof(xIndexBits []frontend.Variable, proof *variabl
 	}
 }
 
-// / We decompose FRI query indices into bits without verifying that the decomposition given by
-// / the prover is the canonical one. In particular, if `x_index < 2^field_bits - p`, then the
-// / prover could supply the binary encoding of either `x_index` or `x_index + p`, since they are
-// / congruent mod `p`. However, this only occurs with probability
-// /     p_ambiguous = (2^field_bits - p) / p
-// / which is small for the field that we use in practice.
-// /
-// / In particular, the soundness error of one FRI query is roughly the codeword rate, which
-// / is much larger than this ambiguous-element probability given any reasonable parameters.
-// / Thus ambiguous elements contribute a negligible amount to soundness error.
-// /
-// / Here we compare the probabilities as a sanity check, to verify the claim above.
-func (f *Chip) assertNoncanonicalIndicesOK() {
-	numAmbiguousElems := uint64(math.MaxUint64) - goldilocks.Modulus().Uint64() + 1
-	queryError := f.friParams.Config.Rate()
-	pAmbiguous := float64(numAmbiguousElems) / float64(goldilocks.Modulus().Uint64())
-
-	// TODO:  Check that pAmbiguous value is the same as the one in plonky2 verifier
-	if pAmbiguous >= queryError*1e-5 {
-		panic("A non-negligible portion of field elements are in the range that permits non-canonical encodings. Need to do more analysis or enforce canonical encodings.")
-	}
-}
-
 func (f *Chip) expFromBitsConstBase(
 	base goldilocks.Element,
 	exponentBits []frontend.Variable,
@@ -209,7 +190,7 @@ func (f *Chip) calculateSubgroupX(
 ) gl.Variable {
 	// Compute x from its index
 	// `subgroup_x` is `subgroup[x_index]`, i.e., the actual field element in the domain.
-	// TODO - Make these as global values
+	// OPTIMIZE - Make these as global values
 	g := gl.NewVariable(gl.MULTIPLICATIVE_GROUP_GENERATOR.Uint64())
 	base := gl.PrimitiveRootOfUnity(nLog)
 
@@ -343,7 +324,7 @@ func (f *Chip) computeEvaluation(
 
 	// The evaluation vector needs to be reordered first.  Permute the evals array such that each
 	// element's new index is the bit reverse of it's original index.
-	// TODO:  Optimization - Since the size of the evals array should be constant (e.g. 2^arityBits),
+	// OPTIMIZE - Since the size of the evals array should be constant (e.g. 2^arityBits),
 	//        we can just hard code the permutation.
 	permutedEvals := make([]gl.QuadraticExtensionVariable, len(evals))
 	for i := uint8(0); i < uint8(len(evals)); i++ {
@@ -363,14 +344,14 @@ func (f *Chip) computeEvaluation(
 	xPoints := make([]gl.QuadraticExtensionVariable, len(evals))
 	yPoints := permutedEvals
 
-	// TODO: Make g_F a constant
+	// OPTIMIZE: Make g_F a constant
 	g_F := gl.NewVariable(g.Uint64()).ToQuadraticExtension()
 	xPoints[0] = gl.QuadraticExtensionVariable{cosetStart, gl.Zero()}
 	for i := 1; i < len(evals); i++ {
 		xPoints[i] = f.gl.MulExtension(xPoints[i-1], g_F)
 	}
 
-	// TODO:  This is n^2.  Is there a way to do this better?
+	// OPTIMIZE:  This is n^2.  Is there a way to do this better?
 	// Compute the barycentric weights
 	barycentricWeights := make([]gl.QuadraticExtensionVariable, len(xPoints))
 	for i := 0; i < len(xPoints); i++ {
@@ -385,7 +366,7 @@ func (f *Chip) computeEvaluation(
 			}
 		}
 		// Take the inverse of the barycentric weights
-		// TODO: Can provide a witness to this value
+		// OPTIMIZE: Can provide a witness to this value
 		barycentricWeights[i] = f.gl.InverseExtension(barycentricWeights[i])
 	}
 
@@ -403,7 +384,9 @@ func (f *Chip) verifyQueryRound(
 	nLog uint64,
 	roundProof *variables.FriQueryRound,
 ) {
-	f.assertNoncanonicalIndicesOK()
+	// Note assertNoncanonicalIndicesOK does not add any constraints, it's a sanity check on the config
+	assertNoncanonicalIndicesOK(*f.friParams)
+
 	xIndex = f.gl.Reduce(xIndex)
 	xIndexBits := f.api.ToBinary(xIndex.Limb, 64)[0 : f.friParams.DegreeBits+f.friParams.Config.RateBits]
 	capIndexBits := xIndexBits[len(xIndexBits)-int(f.friParams.Config.CapHeight):]
@@ -511,20 +494,17 @@ func (f *Chip) VerifyFriProof(
 	initialMerkleCaps []variables.FriMerkleCap,
 	friProof *variables.FriProof,
 ) {
-	// TODO:  Check fri config
-	/* if let Some(max_arity_bits) = params.max_arity_bits() {
-		self.check_recursion_config::<C>(max_arity_bits);
-	}
-
-	debug_assert_eq!(
-		params.final_poly_len(),
-		proof.final_poly.len(),
-		"Final polynomial has wrong degree."
-	); */
+	// Not adding any constraints but a sanity check on the proof shape matching the friParams (constant).
+	validateFriProofShape(friProof, instance, f.friParams)
 
 	// Check POW
-
 	f.assertLeadingZeros(friChallenges.FriPowResponse, f.friParams.Config)
+
+	// Check that parameters are coherent. Not adding any constraints but a sanity check
+	// on the proof shape matching the friParams.
+	if int(f.friParams.Config.NumQueryRounds) != len(friProof.QueryRoundProofs) {
+		panic("Number of query rounds does not match config.")
+	}
 
 	precomputedReducedEvals := f.fromOpeningsAndAlpha(&openings, friChallenges.FriAlpha)
 
