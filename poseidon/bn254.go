@@ -47,6 +47,9 @@ func (c *BN254Chip) HashNoPad(input []gl.Variable) BN254HashOut {
 		frontend.Variable(0),
 	}
 
+	two_to_32 := new(big.Int).SetInt64(1 << 32)
+	two_to_64 := new(big.Int).Mul(two_to_32, two_to_32)
+
 	for i := 0; i < len(input); i += BN254_SPONGE_RATE * 3 {
 		endI := c.min(len(input), i+BN254_SPONGE_RATE*3)
 		rateChunk := input[i:endI]
@@ -54,13 +57,12 @@ func (c *BN254Chip) HashNoPad(input []gl.Variable) BN254HashOut {
 			endJ := c.min(len(rateChunk), j+3)
 			bn254Chunk := rateChunk[j:endJ]
 
-			bits := []frontend.Variable{}
+			inter := frontend.Variable(0)
 			for k := 0; k < len(bn254Chunk); k++ {
-				bn254Chunk[k] = c.gl.Reduce(bn254Chunk[k])
-				bits = append(bits, c.api.ToBinary(bn254Chunk[k].Limb, 64)...)
+				inter = c.api.MulAcc(inter, bn254Chunk[k].Limb, new(big.Int).Exp(two_to_64, big.NewInt(int64(k)), nil))
 			}
 
-			state[stateIdx+1] = c.api.FromBinary(bits...)
+			state[stateIdx+1] = inter
 		}
 
 		state = c.Poseidon(state)
