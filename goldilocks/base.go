@@ -131,9 +131,8 @@ func (p *Chip) MulAdd(a Variable, b Variable, c Variable) Variable {
 	quotient := NewVariable(result[0])
 	remainder := NewVariable(result[1])
 
-	lhs := p.api.Mul(a.Limb, b.Limb)
-	lhs = p.api.Add(lhs, c.Limb)
-	rhs := p.api.Add(p.api.Mul(quotient.Limb, MODULUS), remainder.Limb)
+	lhs := p.api.MulAcc(c.Limb, a.Limb, b.Limb)
+	rhs := p.api.MulAcc(remainder.Limb, MODULUS, quotient.Limb)
 	p.api.AssertIsEqual(lhs, rhs)
 
 	p.RangeCheck(quotient)
@@ -144,7 +143,7 @@ func (p *Chip) MulAdd(a Variable, b Variable, c Variable) Variable {
 // Multiplies two field elements and adds a field element such that x * y + z = c within the
 // Golidlocks field without reducing.
 func (p *Chip) MulAddNoReduce(a Variable, b Variable, c Variable) Variable {
-	return p.AddNoReduce(p.MulNoReduce(a, b), c)
+	return NewVariable(p.api.MulAcc(c.Limb, a.Limb, b.Limb))
 }
 
 // The hint used to compute MulAdd.

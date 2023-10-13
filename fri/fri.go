@@ -103,14 +103,30 @@ func (f *Chip) verifyMerkleProofToCapWithCapIndex(
 	merkleCap variables.FriMerkleCap,
 	proof *variables.FriMerkleProof,
 ) {
+	// func (c *BN254Chip) TwoToOne(left BN254HashOut, right BN254HashOut) BN254HashOut {
+	// 	var inputs BN254State
+	// 	inputs[0] = frontend.Variable(0)
+	// 	inputs[1] = frontend.Variable(0)
+	// 	inputs[2] = left
+	// 	inputs[3] = right
+	// 	state := c.Poseidon(inputs)
+	// 	return state[0]
+	// }
+
 	currentDigest := f.poseidonBN254Chip.HashOrNoop(leafData)
 	for i, sibling := range proof.Siblings {
 		bit := leafIndexBits[i]
-		// TODO: Don't need to do two hashes by using a trick that the plonky2 verifier circuit does
-		// https://github.com/mir-protocol/plonky2/blob/973624f12d2d12d74422b3ea051358b9eaacb050/plonky2/src/gates/poseidon.rs#L298
-		leftHash := f.poseidonBN254Chip.TwoToOne(sibling, currentDigest)
-		rightHash := f.poseidonBN254Chip.TwoToOne(currentDigest, sibling)
-		currentDigest = f.api.Select(bit, leftHash, rightHash)
+		var inputs poseidon.BN254State
+		inputs[0] = frontend.Variable(0)
+		inputs[1] = frontend.Variable(0)
+		inputs[2] = f.api.Select(bit, sibling, currentDigest)
+		inputs[3] = f.api.Select(bit, currentDigest, sibling)
+		state := f.poseidonBN254Chip.Poseidon(inputs)
+		// // TODO: Don't need to do two hashes by using a trick that the plonky2 verifier circuit does
+		// // https://github.com/mir-protocol/plonky2/blob/973624f12d2d12d74422b3ea051358b9eaacb050/plonky2/src/gates/poseidon.rs#L298
+		// leftHash := f.poseidonBN254Chip.TwoToOne(sibling, currentDigest)
+		// rightHash := f.poseidonBN254Chip.TwoToOne(currentDigest, sibling)
+		currentDigest = state[0]
 	}
 
 	// We assume that the cap_height is 4.  Create two levels of the Lookup2 circuit
