@@ -186,9 +186,12 @@ func (p *Chip) Reduce(x Variable) Variable {
 	}
 
 	quotient := result[0]
-	p.rangeChecker.Check(quotient, RANGE_CHECK_NB_BITS)
-
 	remainder := NewVariable(result[1])
+
+	rhs := p.api.MulAcc(remainder.Limb, MODULUS, quotient)
+	p.api.AssertIsEqual(x.Limb, rhs)
+
+	p.rangeChecker.Check(quotient, RANGE_CHECK_NB_BITS)
 	p.RangeCheck(remainder)
 	return remainder
 }
@@ -208,9 +211,12 @@ func (p *Chip) ReduceWithMaxBits(x Variable, maxNbBits uint64) Variable {
 	}
 
 	quotient := result[0]
-	p.rangeChecker.Check(quotient, int(maxNbBits))
-
 	remainder := NewVariable(result[1])
+
+	rhs := p.api.MulAcc(remainder.Limb, MODULUS, quotient)
+	p.api.AssertIsEqual(x.Limb, rhs)
+
+	p.rangeChecker.Check(quotient, int(maxNbBits))
 	p.RangeCheck(remainder)
 	return remainder
 }
