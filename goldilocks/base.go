@@ -190,6 +190,9 @@ func (p *Chip) Reduce(x Variable) Variable {
 
 	remainder := NewVariable(result[1])
 	p.RangeCheck(remainder)
+
+	p.api.AssertIsEqual(x, p.api.Add(p.api.Mul(quotient, MODULUS), remainder.Limb))
+
 	return remainder
 }
 
