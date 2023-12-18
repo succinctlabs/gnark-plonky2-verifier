@@ -236,6 +236,8 @@ func (p *Chip) Inverse(x Variable) Variable {
 	}
 
 	inverse := NewVariable(result[0])
+	p.RangeCheck(inverse)
+
 	product := p.Mul(inverse, x)
 	p.api.AssertIsEqual(product.Limb, frontend.Variable(1))
 	return inverse
