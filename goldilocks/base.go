@@ -215,6 +215,9 @@ func (p *Chip) ReduceWithMaxBits(x Variable, maxNbBits uint64) Variable {
 
 	remainder := NewVariable(result[1])
 	p.RangeCheck(remainder)
+
+	p.api.AssertIsEqual(x, p.api.Add(p.api.Mul(quotient, MODULUS), remainder.Limb))
+
 	return remainder
 }
 
