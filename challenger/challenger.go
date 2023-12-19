@@ -118,7 +118,6 @@ func (c *Chip) GetFriChallenges(
 	commitPhaseMerkleCaps []variables.FriMerkleCap,
 	finalPoly variables.PolynomialCoeffs,
 	powWitness gl.Variable,
-	degreeBits uint64,
 	config types.FriConfig,
 ) variables.FriChallenges {
 	numFriQueries := config.NumQueryRounds
