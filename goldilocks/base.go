@@ -87,38 +87,41 @@ func New(api frontend.API) *Chip {
 	return &Chip{api: api, rangeChecker: rangeChecker}
 }
 
-// Adds two field elements such that x + y = z within the Golidlocks field.
+// Adds two goldilocks field elements and returns a value within the goldilocks field.
 func (p *Chip) Add(a Variable, b Variable) Variable {
 	return p.MulAdd(a, NewVariable(1), b)
 }
 
-// Adds two field elements such that x + y = z within the Golidlocks field without reducing.
+// Adds two goldilocks field elements and returns a value that may not be within the goldilocks field
+// (e.g. the sum is not reduced).
 func (p *Chip) AddNoReduce(a Variable, b Variable) Variable {
 	return NewVariable(p.api.Add(a.Limb, b.Limb))
 }
 
-// Subtracts two field elements such that x + y = z within the Golidlocks field.
+// Subracts two goldilocks field elements and returns a value within the goldilocks field.
 func (p *Chip) Sub(a Variable, b Variable) Variable {
 	return p.MulAdd(b, NegOne(), a)
 }
 
-// Subtracts two field elements such that x + y = z within the Golidlocks field without reducing.
+// Subracts two goldilocks field elements and returns a value that may not be within the goldilocks field
+// (e.g. the difference is not reduced).
 func (p *Chip) SubNoReduce(a Variable, b Variable) Variable {
 	return NewVariable(p.api.Add(a.Limb, p.api.Mul(b.Limb, NegOne().Limb)))
 }
 
-// Multiplies two field elements such that x * y = z within the Golidlocks field.
+// Multiplies two goldilocks field elements and returns a value within the goldilocks field.
 func (p *Chip) Mul(a Variable, b Variable) Variable {
 	return p.MulAdd(a, b, Zero())
 }
 
-// Multiplies two field elements such that x * y = z within the Golidlocks field without reducing.
+// Multiplies two goldilocks field elements and returns a value that may not be within the goldilocks field
+// (e.g. the product is not reduced).
 func (p *Chip) MulNoReduce(a Variable, b Variable) Variable {
 	return NewVariable(p.api.Mul(a.Limb, b.Limb))
 }
 
-// Multiplies two field elements and adds a field element such that x * y + z = c within the
-// Golidlocks field.
+// Multiplies two field elements and adds a field element (e.g. computes a * b + c).  The returned value
+// will be within the goldilocks field.
 func (p *Chip) MulAdd(a Variable, b Variable, c Variable) Variable {
 	result, err := p.api.Compiler().NewHint(MulAddHint, 2, a.Limb, b.Limb, c.Limb)
 	if err != nil {
@@ -138,8 +141,8 @@ func (p *Chip) MulAdd(a Variable, b Variable, c Variable) Variable {
 	return remainder
 }
 
-// Multiplies two field elements and adds a field element such that x * y + z = c within the
-// Golidlocks field without reducing.
+// Multiplies two field elements and adds a field element (e.g. computes a * b + c).  The returned value
+// may no be within the goldilocks field (e.g. the result is not reduced).
 func (p *Chip) MulAddNoReduce(a Variable, b Variable, c Variable) Variable {
 	cLimbCopy := p.api.Mul(c.Limb, 1)
 	return NewVariable(p.api.MulAcc(cLimbCopy, a.Limb, b.Limb))

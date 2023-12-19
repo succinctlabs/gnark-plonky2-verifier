@@ -84,7 +84,7 @@ func (p *Chip) MulAddExtensionNoReduce(a, b, c QuadraticExtensionVariable) Quadr
 	return sum
 }
 
-// Multiplies two operands a and b and subtracts to c in the Goldilocks extension field. a * b - c must
+// Subtracts two operands a and b and multiplies the diff by c in the Goldilocks extension field. (a - b) * c must
 // be less than RANGE_CHECK_NB_BITS bits.
 func (p *Chip) SubMulExtension(a, b, c QuadraticExtensionVariable) QuadraticExtensionVariable {
 	difference := p.SubExtensionNoReduce(a, b)
@@ -209,7 +209,7 @@ func (p *Chip) Lookup(
 	return NewQuadraticExtensionVariable(NewVariable(c0), NewVariable(c1))
 }
 
-// Lookup2 is similar to select2, but returns the first variable if the bit is zero and vice-versa.
+// Lookup2 is similar to Lookup2.  It returns the ith qe value (0 indexed) where i is bit decomposed to b0,b1 (little endian).
 func (p *Chip) Lookup2(
 	b0 frontend.Variable,
 	b1 frontend.Variable,

@@ -151,7 +151,7 @@ func (g *RandomAccessGate) EvalUnfiltered(
 				y := listItems[i+1]
 
 				// This is computing `if b { x } else { y }`
-				// i.e. `bx - (by-y)`.
+				// i.e. `by - (bx - x)`.
 				mul1 := glApi.MulExtension(b, x)
 				sub1 := glApi.SubExtension(mul1, x)
 

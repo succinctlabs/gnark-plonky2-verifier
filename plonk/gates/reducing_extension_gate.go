@@ -12,7 +12,7 @@ import (
 var reducingExtensionGateRegex = regexp.MustCompile("ReducingExtensionGate { num_coeffs: (?P<numCoeffs>[0-9]+) }")
 
 func deserializeReducingExtensionGate(parameters map[string]string) Gate {
-	// Has the format "ReducingGate { num_coeffs: 33 }"
+	// Has the format "ReducingExtensionGate { num_coeffs: 33 }"
 	numCoeffs, hasNumCoeffs := parameters["numCoeffs"]
 	if !hasNumCoeffs {
 		panic("Missing field num_coeffs in ReducingExtensionGate")
