@@ -199,6 +199,10 @@ func (g *CosetInterpolationGate) EvalUnfiltered(
 
 		startIndex := 1 + (g.degree-1)*(i+1)
 		endIndex := startIndex + g.degree - 1
+		if endIndex > g.numPoints() {
+			endIndex = g.numPoints()
+		}
+
 		computedEval, computedProd = glApi.PartialInterpolateExtAlgebra(
 			domain[startIndex:endIndex],
 			values[startIndex:endIndex],
