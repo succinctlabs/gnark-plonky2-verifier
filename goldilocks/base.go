@@ -394,7 +394,7 @@ func TwoAdicSubgroup(nLog uint64) []goldilocks.Element {
 	rootOfUnity := PrimitiveRootOfUnity(nLog)
 	res = append(res, goldilocks.NewElement(1))
 
-	for i := 0; i < (1 << nLog); i++ {
+	for i := 0; i < (1<<nLog)-1; i++ {
 		lastElement := res[len(res)-1]
 		res = append(res, *lastElement.Mul(&lastElement, &rootOfUnity))
 	}
