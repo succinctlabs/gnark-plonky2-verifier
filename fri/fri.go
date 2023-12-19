@@ -335,7 +335,7 @@ func (f *Chip) computeEvaluation(
 	// OPTIMIZE - Since the size of the evals array should be constant (e.g. 2^arityBits),
 	//        we can just hard code the permutation.
 	permutedEvals := make([]gl.QuadraticExtensionVariable, len(evals))
-	for i := uint8(0); i < uint8(len(evals)); i++ {
+	for i := uint8(0); i <= uint8(len(evals)-1); i++ {
 		newIndex := bits.Reverse8(i) >> arityBits
 		permutedEvals[newIndex] = evals[i]
 	}
