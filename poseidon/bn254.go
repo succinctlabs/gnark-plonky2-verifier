@@ -79,7 +79,7 @@ func (c *BN254Chip) HashOrNoop(input []gl.Variable) BN254HashOut {
 		alpha = new(big.Int).Mul(alpha, alpha)
 		for i, inputElement := range input {
 			mulFactor := new(big.Int).Exp(alpha, big.NewInt(int64(i)), nil)
-			returnVal = c.api.MulAcc(returnVal, inputElement, mulFactor)
+			returnVal = c.api.MulAcc(returnVal, inputElement.Limb, mulFactor)
 		}
 
 		return BN254HashOut(returnVal)
