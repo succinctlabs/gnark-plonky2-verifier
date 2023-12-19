@@ -49,14 +49,14 @@ func (f *Chip) GetInstance(zeta gl.QuadraticExtensionVariable) InstanceInfo {
 		zeta,
 	)
 
-	zetaNextBath := BatchInfo{
+	zetaNextBatch := BatchInfo{
 		Point:       zetaNext,
 		Polynomials: friZSPolys(f.commonData),
 	}
 
 	return InstanceInfo{
 		Oracles: friOracles(f.commonData),
-		Batches: []BatchInfo{zetaBatch, zetaNextBath},
+		Batches: []BatchInfo{zetaBatch, zetaNextBatch},
 	}
 }
 
@@ -168,7 +168,7 @@ func (f *Chip) expFromBitsConstBase(
 ) gl.Variable {
 	product := gl.One()
 	for i, bit := range exponentBits {
-		// If the bit is on, we multiply product by base^pow.
+		// If the bit is 1, we multiply product by base^pow.
 		// We can arithmetize this as:
 		//     product *= 1 + bit (base^pow - 1)
 		//     product = (base^pow - 1) product bit + product
@@ -326,7 +326,7 @@ func (f *Chip) computeEvaluation(
 ) gl.QuadraticExtensionVariable {
 	arity := 1 << arityBits
 	if (len(evals)) != arity {
-		panic("len(evals) ! arity")
+		panic("len(evals) != arity")
 	}
 	if arityBits > 8 {
 		panic("currently assuming that arityBits is <= 8")
