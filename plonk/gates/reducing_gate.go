@@ -96,11 +96,7 @@ func (g *ReducingGate) EvalUnfiltered(
 	constraints := []gl.QuadraticExtensionVariable{}
 	acc := oldAcc
 	for i := uint64(0); i < g.numCoeffs; i++ {
-		var coeff gl.QuadraticExtensionAlgebraVariable
-		for j := 0; j < gl.D; j++ {
-			coeff[j] = gl.ZeroExtension()
-		}
-		coeff[0] = coeffs[i]
+		coeff := coeffs[i].ToQuadraticExtensionAlgebra()
 		tmp := glApi.MulExtensionAlgebra(acc, alpha)
 		tmp = glApi.AddExtensionAlgebra(tmp, coeff)
 		tmp = glApi.SubExtensionAlgebra(tmp, accs[i])

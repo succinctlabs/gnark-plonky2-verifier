@@ -14,7 +14,7 @@ func NewQuadraticExtensionAlgebraVariable(
 }
 
 func (p QuadraticExtensionVariable) ToQuadraticExtensionAlgebra() QuadraticExtensionAlgebraVariable {
-	return [2]QuadraticExtensionVariable{p, ZeroExtension()}
+	return [D]QuadraticExtensionVariable{p, ZeroExtension()}
 }
 
 func ZeroExtensionAlgebra() QuadraticExtensionAlgebraVariable {

@@ -77,8 +77,8 @@ func (c *GoldilocksChip) HashNoPad(input []gl.Variable) GoldilocksHashOut {
 		inputVars = append(inputVars, c.gl.Reduce(input[i]))
 	}
 
-	outputVars := c.HashNToMNoPad(inputVars, 4)
-	for i := 0; i < 4; i++ {
+	outputVars := c.HashNToMNoPad(inputVars, len(hash))
+	for i := 0; i < len(hash); i++ {
 		hash[i] = outputVars[i]
 	}
 
@@ -118,7 +118,7 @@ func (c *GoldilocksChip) constantLayer(state GoldilocksState, roundCounter *int)
 	for i := 0; i < 12; i++ {
 		if i < SPONGE_WIDTH {
 			roundConstant := ALL_ROUND_CONSTANTS[i+SPONGE_WIDTH*(*roundCounter)]
-			state[i] = c.gl.MulAdd(state[i], gl.NewVariable(1), gl.NewVariable(roundConstant))
+			state[i] = c.gl.Add(state[i], gl.NewVariable(roundConstant))
 		}
 	}
 	return state
@@ -169,7 +169,7 @@ func (c *GoldilocksChip) SBoxLayerExtension(state GoldilocksStateExtension) Gold
 	return state
 }
 
-func (c *GoldilocksChip) mdsRowShf(r int, v [SPONGE_WIDTH]gl.Variable) gl.Variable {
+func (c *GoldilocksChip) mdsRowShf(r int, v GoldilocksState) gl.Variable {
 	res := gl.Zero()
 
 	for i := 0; i < 12; i++ {
@@ -182,7 +182,7 @@ func (c *GoldilocksChip) mdsRowShf(r int, v [SPONGE_WIDTH]gl.Variable) gl.Variab
 	return c.gl.Reduce(res)
 }
 
-func (c *GoldilocksChip) MdsRowShfExtension(r int, v [SPONGE_WIDTH]gl.QuadraticExtensionVariable) gl.QuadraticExtensionVariable {
+func (c *GoldilocksChip) MdsRowShfExtension(r int, v GoldilocksStateExtension) gl.QuadraticExtensionVariable {
 	res := gl.ZeroExtension()
 
 	for i := 0; i < 12; i++ {
@@ -251,7 +251,7 @@ func (c *GoldilocksChip) PartialFirstConstantLayerExtension(state GoldilocksStat
 func (c *GoldilocksChip) mdsPartialLayerInit(state GoldilocksState) GoldilocksState {
 	var result GoldilocksState
 	for i := 0; i < 12; i++ {
-		result[i] = gl.NewVariable(0)
+		result[i] = gl.Zero()
 	}
 
 	result[0] = state[0]

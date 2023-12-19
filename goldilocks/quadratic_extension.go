@@ -58,15 +58,13 @@ func (p *Chip) SubExtensionNoReduce(a, b QuadraticExtensionVariable) QuadraticEx
 // Multiplies quadratic extension variable in the Goldilocks field.
 func (p *Chip) MulExtension(a, b QuadraticExtensionVariable) QuadraticExtensionVariable {
 	product := p.MulExtensionNoReduce(a, b)
-	product[0] = p.Reduce(product[0])
-	product[1] = p.Reduce(product[1])
-	return product
+	return p.ReduceExtension(product)
 }
 
 // Multiplies quadratic extension variable in the Goldilocks field without reducing.
 func (p *Chip) MulExtensionNoReduce(a, b QuadraticExtensionVariable) QuadraticExtensionVariable {
 	c0o0 := p.MulNoReduce(a[0], b[0])
-	c0o1 := p.MulNoReduce(p.MulNoReduce(NewVariable(7), a[1]), b[1])
+	c0o1 := p.MulNoReduce(p.MulNoReduce(NewVariable(W), a[1]), b[1])
 	c0 := p.AddNoReduce(c0o0, c0o1)
 	c1 := p.AddNoReduce(p.MulNoReduce(a[0], b[1]), p.MulNoReduce(a[1], b[0]))
 	return NewQuadraticExtensionVariable(c0, c1)
@@ -77,9 +75,7 @@ func (p *Chip) MulExtensionNoReduce(a, b QuadraticExtensionVariable) QuadraticEx
 func (p *Chip) MulAddExtension(a, b, c QuadraticExtensionVariable) QuadraticExtensionVariable {
 	product := p.MulExtensionNoReduce(a, b)
 	sum := p.AddExtensionNoReduce(product, c)
-	sum[0] = p.Reduce(sum[0])
-	sum[1] = p.Reduce(sum[1])
-	return sum
+	return p.ReduceExtension(sum)
 }
 
 func (p *Chip) MulAddExtensionNoReduce(a, b, c QuadraticExtensionVariable) QuadraticExtensionVariable {
@@ -93,9 +89,7 @@ func (p *Chip) MulAddExtensionNoReduce(a, b, c QuadraticExtensionVariable) Quadr
 func (p *Chip) SubMulExtension(a, b, c QuadraticExtensionVariable) QuadraticExtensionVariable {
 	difference := p.SubExtensionNoReduce(a, b)
 	product := p.MulExtensionNoReduce(difference, c)
-	product[0] = p.Reduce(product[0])
-	product[1] = p.Reduce(product[1])
-	return product
+	return p.ReduceExtension(product)
 }
 
 // Multiplies quadratic extension variable in the Goldilocks field by a scalar.
@@ -127,9 +121,8 @@ func (p *Chip) InnerProductExtension(
 
 // Computes the inverse of a quadratic extension variable in the Goldilocks field.
 func (p *Chip) InverseExtension(a QuadraticExtensionVariable) (QuadraticExtensionVariable, frontend.Variable) {
-	a0IsZero := p.api.IsZero(a[0].Limb)
-	a1IsZero := p.api.IsZero(a[1].Limb)
-	p.api.AssertIsEqual(p.api.Mul(a0IsZero, a1IsZero), frontend.Variable(0))
+	aIsZero := p.IsZero(a)
+	p.api.AssertIsEqual(aIsZero, frontend.Variable(0))
 	aPowRMinus1 := QuadraticExtensionVariable{
 		a[0],
 		p.Mul(a[1], NewVariable(DTH_ROOT)),

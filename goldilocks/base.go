@@ -102,12 +102,12 @@ func (p *Chip) AddNoReduce(a Variable, b Variable) Variable {
 
 // Subtracts two field elements such that x + y = z within the Golidlocks field.
 func (p *Chip) Sub(a Variable, b Variable) Variable {
-	return p.MulAdd(b, NewVariable(MODULUS.Uint64()-1), a)
+	return p.MulAdd(b, NegOne(), a)
 }
 
 // Subtracts two field elements such that x + y = z within the Golidlocks field without reducing.
 func (p *Chip) SubNoReduce(a Variable, b Variable) Variable {
-	return NewVariable(p.api.Add(a.Limb, p.api.Mul(b.Limb, MODULUS.Uint64()-1)))
+	return NewVariable(p.api.Add(a.Limb, p.api.Mul(b.Limb, NegOne().Limb)))
 }
 
 // Multiplies two field elements such that x * y = z within the Golidlocks field.
@@ -181,21 +181,7 @@ func (p *Chip) Reduce(x Variable) Variable {
 	// that this computation does not overflow. We use 2^RANGE_CHECK_NB_BITS to reduce the cost of the range check
 	//
 	// In other words, we assume that we at most compute a a dot product with dimension at most RANGE_CHECK_NB_BITS - 128.
-
-	result, err := p.api.Compiler().NewHint(ReduceHint, 2, x.Limb)
-	if err != nil {
-		panic(err)
-	}
-
-	quotient := result[0]
-	p.rangeChecker.Check(quotient, RANGE_CHECK_NB_BITS)
-
-	remainder := NewVariable(result[1])
-	p.RangeCheck(remainder)
-
-	p.api.AssertIsEqual(x.Limb, p.api.Add(p.api.Mul(quotient, MODULUS), remainder.Limb))
-
-	return remainder
+	return p.ReduceWithMaxBits(x, uint64(RANGE_CHECK_NB_BITS))
 }
 
 // Reduces a field element x such that x % MODULUS = y.

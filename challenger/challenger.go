@@ -15,13 +15,13 @@ type Chip struct {
 	api               frontend.API `gnark:"-"`
 	poseidonChip      *poseidon.GoldilocksChip
 	poseidonBN254Chip *poseidon.BN254Chip
-	spongeState       [poseidon.SPONGE_WIDTH]gl.Variable
+	spongeState       poseidon.GoldilocksState
 	inputBuffer       []gl.Variable
 	outputBuffer      []gl.Variable
 }
 
 func NewChip(api frontend.API) *Chip {
-	var spongeState [poseidon.SPONGE_WIDTH]gl.Variable
+	var spongeState poseidon.GoldilocksState
 	var inputBuffer []gl.Variable
 	var outputBuffer []gl.Variable
 	for i := 0; i < poseidon.SPONGE_WIDTH; i++ {
