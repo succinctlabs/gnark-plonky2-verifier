@@ -40,7 +40,8 @@ func NewChip(api frontend.API) *Chip {
 }
 
 func (c *Chip) ObserveElement(element gl.Variable) {
-	c.outputBuffer = clearBuffer(c.outputBuffer)
+	// Clear the output buffer
+	c.outputBuffer = make([]gl.Variable, 0)
 	c.inputBuffer = append(c.inputBuffer, element)
 	if len(c.inputBuffer) == poseidon.SPONGE_RATE {
 		c.duplexing()
@@ -143,10 +144,6 @@ func (c *Chip) GetFriChallenges(
 	}
 }
 
-func clearBuffer(buffer []gl.Variable) []gl.Variable {
-	return make([]gl.Variable, 0)
-}
-
 func (c *Chip) duplexing() {
 	if len(c.inputBuffer) > poseidon.SPONGE_RATE {
 		fmt.Println(len(c.inputBuffer))
@@ -158,9 +155,12 @@ func (c *Chip) duplexing() {
 	for i := 0; i < len(c.inputBuffer); i++ {
 		c.spongeState[i] = glApi.Reduce(c.inputBuffer[i])
 	}
-	c.inputBuffer = clearBuffer(c.inputBuffer)
+	// Clear the input buffer
+	c.inputBuffer = make([]gl.Variable, 0)
 	c.spongeState = c.poseidonChip.Poseidon(c.spongeState)
-	clearBuffer(c.outputBuffer)
+
+	// Clear the output buffer
+	c.outputBuffer = make([]gl.Variable, 0)
 	for i := 0; i < poseidon.SPONGE_RATE; i++ {
 		c.outputBuffer = append(c.outputBuffer, c.spongeState[i])
 	}
