@@ -336,7 +336,7 @@ func (f *Chip) computeEvaluation(
 	//        we can just hard code the permutation.
 	permutedEvals := make([]gl.QuadraticExtensionVariable, len(evals))
 	for i := uint8(0); i <= uint8(len(evals)-1); i++ {
-		newIndex := bits.Reverse8(i) >> arityBits
+		newIndex := bits.Reverse8(i) >> (8 - arityBits)
 		permutedEvals[newIndex] = evals[i]
 	}
 
