@@ -32,6 +32,9 @@ func deserializeCosetInterpolationGate(parameters map[string]string) Gate {
 	if err != nil {
 		panic("invalid degree in CosetInterpolationGate")
 	}
+	if degreeInt < 2 {
+		panic("degree must be at least 2 in CosetInterpolationGate")
+	}
 
 	barycentricWeightsStr := strings.Split(barycentricWeights, ",")
 	barycentricWeightsInt := make([]goldilocks.Element, len(barycentricWeightsStr))
