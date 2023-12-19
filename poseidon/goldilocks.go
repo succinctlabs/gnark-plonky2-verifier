@@ -9,10 +9,11 @@ const HALF_N_FULL_ROUNDS = 4
 const N_PARTIAL_ROUNDS = 22
 const SPONGE_WIDTH = 12
 const SPONGE_RATE = 8
+const POSEIDON_GL_HASH_SIZE = 4
 
 type GoldilocksState = [SPONGE_WIDTH]gl.Variable
 type GoldilocksStateExtension = [SPONGE_WIDTH]gl.QuadraticExtensionVariable
-type GoldilocksHashOut = [4]gl.Variable
+type GoldilocksHashOut = [POSEIDON_GL_HASH_SIZE]gl.Variable
 
 type GoldilocksChip struct {
 	api frontend.API `gnark:"-"`

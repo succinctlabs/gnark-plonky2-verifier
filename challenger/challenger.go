@@ -111,7 +111,7 @@ func (c *Chip) GetExtensionChallenge() gl.QuadraticExtensionVariable {
 }
 
 func (c *Chip) GetHash() poseidon.GoldilocksHashOut {
-	return [4]gl.Variable{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
+	return [poseidon.POSEIDON_GL_HASH_SIZE]gl.Variable{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
 }
 
 func (c *Chip) GetFriChallenges(
