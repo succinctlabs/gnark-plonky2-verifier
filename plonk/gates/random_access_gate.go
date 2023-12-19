@@ -36,6 +36,20 @@ func deserializeRandomAccessGate(parameters map[string]string) Gate {
 		panic("invalid numExtraConstants in RandomAccessGate")
 	}
 
+	base, hasBase := parameters["base"]
+	if !hasBase {
+		panic("Missing field base in RandomAccessGate")
+	}
+
+	baseInt, err := strconv.Atoi(base)
+	if err != nil {
+		panic("Invalid base field in RandomAccessGate")
+	}
+
+	if baseInt != gl.D {
+		panic("Expected base field in RandomAccessGate to equal gl.D")
+	}
+
 	return NewRandomAccessGate(bitsInt, numCopiesInt, numExtraConstantsInt)
 }
 
