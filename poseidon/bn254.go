@@ -10,6 +10,7 @@ package poseidon
 import (
 	"math/big"
 
+	"github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark/frontend"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 )
@@ -28,6 +29,10 @@ type BN254State = [BN254_SPONGE_WIDTH]frontend.Variable
 type BN254HashOut = frontend.Variable
 
 func NewBN254Chip(api frontend.API) *BN254Chip {
+	if api.Compiler().Field().Cmp(bn254.ID.ScalarField()) != 0 {
+		panic("Gnark compiler not set to BN254 scalar field")
+	}
+
 	return &BN254Chip{api: api, gl: *gl.New(api)}
 }
 
