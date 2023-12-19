@@ -7,7 +7,6 @@ import (
 
 const HALF_N_FULL_ROUNDS = 4
 const N_PARTIAL_ROUNDS = 22
-const MAX_WIDTH = 12
 const SPONGE_WIDTH = 12
 const SPONGE_RATE = 8
 

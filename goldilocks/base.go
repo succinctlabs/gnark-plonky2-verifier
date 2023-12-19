@@ -38,9 +38,6 @@ var POWER_OF_TWO_GENERATOR goldilocks.Element = goldilocks.NewElement(1753635133
 // The modulus of the field.
 var MODULUS *big.Int = emulated.Goldilocks{}.Modulus()
 
-// The threshold maximum number of bits at which we must reduce the element.
-var REDUCE_NB_BITS_THRESHOLD uint8 = 254 - 64
-
 // The number of bits to use for range checks on inner products of field elements.
 var RANGE_CHECK_NB_BITS int = 140
 
