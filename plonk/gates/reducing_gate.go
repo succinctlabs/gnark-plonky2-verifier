@@ -39,7 +39,7 @@ func NewReducingGate(numCoeffs uint64) *ReducingGate {
 }
 
 func (g *ReducingGate) Id() string {
-	return fmt.Sprintf("ReducingExtensionGate { num_ops: %d }", g.numCoeffs)
+	return fmt.Sprintf("ReducingGate { num_coeffs: %d }", g.numCoeffs)
 }
 
 func (g *ReducingGate) wiresOutput() Range {
