@@ -128,13 +128,15 @@ func (f *Chip) verifyMerkleProofToCapWithCapIndex(
 	}
 
 	const NUM_LEAF_LOOKUPS = 4
+	// Each lookup gadget will connect to 4 merkleCap entries
+	const STRIDE_LENGTH = 4
 	var leafLookups [NUM_LEAF_LOOKUPS]poseidon.BN254HashOut
 	// First create the "leaf" lookup2 circuits
-	// The will use the least significant bits of the capIndexBits array
+	// This will use the least significant bits of the capIndexBits array
 	for i := 0; i < NUM_LEAF_LOOKUPS; i++ {
 		leafLookups[i] = f.api.Lookup2(
 			capIndexBits[0], capIndexBits[1],
-			merkleCap[i*NUM_LEAF_LOOKUPS], merkleCap[i*NUM_LEAF_LOOKUPS+1], merkleCap[i*NUM_LEAF_LOOKUPS+2], merkleCap[i*NUM_LEAF_LOOKUPS+3],
+			merkleCap[i*STRIDE_LENGTH], merkleCap[i*STRIDE_LENGTH+1], merkleCap[i*STRIDE_LENGTH+2], merkleCap[i*STRIDE_LENGTH+3],
 		)
 	}
 
