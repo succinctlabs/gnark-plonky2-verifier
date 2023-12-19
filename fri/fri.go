@@ -238,9 +238,11 @@ func (f *Chip) friCombineInitial(
 		numerator := f.gl.SubExtensionNoReduce(reducedEvals, reducedOpenings)
 		denominator := f.gl.SubExtension(subgroupX_QE, point)
 		sum = f.gl.MulExtension(f.gl.ExpExtension(friAlpha, uint64(len(evals))), sum)
+		inv, hasInv := f.gl.InverseExtension(denominator)
+		f.api.AssertIsEqual(hasInv, frontend.Variable(1))
 		sum = f.gl.MulAddExtension(
 			numerator,
-			f.gl.InverseExtension(denominator),
+			inv,
 			sum,
 		)
 	}
@@ -272,17 +274,23 @@ func (f *Chip) interpolate(
 	}
 
 	sum := gl.ZeroExtension()
+
+	lookupFromPoints := frontend.Variable(1)
 	for i := 0; i < len(xPoints); i++ {
+		quotient, hasQuotient := f.gl.DivExtension(
+			barycentricWeights[i],
+			f.gl.SubExtension(
+				x,
+				xPoints[i],
+			),
+		)
+
+		lookupFromPoints = f.api.Mul(hasQuotient, lookupFromPoints)
+
 		sum = f.gl.AddExtension(
 			f.gl.MulExtension(
-				f.gl.DivExtension(
-					barycentricWeights[i],
-					f.gl.SubExtension(
-						x,
-						xPoints[i],
-					),
-				),
 				yPoints[i],
+				quotient,
 			),
 			sum,
 		)
@@ -290,17 +298,17 @@ func (f *Chip) interpolate(
 
 	interpolation := f.gl.MulExtension(lX, sum)
 
-	returnField := interpolation
+	lookupVal := gl.ZeroExtension()
 	// Now check if x is already within the xPoints
 	for i := 0; i < len(xPoints); i++ {
-		returnField = f.gl.Lookup(
+		lookupVal = f.gl.Lookup(
 			f.gl.IsZero(f.gl.SubExtension(x, xPoints[i])),
-			returnField,
+			lookupVal,
 			yPoints[i],
 		)
 	}
 
-	return returnField
+	return f.gl.Lookup(lookupFromPoints, lookupVal, interpolation)
 }
 
 func (f *Chip) computeEvaluation(
@@ -367,7 +375,9 @@ func (f *Chip) computeEvaluation(
 		}
 		// Take the inverse of the barycentric weights
 		// OPTIMIZE: Can provide a witness to this value
-		barycentricWeights[i] = f.gl.InverseExtension(barycentricWeights[i])
+		inv, hasInv := f.gl.InverseExtension(barycentricWeights[i])
+		f.api.AssertIsEqual(hasInv, frontend.Variable(1))
+		barycentricWeights[i] = inv
 	}
 
 	return f.interpolate(beta, xPoints, yPoints, barycentricWeights)

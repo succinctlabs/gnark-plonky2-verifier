@@ -237,18 +237,21 @@ func ReduceHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
 }
 
 // Computes the inverse of a field element x such that x * x^-1 = 1.
-func (p *Chip) Inverse(x Variable) Variable {
-	result, err := p.api.Compiler().NewHint(InverseHint, 1, x.Limb)
+func (p *Chip) Inverse(x Variable) (Variable, frontend.Variable) {
+	result, err := p.api.Compiler().NewHint(InverseHint, 2, x.Limb)
 	if err != nil {
 		panic(err)
 	}
 
 	inverse := NewVariable(result[0])
+	hasInv := frontend.Variable(result[1])
 	p.RangeCheck(inverse)
 
 	product := p.Mul(inverse, x)
-	p.api.AssertIsEqual(product.Limb, frontend.Variable(1))
-	return inverse
+	productToCheck := p.api.Select(hasInv, product.Limb, frontend.Variable(1))
+	p.api.AssertIsEqual(productToCheck, frontend.Variable(1))
+
+	return inverse, hasInv
 }
 
 // The hint used to compute Inverse.
@@ -264,10 +267,18 @@ func InverseHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
 
 	inputGl := goldilocks.NewElement(input.Uint64())
 	resultGl := goldilocks.NewElement(0)
+
+	// Will set resultGL if inputGL == 0
 	resultGl.Inverse(&inputGl)
 
 	result := big.NewInt(0)
 	results[0] = resultGl.BigInt(result)
+
+	hasInvInt64 := int64(0)
+	if !inputGl.IsZero() {
+		hasInvInt64 = 1
+	}
+	results[1] = big.NewInt(hasInvInt64)
 
 	return nil
 }

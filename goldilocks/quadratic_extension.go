@@ -126,7 +126,7 @@ func (p *Chip) InnerProductExtension(
 }
 
 // Computes the inverse of a quadratic extension variable in the Goldilocks field.
-func (p *Chip) InverseExtension(a QuadraticExtensionVariable) QuadraticExtensionVariable {
+func (p *Chip) InverseExtension(a QuadraticExtensionVariable) (QuadraticExtensionVariable, frontend.Variable) {
 	a0IsZero := p.api.IsZero(a[0].Limb)
 	a1IsZero := p.api.IsZero(a[1].Limb)
 	p.api.AssertIsEqual(p.api.Mul(a0IsZero, a1IsZero), frontend.Variable(0))
@@ -135,12 +135,15 @@ func (p *Chip) InverseExtension(a QuadraticExtensionVariable) QuadraticExtension
 		p.Mul(a[1], NewVariable(DTH_ROOT)),
 	}
 	aPowR := p.MulExtension(aPowRMinus1, a)
-	return p.ScalarMulExtension(aPowRMinus1, p.Inverse(aPowR[0]))
+
+	aPowRInv, hasInv := p.Inverse(aPowR[0])
+	return p.ScalarMulExtension(aPowRMinus1, aPowRInv), hasInv
 }
 
 // Divides two quadratic extension variables in the Goldilocks field.
-func (p *Chip) DivExtension(a, b QuadraticExtensionVariable) QuadraticExtensionVariable {
-	return p.MulExtension(a, p.InverseExtension(b))
+func (p *Chip) DivExtension(a, b QuadraticExtensionVariable) (QuadraticExtensionVariable, frontend.Variable) {
+	bInv, hasInv := p.InverseExtension(b)
+	return p.MulExtension(a, bInv), hasInv
 }
 
 // Exponentiates a quadratic extension variable to some exponent in the Golidlocks field.
