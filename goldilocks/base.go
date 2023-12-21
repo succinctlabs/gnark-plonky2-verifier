@@ -269,28 +269,6 @@ func InverseHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
 	return nil
 }
 
-// Computes a field element raised to some power.
-func (p *Chip) Exp(x Variable, k *big.Int) Variable {
-	if k.IsUint64() && k.Uint64() == 0 {
-		return One()
-	}
-
-	e := k
-	if k.Sign() == -1 {
-		panic("Unsupported negative exponent. Need to implement inversion.")
-	}
-
-	z := x
-	for i := e.BitLen() - 2; i >= 0; i-- {
-		z = p.Mul(z, z)
-		if e.Bit(i) == 1 {
-			z = p.Mul(z, x)
-		}
-	}
-
-	return z
-}
-
 // The hint used to split a GoldilocksVariable into 2 32 bit limbs.
 func SplitLimbsHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
 	if len(inputs) != 1 {
