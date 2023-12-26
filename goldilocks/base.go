@@ -224,13 +224,14 @@ func ReduceHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
 
 // Computes the inverse of a field element x such that x * x^-1 = 1.
 func (p *Chip) Inverse(x Variable) (Variable, frontend.Variable) {
-	result, err := p.api.Compiler().NewHint(InverseHint, 2, x.Limb)
+	result, err := p.api.Compiler().NewHint(InverseHint, 1, x.Limb)
 	if err != nil {
 		panic(err)
 	}
 
 	inverse := NewVariable(result[0])
-	hasInv := frontend.Variable(result[1])
+	isZero := p.api.IsZero(x.Limb)
+	hasInv := p.api.Sub(1, isZero)
 	p.RangeCheck(inverse)
 
 	product := p.Mul(inverse, x)
@@ -259,12 +260,6 @@ func InverseHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
 
 	result := big.NewInt(0)
 	results[0] = resultGl.BigInt(result)
-
-	hasInvInt64 := int64(0)
-	if !inputGl.IsZero() {
-		hasInvInt64 = 1
-	}
-	results[1] = big.NewInt(hasInvInt64)
 
 	return nil
 }
