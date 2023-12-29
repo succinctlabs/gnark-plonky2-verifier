@@ -81,23 +81,44 @@ func NegOne() Variable {
 
 // The chip used for Goldilocks field operations.
 type Chip struct {
-	api          frontend.API
-	rangeChecker frontend.Rangechecker
+	api                 frontend.API
+	rangeChecker        frontend.Rangechecker
+	rangeCheckCollected []checkedVariable
+	usingCommitChecker  bool
 }
 
 // Creates a new Goldilocks Chip.
 func New(api frontend.API) *Chip {
-	use_bit_decomp := os.Getenv("USE_BIT_DECOMPOSITION_RANGE_CHECK")
+
+	useBitDecomp := os.Getenv("USE_BIT_DECOMPOSITION_RANGE_CHECK")
 
 	var rangeChecker frontend.Rangechecker
+	var usingCommitChecker bool
 
 	// If USE_BIT_DECOMPOSITION_RANGE_CHECK is not set, then use the std.rangecheck New function
-	if use_bit_decomp == "" {
+	if useBitDecomp == "" {
 		rangeChecker = rangecheck.New(api)
+
+		// Emulate the logic within rangecheck.New
+		// https://github.com/Consensys/gnark/blob/3421eaa7d544286abf3de8c46282b8d4da6d5da0/std/rangecheck/rangecheck.go#L24
+		if _, ok := api.(frontend.Rangechecker); ok {
+			usingCommitChecker = false
+		} else if _, ok := api.(frontend.Committer); ok {
+			usingCommitChecker = true
+		} else {
+			usingCommitChecker = false
+		}
 	} else {
 		rangeChecker = bitDecompChecker{api: api}
+		usingCommitChecker = false
 	}
-	return &Chip{api: api, rangeChecker: rangeChecker}
+
+	c := &Chip{api: api, rangeChecker: rangeChecker, usingCommitChecker: usingCommitChecker}
+	if usingCommitChecker {
+		api.Compiler().Defer(c.checkCollectedLimbSizes)
+	}
+
+	return c
 }
 
 // Adds two field elements such that x + y = z within the Golidlocks field.
@@ -196,7 +217,7 @@ func (p *Chip) Reduce(x Variable) Variable {
 	}
 
 	quotient := result[0]
-	p.rangeChecker.Check(quotient, RANGE_CHECK_NB_BITS)
+	p.rangeCheckerCheck(quotient, RANGE_CHECK_NB_BITS)
 
 	remainder := NewVariable(result[1])
 	p.RangeCheck(remainder)
@@ -218,7 +239,7 @@ func (p *Chip) ReduceWithMaxBits(x Variable, maxNbBits uint64) Variable {
 	}
 
 	quotient := result[0]
-	p.rangeChecker.Check(quotient, int(maxNbBits))
+	p.rangeCheckerCheck(quotient, int(maxNbBits))
 
 	remainder := NewVariable(result[1])
 	p.RangeCheck(remainder)
@@ -341,8 +362,8 @@ func (p *Chip) RangeCheck(x Variable) {
 		),
 		x.Limb,
 	)
-	p.rangeChecker.Check(mostSigLimb, 32)
-	p.rangeChecker.Check(leastSigLimb, 32)
+	p.rangeCheckerCheck(mostSigLimb, 32)
+	p.rangeCheckerCheck(leastSigLimb, 32)
 
 	// If the most significant bits are all 1, then we need to check that the least significant bits are all zero
 	// in order for element to be less than the Goldilock's modulus.
@@ -360,6 +381,24 @@ func (p *Chip) RangeCheck(x Variable) {
 
 func (p *Chip) AssertIsEqual(x, y Variable) {
 	p.api.AssertIsEqual(x.Limb, y.Limb)
+}
+
+func (p *Chip) rangeCheckerCheck(x frontend.Variable, nbBits int) {
+	if p.usingCommitChecker {
+		p.rangeCheckCollected = append(p.rangeCheckCollected, checkedVariable{v: x, bits: nbBits})
+	}
+	p.rangeChecker.Check(x, nbBits)
+}
+
+func (p *Chip) checkCollectedLimbSizes(api frontend.API) error {
+	nbBits := getOptimalBasewidth(p.api, p.rangeCheckCollected)
+	for _, v := range p.rangeCheckCollected {
+		if v.bits%nbBits != 0 {
+			return fmt.Errorf("limb size is not a multiple of optimal limb size")
+		}
+	}
+
+	return nil
 }
 
 // Computes the n'th primitive root of unity for the Goldilocks field.
