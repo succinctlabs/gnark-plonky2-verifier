@@ -19,6 +19,7 @@ import (
 	"math"
 	"math/big"
 	"os"
+	"sync"
 
 	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/constraint/solver"
@@ -90,10 +91,21 @@ type Chip struct {
 	usingSimpleChecker  bool
 }
 
+var (
+	globalPoseidonChip *Chip
+	mutex              sync.Mutex
+)
+
 // Creates a new Goldilocks Chip.
 func New(api frontend.API) *Chip {
-
 	useBitDecomp := os.Getenv("USE_BIT_DECOMPOSITION_RANGE_CHECK")
+
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	if globalPoseidonChip != nil {
+		return globalPoseidonChip
+	}
 
 	c := &Chip{api: api}
 
@@ -117,6 +129,8 @@ func New(api frontend.API) *Chip {
 	if !c.usingSimpleChecker {
 		c.rangeChecker = rangecheck.New(api)
 	}
+
+	globalPoseidonChip = c
 
 	return c
 }
@@ -433,7 +447,7 @@ func (p *Chip) checkCollected(api frontend.API) error {
 
 		p.api.AssertIsEqual(
 			p.api.Add(
-				p.api.Mul(most_sig_limb, uint64(math.Pow(2, least_sig_factor))),
+				p.api.Mul(most_sig_limb, new(big.Int).SetUint64(uint64(least_sig_factor))),
 				least_sig_limb),
 			v.v)
 
