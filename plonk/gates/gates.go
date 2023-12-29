@@ -12,7 +12,7 @@ type Gate interface {
 	Id() string
 	EvalUnfiltered(
 		api frontend.API,
-		glApi gl.Chip,
+		glApi *gl.Chip,
 		vars EvaluationVars,
 	) []gl.QuadraticExtensionVariable
 }

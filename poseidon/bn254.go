@@ -21,14 +21,14 @@ const BN254_SPONGE_RATE int = 3
 
 type BN254Chip struct {
 	api frontend.API `gnark:"-"`
-	gl  gl.Chip      `gnark:"-"`
+	gl  *gl.Chip     `gnark:"-"`
 }
 
 type BN254State = [BN254_SPONGE_WIDTH]frontend.Variable
 type BN254HashOut = frontend.Variable
 
 func NewBN254Chip(api frontend.API) *BN254Chip {
-	return &BN254Chip{api: api, gl: *gl.New(api)}
+	return &BN254Chip{api: api, gl: gl.New(api)}
 }
 
 func (c *BN254Chip) Poseidon(state BN254State) BN254State {

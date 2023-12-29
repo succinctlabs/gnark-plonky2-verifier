@@ -697,7 +697,7 @@ func (circuit *TestGateCircuit) Define(api frontend.API) error {
 
 	vars := gates.NewEvaluationVars(localConstants[numSelectors:], localWires, publicInputsHash)
 
-	constraints := circuit.testGate.EvalUnfiltered(api, *glApi, *vars)
+	constraints := circuit.testGate.EvalUnfiltered(api, glApi, *vars)
 
 	if len(constraints) != len(circuit.ExpectedConstraints) {
 		return errors.New("gate constraints length mismatch")

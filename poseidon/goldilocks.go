@@ -17,11 +17,11 @@ type GoldilocksHashOut = [4]gl.Variable
 
 type GoldilocksChip struct {
 	api frontend.API `gnark:"-"`
-	gl  gl.Chip      `gnark:"-"`
+	gl  *gl.Chip     `gnark:"-"`
 }
 
 func NewGoldilocksChip(api frontend.API) *GoldilocksChip {
-	return &GoldilocksChip{api: api, gl: *gl.New(api)}
+	return &GoldilocksChip{api: api, gl: gl.New(api)}
 }
 
 // The permutation function.

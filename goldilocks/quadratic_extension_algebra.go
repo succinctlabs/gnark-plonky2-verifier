@@ -47,7 +47,7 @@ func (p *Chip) SubExtensionAlgebra(
 	return diff
 }
 
-func (p Chip) MulExtensionAlgebra(
+func (p *Chip) MulExtensionAlgebra(
 	a QuadraticExtensionAlgebraVariable,
 	b QuadraticExtensionAlgebraVariable,
 ) QuadraticExtensionAlgebraVariable {

@@ -147,7 +147,7 @@ func (g *CosetInterpolationGate) wiresShiftedEvaluationPoint() Range {
 
 func (g *CosetInterpolationGate) EvalUnfiltered(
 	api frontend.API,
-	glApi gl.Chip,
+	glApi *gl.Chip,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
 	constraints := []gl.QuadraticExtensionVariable{}

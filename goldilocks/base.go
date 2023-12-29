@@ -87,6 +87,7 @@ type Chip struct {
 	rangeChecker        frontend.Rangechecker
 	simpleChecker       bitDecompChecker
 	rangeCheckCollected []checkedVariable
+	collectedMutex      sync.Mutex
 	usingCommitChecker  bool
 	usingSimpleChecker  bool
 }
@@ -399,6 +400,8 @@ func (p *Chip) AssertIsEqual(x, y Variable) {
 
 func (p *Chip) rangeCheckerCheck(x frontend.Variable, nbBits int) {
 	if p.usingCommitChecker {
+		p.collectedMutex.Lock()
+		defer p.collectedMutex.Unlock()
 		p.rangeCheckCollected = append(p.rangeCheckCollected, checkedVariable{v: x, bits: nbBits})
 	} else if p.usingSimpleChecker {
 		p.simpleChecker.Check(x, nbBits)

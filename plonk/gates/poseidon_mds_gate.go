@@ -75,7 +75,7 @@ func (g *PoseidonMdsGate) mdsLayerAlgebra(
 
 func (g *PoseidonMdsGate) EvalUnfiltered(
 	api frontend.API,
-	glApi gl.Chip,
+	glApi *gl.Chip,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
 	constraints := []gl.QuadraticExtensionVariable{}
