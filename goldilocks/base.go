@@ -51,6 +51,7 @@ func init() {
 	solver.RegisterHint(ReduceHint)
 	solver.RegisterHint(InverseHint)
 	solver.RegisterHint(SplitLimbsHint)
+	solver.RegisterHint(splitValueHint)
 }
 
 // A type alias used to represent Goldilocks field elements.
@@ -83,8 +84,10 @@ func NegOne() Variable {
 type Chip struct {
 	api                 frontend.API
 	rangeChecker        frontend.Rangechecker
+	simpleChecker       bitDecompChecker
 	rangeCheckCollected []checkedVariable
 	usingCommitChecker  bool
+	usingSimpleChecker  bool
 }
 
 // Creates a new Goldilocks Chip.
@@ -92,30 +95,27 @@ func New(api frontend.API) *Chip {
 
 	useBitDecomp := os.Getenv("USE_BIT_DECOMPOSITION_RANGE_CHECK")
 
-	var rangeChecker frontend.Rangechecker
-	var usingCommitChecker bool
+	c := &Chip{api: api}
 
 	// If USE_BIT_DECOMPOSITION_RANGE_CHECK is not set, then use the std.rangecheck New function
 	if useBitDecomp == "" {
-		rangeChecker = rangecheck.New(api)
-
-		// Emulate the logic within rangecheck.New
-		// https://github.com/Consensys/gnark/blob/3421eaa7d544286abf3de8c46282b8d4da6d5da0/std/rangecheck/rangecheck.go#L24
-		if _, ok := api.(frontend.Rangechecker); ok {
-			usingCommitChecker = false
-		} else if _, ok := api.(frontend.Committer); ok {
-			usingCommitChecker = true
-		} else {
-			usingCommitChecker = false
-		}
+		c.usingCommitChecker = rangeCheckGadgetUsingCommitChecker(api)
+		c.usingSimpleChecker = false
 	} else {
-		rangeChecker = bitDecompChecker{api: api}
-		usingCommitChecker = false
+		c.usingCommitChecker = false
+		c.usingSimpleChecker = true
 	}
 
-	c := &Chip{api: api, rangeChecker: rangeChecker, usingCommitChecker: usingCommitChecker}
-	if usingCommitChecker {
-		api.Compiler().Defer(c.checkCollectedLimbSizes)
+	if c.usingCommitChecker || c.usingSimpleChecker {
+		c.simpleChecker = bitDecompChecker{api: api}
+	}
+
+	if c.usingCommitChecker {
+		api.Compiler().Defer(c.checkCollected)
+	}
+
+	if !c.usingSimpleChecker {
+		c.rangeChecker = rangecheck.New(api)
 	}
 
 	return c
@@ -386,16 +386,59 @@ func (p *Chip) AssertIsEqual(x, y Variable) {
 func (p *Chip) rangeCheckerCheck(x frontend.Variable, nbBits int) {
 	if p.usingCommitChecker {
 		p.rangeCheckCollected = append(p.rangeCheckCollected, checkedVariable{v: x, bits: nbBits})
+	} else if p.usingSimpleChecker {
+		p.simpleChecker.Check(x, nbBits)
+	} else {
+		p.rangeChecker.Check(x, nbBits)
 	}
-	p.rangeChecker.Check(x, nbBits)
 }
 
-func (p *Chip) checkCollectedLimbSizes(api frontend.API) error {
+func splitValueHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
+	if len(inputs) != 2 {
+		panic("SplitValueHint expects 3 input operands")
+	}
+
+	variable := inputs[0]
+	least_sig_bitlen := inputs[1]
+	one := big.NewInt(1)
+	least_sig_bitmask := new(big.Int).Lsh(one, uint(least_sig_bitlen.Int64()))
+	least_sig_bitmask.Sub(least_sig_bitmask, one)
+
+	least_sig_limb := new(big.Int).And(variable, least_sig_bitmask)
+	most_sig_limb := new(big.Int).Rsh(variable, uint(least_sig_bitlen.Int64()))
+
+	// The most significant limb
+	results[0] = most_sig_limb
+	// The least significant limb
+	results[1] = least_sig_limb
+
+	return nil
+}
+
+func (p *Chip) checkCollected(api frontend.API) error {
 	nbBits := getOptimalBasewidth(p.api, p.rangeCheckCollected)
+
 	for _, v := range p.rangeCheckCollected {
-		if v.bits%nbBits != 0 {
-			return fmt.Errorf("limb size is not a multiple of optimal limb size")
+		most_sig_bitlen := v.bits % nbBits
+		least_sig_bitlen := v.bits - most_sig_bitlen
+		least_sig_factor := math.Pow(2, float64(least_sig_bitlen))
+
+		result, err := p.api.Compiler().NewHint(splitValueHint, 2, v.v, least_sig_bitlen)
+		if err != nil {
+			panic(err)
 		}
+
+		most_sig_limb := result[0]
+		least_sig_limb := result[1]
+
+		p.api.AssertIsEqual(
+			p.api.Add(
+				p.api.Mul(most_sig_limb, uint64(math.Pow(2, least_sig_factor))),
+				least_sig_limb),
+			v.v)
+
+		p.rangeChecker.Check(least_sig_limb, least_sig_bitlen)
+		p.simpleChecker.Check(most_sig_limb, most_sig_bitlen)
 	}
 
 	return nil
