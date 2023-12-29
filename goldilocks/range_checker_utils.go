@@ -44,11 +44,19 @@ func optimalWidth(countFn func(baseLength int, collected []checkedVariable) int,
 			minVal = j
 		}
 	}
+
+	println("optimal width is", minVal)
 	return minVal
 }
 
 func decompSize(varSize int, limbSize int) int {
-	return (varSize + limbSize - 1) / limbSize
+	mostSigLimbSize := varSize % limbSize
+
+	if (varSize-mostSigLimbSize)%limbSize != 0 {
+		panic("varSize - mostSigLimbSize must be a multiple of limbSize")
+	}
+
+	return (varSize - mostSigLimbSize) / limbSize
 }
 
 func nbR1CSConstraints(baseLength int, collected []checkedVariable) int {

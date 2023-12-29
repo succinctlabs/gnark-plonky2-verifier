@@ -435,6 +435,9 @@ func (p *Chip) checkCollected(api frontend.API) error {
 	for _, v := range p.rangeCheckCollected {
 		most_sig_bitlen := v.bits % nbBits
 		least_sig_bitlen := v.bits - most_sig_bitlen
+		if least_sig_bitlen%nbBits != 0 {
+			panic("v.bits - most_sig_bitlen must be a multiple of nbBits")
+		}
 		least_sig_factor := math.Pow(2, float64(least_sig_bitlen))
 
 		result, err := p.api.Compiler().NewHint(splitValueHint, 2, v.v, least_sig_bitlen)
