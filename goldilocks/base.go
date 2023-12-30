@@ -98,14 +98,14 @@ var (
 
 // Creates a new Goldilocks Chip.
 func New(api frontend.API) *Chip {
-	useBitDecomp := os.Getenv("USE_BIT_DECOMPOSITION_RANGE_CHECK")
-
 	mutex.Lock()
 	defer mutex.Unlock()
 
 	if chip, ok := poseidonChips[api]; ok {
 		return chip
 	}
+
+	useBitDecomp := os.Getenv("USE_BIT_DECOMPOSITION_RANGE_CHECK")
 
 	c := &Chip{api: api}
 
@@ -126,6 +126,8 @@ func New(api frontend.API) *Chip {
 		api.Compiler().Defer(c.checkCollected)
 	}
 
+	// The gnark range checker gadget needs to be created AFTER the c.checkCollected function is deferred.
+	// The commit range checker gadget will also calla deferred function, which needs to be called after c.checkCollected.
 	if !c.usingSimpleChecker {
 		c.rangeChecker = rangecheck.New(api)
 	}

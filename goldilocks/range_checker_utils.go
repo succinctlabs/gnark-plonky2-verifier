@@ -6,6 +6,8 @@ import (
 	"github.com/consensys/gnark/frontend"
 )
 
+// The types, structs, and functions in this file were ported over from the gnark library
+// https://github.com/Consensys/gnark/blob/3421eaa7d544286abf3de8c46282b8d4da6d5da0/std/rangecheck/rangecheck_commit.go
 type Type int
 
 const (
@@ -45,7 +47,6 @@ func optimalWidth(countFn func(baseLength int, collected []checkedVariable) int,
 		}
 	}
 
-	println("optimal width is", minVal)
 	return minVal
 }
 
