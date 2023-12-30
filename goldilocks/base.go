@@ -52,7 +52,6 @@ func init() {
 	solver.RegisterHint(ReduceHint)
 	solver.RegisterHint(InverseHint)
 	solver.RegisterHint(SplitLimbsHint)
-	solver.RegisterHint(splitValueHint)
 }
 
 // A type alias used to represent Goldilocks field elements.
@@ -93,8 +92,8 @@ type Chip struct {
 }
 
 var (
-	globalPoseidonChip *Chip
-	mutex              sync.Mutex
+	poseidonChips = make(map[frontend.API]*Chip)
+	mutex         sync.Mutex
 )
 
 // Creates a new Goldilocks Chip.
@@ -104,8 +103,8 @@ func New(api frontend.API) *Chip {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	if globalPoseidonChip != nil {
-		return globalPoseidonChip
+	if chip, ok := poseidonChips[api]; ok {
+		return chip
 	}
 
 	c := &Chip{api: api}
@@ -131,7 +130,7 @@ func New(api frontend.API) *Chip {
 		c.rangeChecker = rangecheck.New(api)
 	}
 
-	globalPoseidonChip = c
+	poseidonChips[api] = c
 
 	return c
 }
@@ -410,55 +409,33 @@ func (p *Chip) rangeCheckerCheck(x frontend.Variable, nbBits int) {
 	}
 }
 
-func splitValueHint(_ *big.Int, inputs []*big.Int, results []*big.Int) error {
-	if len(inputs) != 2 {
-		panic("SplitValueHint expects 3 input operands")
-	}
-
-	variable := inputs[0]
-	least_sig_bitlen := inputs[1]
-	one := big.NewInt(1)
-	least_sig_bitmask := new(big.Int).Lsh(one, uint(least_sig_bitlen.Int64()))
-	least_sig_bitmask.Sub(least_sig_bitmask, one)
-
-	least_sig_limb := new(big.Int).And(variable, least_sig_bitmask)
-	most_sig_limb := new(big.Int).Rsh(variable, uint(least_sig_bitlen.Int64()))
-
-	// The most significant limb
-	results[0] = most_sig_limb
-	// The least significant limb
-	results[1] = least_sig_limb
-
-	return nil
-}
-
 func (p *Chip) checkCollected(api frontend.API) error {
 	nbBits := getOptimalBasewidth(p.api, p.rangeCheckCollected)
 
 	for _, v := range p.rangeCheckCollected {
-		most_sig_bitlen := v.bits % nbBits
-		least_sig_bitlen := v.bits - most_sig_bitlen
-		if least_sig_bitlen%nbBits != 0 {
-			panic("v.bits - most_sig_bitlen must be a multiple of nbBits")
+
+		// If b.vits is not nbBits aligned, then we will need to left shift the value to be nbBits aligned.
+		// Per this issue, https://github.com/Consensys/gnark/security/advisories/GHSA-rjjm-x32p-m3f7
+		// the commitment/logup based range checker has a bug for checking non aligned bitwidths.
+		nonalignedBitwidth := v.bits % nbBits
+
+		var valueToCheck frontend.Variable
+		var valueBitwidth int
+		var one = big.NewInt(1)
+		if nonalignedBitwidth != 0 {
+			leftShift := nbBits - nonalignedBitwidth
+			valueToCheck = p.api.Mul(v.v, new(big.Int).Lsh(one, uint(leftShift)))
+			valueBitwidth = v.bits + leftShift
+		} else {
+			valueToCheck = v.v
+			valueBitwidth = v.bits
 		}
-		least_sig_factor := math.Pow(2, float64(least_sig_bitlen))
 
-		result, err := p.api.Compiler().NewHint(splitValueHint, 2, v.v, least_sig_bitlen)
-		if err != nil {
-			panic(err)
+		if valueBitwidth%nbBits != 0 {
+			panic("value_bitwidth is not nbBits aligned")
 		}
 
-		most_sig_limb := result[0]
-		least_sig_limb := result[1]
-
-		p.api.AssertIsEqual(
-			p.api.Add(
-				p.api.Mul(most_sig_limb, new(big.Int).SetUint64(uint64(least_sig_factor))),
-				least_sig_limb),
-			v.v)
-
-		p.rangeChecker.Check(least_sig_limb, least_sig_bitlen)
-		p.simpleChecker.Check(most_sig_limb, most_sig_bitlen)
+		p.rangeChecker.Check(valueToCheck, valueBitwidth)
 	}
 
 	return nil
