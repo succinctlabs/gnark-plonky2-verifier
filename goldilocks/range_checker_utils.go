@@ -76,7 +76,7 @@ func nbPLONKConstraints(baseLength int, collected []checkedVariable) int {
 	return nbleft + nbRight + eqs + 1 // and the final assert
 }
 
-func gnarkRangeCheckSelector(api frontend.API) RangeCheckerType {
+func gnarkRangeCheckerSelector(api frontend.API) RangeCheckerType {
 	// Emulate the logic within rangecheck.New
 	// https://github.com/Consensys/gnark/blob/3421eaa7d544286abf3de8c46282b8d4da6d5da0/std/rangecheck/rangecheck.go#L24
 	if _, ok := api.(frontend.Rangechecker); ok {

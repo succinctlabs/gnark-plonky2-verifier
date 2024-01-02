@@ -126,7 +126,7 @@ func New(api frontend.API) *Chip {
 	// This function will emulate gnark's range checker selection logic (within the gnarkRangeCheckSelector func).  However,
 	// if the USE_BIT_DECOMPOSITION_RANGE_CHECK env var is set, then it will explicitly use the bit decomposition range checker.
 
-	rangeCheckerType := gnarkRangeCheckSelector(api)
+	rangeCheckerType := gnarkRangeCheckerSelector(api)
 	useBitDecomp := os.Getenv("USE_BIT_DECOMPOSITION_RANGE_CHECK")
 	if useBitDecomp == "true" {
 		rangeCheckerType = BIT_DECOMP_RANGE_CHECKER
