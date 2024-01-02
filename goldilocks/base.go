@@ -129,12 +129,13 @@ func New(api frontend.API) *Chip {
 	rangeCheckerType := gnarkRangeCheckerSelector(api)
 	useBitDecomp := os.Getenv("USE_BIT_DECOMPOSITION_RANGE_CHECK")
 	if useBitDecomp == "true" {
+		fmt.Println("The USE_BIT_DECOMPOSITION_RANGE_CHECK env var is set to true.  Using the bit decomposition range checker.")
 		rangeCheckerType = BIT_DECOMP_RANGE_CHECKER
 	}
 
 	c.rangeCheckerType = rangeCheckerType
 
-	// If we are using the bit decomposition range checker, then create
+	// If we are using the bit decomposition range checker, then create bitDecompChecker object
 	if c.rangeCheckerType == BIT_DECOMP_RANGE_CHECKER {
 		c.rangeChecker = bitDecompChecker{api: api}
 	} else {
@@ -428,6 +429,10 @@ func (p *Chip) rangeCheckerCheck(x frontend.Variable, nbBits int) {
 }
 
 func (p *Chip) checkCollected(api frontend.API) error {
+	if p.rangeCheckerType != COMMIT_RANGE_CHECKER {
+		panic("checkCollected should only be called when using the commit range checker")
+	}
+
 	nbBits := getOptimalBasewidth(p.api, p.rangeCheckCollected)
 
 	for _, v := range p.rangeCheckCollected {
