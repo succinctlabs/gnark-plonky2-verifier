@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/std/math/bits"
 )
 
 func StrArrayToBigIntArray(input []string) []big.Int {
@@ -42,4 +43,12 @@ func Uint64ArrayToQuadraticExtensionArray(input [][]uint64) []QuadraticExtension
 		output = append(output, NewQuadraticExtensionVariable(NewVariable(input[i][0]), NewVariable(input[i][1])))
 	}
 	return output
+}
+
+type bitDecompChecker struct {
+	api frontend.API
+}
+
+func (pl bitDecompChecker) Check(v frontend.Variable, nbBits int) {
+	bits.ToBinary(pl.api, v, bits.WithNbDigits(nbBits))
 }

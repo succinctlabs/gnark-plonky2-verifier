@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"os"
 
 	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/constraint/solver"
@@ -83,7 +84,16 @@ type Chip struct {
 
 // Creates a new Goldilocks Chip.
 func New(api frontend.API) *Chip {
-	rangeChecker := rangecheck.New(api)
+	use_bit_decomp := os.Getenv("USE_BIT_DECOMPOSITION_RANGE_CHECK")
+
+	var rangeChecker frontend.Rangechecker
+
+	// If USE_BIT_DECOMPOSITION_RANGE_CHECK is not set, then use the std.rangecheck New function
+	if use_bit_decomp == "" {
+		rangeChecker = rangecheck.New(api)
+	} else {
+		rangeChecker = bitDecompChecker{api: api}
+	}
 	return &Chip{api: api, rangeChecker: rangeChecker}
 }
 
