@@ -10,6 +10,7 @@ package poseidon
 import (
 	"math/big"
 
+	"github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark/frontend"
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 )
@@ -28,6 +29,10 @@ type BN254State = [BN254_SPONGE_WIDTH]frontend.Variable
 type BN254HashOut = frontend.Variable
 
 func NewBN254Chip(api frontend.API) *BN254Chip {
+	if api.Compiler().Field().Cmp(bn254.ID.ScalarField()) != 0 {
+		panic("Gnark compiler not set to BN254 scalar field")
+	}
+
 	return &BN254Chip{api: api, gl: *gl.New(api)}
 }
 
@@ -76,8 +81,10 @@ func (c *BN254Chip) HashOrNoop(input []gl.Variable) BN254HashOut {
 		returnVal := frontend.Variable(0)
 
 		alpha := new(big.Int).SetInt64(1 << 32)
+		alpha = new(big.Int).Mul(alpha, alpha)
 		for i, inputElement := range input {
-			returnVal = c.api.MulAcc(returnVal, inputElement, alpha.Exp(alpha, big.NewInt(int64(i)), nil))
+			mulFactor := new(big.Int).Exp(alpha, big.NewInt(int64(i)), nil)
+			returnVal = c.api.MulAcc(returnVal, inputElement.Limb, mulFactor)
 		}
 
 		return BN254HashOut(returnVal)

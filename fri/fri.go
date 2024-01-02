@@ -49,14 +49,14 @@ func (f *Chip) GetInstance(zeta gl.QuadraticExtensionVariable) InstanceInfo {
 		zeta,
 	)
 
-	zetaNextBath := BatchInfo{
+	zetaNextBatch := BatchInfo{
 		Point:       zetaNext,
 		Polynomials: friZSPolys(f.commonData),
 	}
 
 	return InstanceInfo{
 		Oracles: friOracles(f.commonData),
-		Batches: []BatchInfo{zetaBatch, zetaNextBath},
+		Batches: []BatchInfo{zetaBatch, zetaNextBatch},
 	}
 }
 
@@ -73,12 +73,10 @@ func (f *Chip) ToOpenings(c variables.OpeningSet) Openings {
 }
 
 func (f *Chip) assertLeadingZeros(powWitness gl.Variable, friConfig types.FriConfig) {
-	// Asserts that powWitness'es big-endian bit representation has at least `leading_zeros` leading zeros.
+	// Asserts that powWitness'es big-endian bit representation has at least friConfig.ProofOfWorkBits leading zeros.
 	// Note that this is assuming that the Goldilocks field is being used.  Specfically that the
-	// field is 64 bits long
-	maxPowWitness := uint64(math.Pow(2, float64(64-friConfig.ProofOfWorkBits))) - 1
-	reducedPowWitness := f.gl.Reduce(powWitness)
-	f.api.AssertIsLessOrEqual(reducedPowWitness.Limb, frontend.Variable(maxPowWitness))
+	// field is 64 bits long.
+	f.gl.RangeCheckWithMaxBits(powWitness, 64-friConfig.ProofOfWorkBits)
 }
 
 func (f *Chip) fromOpeningsAndAlpha(
@@ -128,13 +126,15 @@ func (f *Chip) verifyMerkleProofToCapWithCapIndex(
 	}
 
 	const NUM_LEAF_LOOKUPS = 4
+	// Each lookup gadget will connect to 4 merkleCap entries
+	const STRIDE_LENGTH = 4
 	var leafLookups [NUM_LEAF_LOOKUPS]poseidon.BN254HashOut
 	// First create the "leaf" lookup2 circuits
-	// The will use the least significant bits of the capIndexBits array
+	// This will use the least significant bits of the capIndexBits array
 	for i := 0; i < NUM_LEAF_LOOKUPS; i++ {
 		leafLookups[i] = f.api.Lookup2(
 			capIndexBits[0], capIndexBits[1],
-			merkleCap[i*NUM_LEAF_LOOKUPS], merkleCap[i*NUM_LEAF_LOOKUPS+1], merkleCap[i*NUM_LEAF_LOOKUPS+2], merkleCap[i*NUM_LEAF_LOOKUPS+3],
+			merkleCap[i*STRIDE_LENGTH], merkleCap[i*STRIDE_LENGTH+1], merkleCap[i*STRIDE_LENGTH+2], merkleCap[i*STRIDE_LENGTH+3],
 		)
 	}
 
@@ -162,7 +162,7 @@ func (f *Chip) expFromBitsConstBase(
 ) gl.Variable {
 	product := gl.One()
 	for i, bit := range exponentBits {
-		// If the bit is on, we multiply product by base^pow.
+		// If the bit is 1, we multiply product by base^pow.
 		// We can arithmetize this as:
 		//     product *= 1 + bit (base^pow - 1)
 		//     product = (base^pow - 1) product bit + product
@@ -238,9 +238,11 @@ func (f *Chip) friCombineInitial(
 		numerator := f.gl.SubExtensionNoReduce(reducedEvals, reducedOpenings)
 		denominator := f.gl.SubExtension(subgroupX_QE, point)
 		sum = f.gl.MulExtension(f.gl.ExpExtension(friAlpha, uint64(len(evals))), sum)
+		inv, hasInv := f.gl.InverseExtension(denominator)
+		f.api.AssertIsEqual(hasInv, frontend.Variable(1))
 		sum = f.gl.MulAddExtension(
 			numerator,
-			f.gl.InverseExtension(denominator),
+			inv,
 			sum,
 		)
 	}
@@ -272,17 +274,23 @@ func (f *Chip) interpolate(
 	}
 
 	sum := gl.ZeroExtension()
+
+	lookupFromPoints := frontend.Variable(1)
 	for i := 0; i < len(xPoints); i++ {
+		quotient, hasQuotient := f.gl.DivExtension(
+			barycentricWeights[i],
+			f.gl.SubExtension(
+				x,
+				xPoints[i],
+			),
+		)
+
+		lookupFromPoints = f.api.Mul(hasQuotient, lookupFromPoints)
+
 		sum = f.gl.AddExtension(
 			f.gl.MulExtension(
-				f.gl.DivExtension(
-					barycentricWeights[i],
-					f.gl.SubExtension(
-						x,
-						xPoints[i],
-					),
-				),
 				yPoints[i],
+				quotient,
 			),
 			sum,
 		)
@@ -290,17 +298,17 @@ func (f *Chip) interpolate(
 
 	interpolation := f.gl.MulExtension(lX, sum)
 
-	returnField := interpolation
+	lookupVal := gl.ZeroExtension()
 	// Now check if x is already within the xPoints
 	for i := 0; i < len(xPoints); i++ {
-		returnField = f.gl.Lookup(
+		lookupVal = f.gl.Lookup(
 			f.gl.IsZero(f.gl.SubExtension(x, xPoints[i])),
-			returnField,
+			lookupVal,
 			yPoints[i],
 		)
 	}
 
-	return returnField
+	return f.gl.Lookup(lookupFromPoints, lookupVal, interpolation)
 }
 
 func (f *Chip) computeEvaluation(
@@ -312,7 +320,7 @@ func (f *Chip) computeEvaluation(
 ) gl.QuadraticExtensionVariable {
 	arity := 1 << arityBits
 	if (len(evals)) != arity {
-		panic("len(evals) ! arity")
+		panic("len(evals) != arity")
 	}
 	if arityBits > 8 {
 		panic("currently assuming that arityBits is <= 8")
@@ -327,8 +335,8 @@ func (f *Chip) computeEvaluation(
 	// OPTIMIZE - Since the size of the evals array should be constant (e.g. 2^arityBits),
 	//        we can just hard code the permutation.
 	permutedEvals := make([]gl.QuadraticExtensionVariable, len(evals))
-	for i := uint8(0); i < uint8(len(evals)); i++ {
-		newIndex := bits.Reverse8(i) >> arityBits
+	for i := uint8(0); i <= uint8(len(evals)-1); i++ {
+		newIndex := bits.Reverse8(i) >> (8 - arityBits)
 		permutedEvals[newIndex] = evals[i]
 	}
 
@@ -367,7 +375,9 @@ func (f *Chip) computeEvaluation(
 		}
 		// Take the inverse of the barycentric weights
 		// OPTIMIZE: Can provide a witness to this value
-		barycentricWeights[i] = f.gl.InverseExtension(barycentricWeights[i])
+		inv, hasInv := f.gl.InverseExtension(barycentricWeights[i])
+		f.api.AssertIsEqual(hasInv, frontend.Variable(1))
+		barycentricWeights[i] = inv
 	}
 
 	return f.interpolate(beta, xPoints, yPoints, barycentricWeights)

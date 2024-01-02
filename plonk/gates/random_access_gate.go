@@ -36,6 +36,20 @@ func deserializeRandomAccessGate(parameters map[string]string) Gate {
 		panic("invalid numExtraConstants in RandomAccessGate")
 	}
 
+	base, hasBase := parameters["base"]
+	if !hasBase {
+		panic("Missing field base in RandomAccessGate")
+	}
+
+	baseInt, err := strconv.Atoi(base)
+	if err != nil {
+		panic("Invalid base field in RandomAccessGate")
+	}
+
+	if baseInt != gl.D {
+		panic("Expected base field in RandomAccessGate to equal gl.D")
+	}
+
 	return NewRandomAccessGate(bitsInt, numCopiesInt, numExtraConstantsInt)
 }
 
@@ -151,14 +165,12 @@ func (g *RandomAccessGate) EvalUnfiltered(
 				y := listItems[i+1]
 
 				// This is computing `if b { x } else { y }`
-				// i.e. `bx - (by-y)`.
-				mul1 := glApi.MulExtension(b, x)
-				sub1 := glApi.SubExtension(mul1, x)
+				// i.e. `x + b(y - x)`.
+				diff := glApi.SubExtension(y, x)
+				mul := glApi.MulExtension(b, diff)
+				add := glApi.AddExtension(x, mul)
 
-				mul2 := glApi.MulExtension(b, y)
-				sub2 := glApi.SubExtension(mul2, sub1)
-
-				listItemsTmp = append(listItemsTmp, sub2)
+				listItemsTmp = append(listItemsTmp, add)
 			}
 			listItems = listItemsTmp
 		}

@@ -76,7 +76,6 @@ func (c *VerifierChip) GetChallenges(
 			proof.OpeningProof.CommitPhaseMerkleCaps,
 			proof.OpeningProof.FinalPoly,
 			proof.OpeningProof.PowWitness,
-			c.commonData.DegreeBits,
 			config.FriConfig,
 		),
 	}
@@ -119,8 +118,10 @@ func (c *VerifierChip) rangeCheckProof(proof variables.Proof) {
 
 	// Range check the openings proof.
 	for _, queryRound := range proof.OpeningProof.QueryRoundProofs {
-		for _, initialTreesElement := range queryRound.InitialTreesProof.EvalsProofs[0].Elements {
-			c.glChip.RangeCheck(initialTreesElement)
+		for _, evalsProof := range queryRound.InitialTreesProof.EvalsProofs {
+			for _, evalsProofElement := range evalsProof.Elements {
+				c.glChip.RangeCheck(evalsProofElement)
+			}
 		}
 
 		for _, queryStep := range queryRound.Steps {

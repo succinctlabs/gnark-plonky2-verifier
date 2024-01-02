@@ -118,5 +118,10 @@ func ReadCommonCircuitData(path string) CommonCircuitData {
 	commonCircuitData.KIs = raw.KIs
 	commonCircuitData.NumPartialProducts = raw.NumPartialProducts
 
+	// Don't support circuits that have hiding enabled
+	if raw.FriParams.Hiding {
+		panic("Circuit has hiding enabled, which is not supported")
+	}
+
 	return commonCircuitData
 }

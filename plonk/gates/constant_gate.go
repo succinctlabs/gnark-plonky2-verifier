@@ -41,14 +41,14 @@ func (g *ConstantGate) Id() string {
 }
 
 func (g *ConstantGate) ConstInput(i uint64) uint64 {
-	if i > g.numConsts {
+	if i >= g.numConsts {
 		panic("Invalid constant index")
 	}
 	return i
 }
 
 func (g *ConstantGate) WireOutput(i uint64) uint64 {
-	if i > g.numConsts {
+	if i >= g.numConsts {
 		panic("Invalid wire index")
 	}
 	return i

@@ -10,7 +10,7 @@ Besides the verifier, there are some Gnark implementation of circuits in this re
 
 ## Requirements
 
-- [Go (1.20.1+)](https://go.dev/doc/install)
+- [Go (1.19+)](https://go.dev/doc/install)
 
 ## Benchmark
 

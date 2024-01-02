@@ -58,15 +58,13 @@ func (p *Chip) SubExtensionNoReduce(a, b QuadraticExtensionVariable) QuadraticEx
 // Multiplies quadratic extension variable in the Goldilocks field.
 func (p *Chip) MulExtension(a, b QuadraticExtensionVariable) QuadraticExtensionVariable {
 	product := p.MulExtensionNoReduce(a, b)
-	product[0] = p.Reduce(product[0])
-	product[1] = p.Reduce(product[1])
-	return product
+	return p.ReduceExtension(product)
 }
 
 // Multiplies quadratic extension variable in the Goldilocks field without reducing.
 func (p *Chip) MulExtensionNoReduce(a, b QuadraticExtensionVariable) QuadraticExtensionVariable {
 	c0o0 := p.MulNoReduce(a[0], b[0])
-	c0o1 := p.MulNoReduce(p.MulNoReduce(NewVariable(7), a[1]), b[1])
+	c0o1 := p.MulNoReduce(p.MulNoReduce(NewVariable(W), a[1]), b[1])
 	c0 := p.AddNoReduce(c0o0, c0o1)
 	c1 := p.AddNoReduce(p.MulNoReduce(a[0], b[1]), p.MulNoReduce(a[1], b[0]))
 	return NewQuadraticExtensionVariable(c0, c1)
@@ -77,9 +75,7 @@ func (p *Chip) MulExtensionNoReduce(a, b QuadraticExtensionVariable) QuadraticEx
 func (p *Chip) MulAddExtension(a, b, c QuadraticExtensionVariable) QuadraticExtensionVariable {
 	product := p.MulExtensionNoReduce(a, b)
 	sum := p.AddExtensionNoReduce(product, c)
-	sum[0] = p.Reduce(sum[0])
-	sum[1] = p.Reduce(sum[1])
-	return sum
+	return p.ReduceExtension(sum)
 }
 
 func (p *Chip) MulAddExtensionNoReduce(a, b, c QuadraticExtensionVariable) QuadraticExtensionVariable {
@@ -88,14 +84,12 @@ func (p *Chip) MulAddExtensionNoReduce(a, b, c QuadraticExtensionVariable) Quadr
 	return sum
 }
 
-// Multiplies two operands a and b and subtracts to c in the Goldilocks extension field. a * b - c must
+// Subtracts two operands a and b and multiplies the diff by c in the Goldilocks extension field. (a - b) * c must
 // be less than RANGE_CHECK_NB_BITS bits.
 func (p *Chip) SubMulExtension(a, b, c QuadraticExtensionVariable) QuadraticExtensionVariable {
 	difference := p.SubExtensionNoReduce(a, b)
 	product := p.MulExtensionNoReduce(difference, c)
-	product[0] = p.Reduce(product[0])
-	product[1] = p.Reduce(product[1])
-	return product
+	return p.ReduceExtension(product)
 }
 
 // Multiplies quadratic extension variable in the Goldilocks field by a scalar.
@@ -126,21 +120,23 @@ func (p *Chip) InnerProductExtension(
 }
 
 // Computes the inverse of a quadratic extension variable in the Goldilocks field.
-func (p *Chip) InverseExtension(a QuadraticExtensionVariable) QuadraticExtensionVariable {
-	a0IsZero := p.api.IsZero(a[0].Limb)
-	a1IsZero := p.api.IsZero(a[1].Limb)
-	p.api.AssertIsEqual(p.api.Mul(a0IsZero, a1IsZero), frontend.Variable(0))
+func (p *Chip) InverseExtension(a QuadraticExtensionVariable) (QuadraticExtensionVariable, frontend.Variable) {
+	aIsZero := p.IsZero(a)
+	p.api.AssertIsEqual(aIsZero, frontend.Variable(0))
 	aPowRMinus1 := QuadraticExtensionVariable{
 		a[0],
 		p.Mul(a[1], NewVariable(DTH_ROOT)),
 	}
 	aPowR := p.MulExtension(aPowRMinus1, a)
-	return p.ScalarMulExtension(aPowRMinus1, p.Inverse(aPowR[0]))
+
+	aPowRInv, hasInv := p.Inverse(aPowR[0])
+	return p.ScalarMulExtension(aPowRMinus1, aPowRInv), hasInv
 }
 
 // Divides two quadratic extension variables in the Goldilocks field.
-func (p *Chip) DivExtension(a, b QuadraticExtensionVariable) QuadraticExtensionVariable {
-	return p.MulExtension(a, p.InverseExtension(b))
+func (p *Chip) DivExtension(a, b QuadraticExtensionVariable) (QuadraticExtensionVariable, frontend.Variable) {
+	bInv, hasInv := p.InverseExtension(b)
+	return p.MulExtension(a, bInv), hasInv
 }
 
 // Exponentiates a quadratic extension variable to some exponent in the Golidlocks field.
@@ -213,7 +209,7 @@ func (p *Chip) Lookup(
 	return NewQuadraticExtensionVariable(NewVariable(c0), NewVariable(c1))
 }
 
-// Lookup2 is similar to select2, but returns the first variable if the bit is zero and vice-versa.
+// Lookup2 is similar to Lookup2.  It returns the ith qe value (0 indexed) where i is bit decomposed to b0,b1 (little endian).
 func (p *Chip) Lookup2(
 	b0 frontend.Variable,
 	b1 frontend.Variable,

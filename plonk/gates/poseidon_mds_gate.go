@@ -90,7 +90,9 @@ func (g *PoseidonMdsGate) EvalUnfiltered(
 	for i := uint64(0); i < poseidon.SPONGE_WIDTH; i++ {
 		output := vars.GetLocalExtAlgebra(g.WireOutput(i))
 		diff := glApi.SubExtensionAlgebra(output, computed_outputs[i])
-		constraints = append(constraints, diff[0], diff[1])
+		for i := 0; i < gl.D; i++ {
+			constraints = append(constraints, diff[i])
+		}
 	}
 
 	return constraints

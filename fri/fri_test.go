@@ -52,7 +52,6 @@ func (circuit *TestFriCircuit) Define(api frontend.API) error {
 		proofWithPis.Proof.OpeningProof.CommitPhaseMerkleCaps,
 		proofWithPis.Proof.OpeningProof.FinalPoly,
 		proofWithPis.Proof.OpeningProof.PowWitness,
-		commonCircuitData.DegreeBits,
 		commonCircuitData.Config.FriConfig,
 	)
 
