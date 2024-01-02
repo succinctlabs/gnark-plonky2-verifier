@@ -38,7 +38,7 @@ func (g *PublicInputGate) EvalUnfiltered(
 
 	wires := g.WiresPublicInputsHash()
 	hash_parts := vars.publicInputsHash
-	for i := 0; i < 4; i++ {
+	for i := 0; i < len(wires); i++ {
 		wire := wires[i]
 		hash_part := hash_parts[i]
 

@@ -15,13 +15,13 @@ type Chip struct {
 	api               frontend.API `gnark:"-"`
 	poseidonChip      *poseidon.GoldilocksChip
 	poseidonBN254Chip *poseidon.BN254Chip
-	spongeState       [poseidon.SPONGE_WIDTH]gl.Variable
+	spongeState       poseidon.GoldilocksState
 	inputBuffer       []gl.Variable
 	outputBuffer      []gl.Variable
 }
 
 func NewChip(api frontend.API) *Chip {
-	var spongeState [poseidon.SPONGE_WIDTH]gl.Variable
+	var spongeState poseidon.GoldilocksState
 	var inputBuffer []gl.Variable
 	var outputBuffer []gl.Variable
 	for i := 0; i < poseidon.SPONGE_WIDTH; i++ {
@@ -40,7 +40,8 @@ func NewChip(api frontend.API) *Chip {
 }
 
 func (c *Chip) ObserveElement(element gl.Variable) {
-	c.outputBuffer = clearBuffer(c.outputBuffer)
+	// Clear the output buffer
+	c.outputBuffer = make([]gl.Variable, 0)
 	c.inputBuffer = append(c.inputBuffer, element)
 	if len(c.inputBuffer) == poseidon.SPONGE_RATE {
 		c.duplexing()
@@ -110,14 +111,13 @@ func (c *Chip) GetExtensionChallenge() gl.QuadraticExtensionVariable {
 }
 
 func (c *Chip) GetHash() poseidon.GoldilocksHashOut {
-	return [4]gl.Variable{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
+	return [poseidon.POSEIDON_GL_HASH_SIZE]gl.Variable{c.GetChallenge(), c.GetChallenge(), c.GetChallenge(), c.GetChallenge()}
 }
 
 func (c *Chip) GetFriChallenges(
 	commitPhaseMerkleCaps []variables.FriMerkleCap,
 	finalPoly variables.PolynomialCoeffs,
 	powWitness gl.Variable,
-	degreeBits uint64,
 	config types.FriConfig,
 ) variables.FriChallenges {
 	numFriQueries := config.NumQueryRounds
@@ -143,10 +143,6 @@ func (c *Chip) GetFriChallenges(
 	}
 }
 
-func clearBuffer(buffer []gl.Variable) []gl.Variable {
-	return make([]gl.Variable, 0)
-}
-
 func (c *Chip) duplexing() {
 	if len(c.inputBuffer) > poseidon.SPONGE_RATE {
 		fmt.Println(len(c.inputBuffer))
@@ -158,9 +154,12 @@ func (c *Chip) duplexing() {
 	for i := 0; i < len(c.inputBuffer); i++ {
 		c.spongeState[i] = glApi.Reduce(c.inputBuffer[i])
 	}
-	c.inputBuffer = clearBuffer(c.inputBuffer)
+	// Clear the input buffer
+	c.inputBuffer = make([]gl.Variable, 0)
 	c.spongeState = c.poseidonChip.Poseidon(c.spongeState)
-	clearBuffer(c.outputBuffer)
+
+	// Clear the output buffer
+	c.outputBuffer = make([]gl.Variable, 0)
 	for i := 0; i < poseidon.SPONGE_RATE; i++ {
 		c.outputBuffer = append(c.outputBuffer, c.spongeState[i])
 	}

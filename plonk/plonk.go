@@ -71,10 +71,15 @@ func (p *PlonkChip) evalL0(x gl.QuadraticExtensionVariable, xPowN gl.QuadraticEx
 		glApi.ScalarMulExtension(x, p.DEGREE),
 		p.DEGREE_QE,
 	)
-	return glApi.DivExtension(
+
+	quotient, hasQuotient := glApi.DivExtension(
 		evalZeroPoly,
 		denominator,
 	)
+
+	p.api.AssertIsEqual(hasQuotient, frontend.Variable(1))
+
+	return quotient
 }
 
 func (p *PlonkChip) checkPartialProducts(

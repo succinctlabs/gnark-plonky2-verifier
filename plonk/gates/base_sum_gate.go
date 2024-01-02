@@ -51,7 +51,7 @@ func NewBaseSumGate(numLimbs uint64, base uint64) *BaseSumGate {
 }
 
 func (g *BaseSumGate) Id() string {
-	return fmt.Sprintf("BaseSumGate { num_ops: %d } + Base: %d", g.numLimbs, g.base)
+	return fmt.Sprintf("BaseSumGate { num_limbs: %d } + Base: %d", g.numLimbs, g.base)
 }
 
 func (g *BaseSumGate) limbs() []uint64 {

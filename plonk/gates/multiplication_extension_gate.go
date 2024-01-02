@@ -37,7 +37,7 @@ func NewMultiplicationExtensionGate(numOps uint64) *MultiplicationExtensionGate 
 }
 
 func (g *MultiplicationExtensionGate) Id() string {
-	return fmt.Sprintf("ArithmeticExtensionGate { num_ops: %d }", g.numOps)
+	return fmt.Sprintf("MulExtensionGate { num_ops: %d }", g.numOps)
 }
 
 func (g *MultiplicationExtensionGate) wiresIthMultiplicand0(i uint64) Range {

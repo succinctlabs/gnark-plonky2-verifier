@@ -23,6 +23,20 @@ func deserializeExponentiationGate(parameters map[string]string) Gate {
 		panic("Invalid num_power_bits field in ExponentiationGate")
 	}
 
+	base, hasBase := parameters["base"]
+	if !hasBase {
+		panic("Missing field base in ExponentiationGate")
+	}
+
+	baseInt, err := strconv.Atoi(base)
+	if err != nil {
+		panic("Invalid base field in ExponentiationGate")
+	}
+
+	if baseInt != gl.D {
+		panic("Expected base field in ExponentiationGate to equal gl.D")
+	}
+
 	return NewExponentiationGate(uint64(numPowerBitsInt))
 }
 

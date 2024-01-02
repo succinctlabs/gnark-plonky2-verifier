@@ -59,7 +59,7 @@ type TestQuadraticExtensionDivCircuit struct {
 
 func (c *TestQuadraticExtensionDivCircuit) Define(api frontend.API) error {
 	glAPI := New(api)
-	actualRes := glAPI.DivExtension(c.Operand1, c.Operand2)
+	actualRes, _ := glAPI.DivExtension(c.Operand1, c.Operand2)
 	glAPI.AssertIsEqual(actualRes[0], c.ExpectedResult[0])
 	glAPI.AssertIsEqual(actualRes[1], c.ExpectedResult[1])
 	return nil

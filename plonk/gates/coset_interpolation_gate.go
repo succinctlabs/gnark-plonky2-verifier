@@ -32,6 +32,9 @@ func deserializeCosetInterpolationGate(parameters map[string]string) Gate {
 	if err != nil {
 		panic("invalid degree in CosetInterpolationGate")
 	}
+	if degreeInt < 2 {
+		panic("degree must be at least 2 in CosetInterpolationGate")
+	}
 
 	barycentricWeightsStr := strings.Split(barycentricWeights, ",")
 	barycentricWeightsInt := make([]goldilocks.Element, len(barycentricWeightsStr))
@@ -199,6 +202,10 @@ func (g *CosetInterpolationGate) EvalUnfiltered(
 
 		startIndex := 1 + (g.degree-1)*(i+1)
 		endIndex := startIndex + g.degree - 1
+		if endIndex > g.numPoints() {
+			endIndex = g.numPoints()
+		}
+
 		computedEval, computedProd = glApi.PartialInterpolateExtAlgebra(
 			domain[startIndex:endIndex],
 			values[startIndex:endIndex],

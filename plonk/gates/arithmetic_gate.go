@@ -9,7 +9,7 @@ import (
 	gl "github.com/succinctlabs/gnark-plonky2-verifier/goldilocks"
 )
 
-var aritheticGateRegex = regexp.MustCompile("ArithmeticGate { num_ops: (?P<numOps>[0-9]+) }")
+var arithmeticGateRegex = regexp.MustCompile("ArithmeticGate { num_ops: (?P<numOps>[0-9]+) }")
 
 func deserializeArithmeticGate(parameters map[string]string) Gate {
 	// Has the format "ArithmeticGate { num_ops: 10 }"

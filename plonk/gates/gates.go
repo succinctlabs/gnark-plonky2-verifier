@@ -18,20 +18,20 @@ type Gate interface {
 }
 
 var gateRegexHandlers = map[*regexp.Regexp]func(parameters map[string]string) Gate{
-	aritheticGateRegex:          deserializeArithmeticGate,
-	aritheticExtensionGateRegex: deserializeExtensionArithmeticGate,
-	baseSumGateRegex:            deserializeBaseSumGate,
-	constantGateRegex:           deserializeConstantGate,
-	cosetInterpolationGateRegex: deserializeCosetInterpolationGate,
-	exponentiationGateRegex:     deserializeExponentiationGate,
-	mulExtensionGateRegex:       deserializeMulExtensionGate,
-	noopGateRegex:               deserializeNoopGate,
-	poseidonGateRegex:           deserializePoseidonGate,
-	poseidonMdsGateRegex:        deserializePoseidonMdsGate,
-	publicInputGateRegex:        deserializePublicInputGate,
-	randomAccessGateRegex:       deserializeRandomAccessGate,
-	reducingExtensionGateRegex:  deserializeReducingExtensionGate,
-	reducingGateRegex:           deserializeReducingGate,
+	arithmeticGateRegex:          deserializeArithmeticGate,
+	arithmeticExtensionGateRegex: deserializeExtensionArithmeticGate,
+	baseSumGateRegex:             deserializeBaseSumGate,
+	constantGateRegex:            deserializeConstantGate,
+	cosetInterpolationGateRegex:  deserializeCosetInterpolationGate,
+	exponentiationGateRegex:      deserializeExponentiationGate,
+	mulExtensionGateRegex:        deserializeMulExtensionGate,
+	noopGateRegex:                deserializeNoopGate,
+	poseidonGateRegex:            deserializePoseidonGate,
+	poseidonMdsGateRegex:         deserializePoseidonMdsGate,
+	publicInputGateRegex:         deserializePublicInputGate,
+	randomAccessGateRegex:        deserializeRandomAccessGate,
+	reducingExtensionGateRegex:   deserializeReducingExtensionGate,
+	reducingGateRegex:            deserializeReducingGate,
 }
 
 func GateInstanceFromId(gateId string) Gate {
