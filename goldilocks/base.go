@@ -80,15 +80,23 @@ func NegOne() Variable {
 	return NewVariable(MODULUS.Uint64() - 1)
 }
 
+type RangeCheckerType int
+
+const (
+	NATIVE_RANGE_CHECKER RangeCheckerType = iota
+	COMMIT_RANGE_CHECKER
+	BIT_DECOMP_RANGE_CHECKER
+)
+
 // The chip used for Goldilocks field operations.
 type Chip struct {
-	api                 frontend.API
-	rangeChecker        frontend.Rangechecker
-	simpleChecker       bitDecompChecker
-	rangeCheckCollected []checkedVariable
+	api frontend.API
+
+	rangeChecker     frontend.Rangechecker
+	rangeCheckerType RangeCheckerType
+
+	rangeCheckCollected []checkedVariable // These field are used if rangeCheckerType == commit_range_checker
 	collectedMutex      sync.Mutex
-	usingCommitChecker  bool
-	usingSimpleChecker  bool
 }
 
 var (
@@ -105,30 +113,38 @@ func New(api frontend.API) *Chip {
 		return chip
 	}
 
-	useBitDecomp := os.Getenv("USE_BIT_DECOMPOSITION_RANGE_CHECK")
-
 	c := &Chip{api: api}
 
-	// If USE_BIT_DECOMPOSITION_RANGE_CHECK is not set, then use the std.rangecheck New function
-	if useBitDecomp == "" {
-		c.usingCommitChecker = rangeCheckGadgetUsingCommitChecker(api)
-		c.usingSimpleChecker = false
+	// Instantiate the range checker gadget
+	// Per Gnark's range checker gadget's New function, there are three possible range checkers:
+	// 1. The native range checker
+	// 2. The commit range checker
+	// 3. The bit decomposition range checker
+	//
+	// See https://github.com/Consensys/gnark/blob/3421eaa7d544286abf3de8c46282b8d4da6d5da0/std/rangecheck/rangecheck.go#L3
+
+	// This function will emulate gnark's range checker selection logic (within the gnarkRangeCheckSelector func).  However,
+	// if the USE_BIT_DECOMPOSITION_RANGE_CHECK env var is set, then it will explicitly use the bit decomposition range checker.
+
+	rangeCheckerType := gnarkRangeCheckSelector(api)
+	useBitDecomp := os.Getenv("USE_BIT_DECOMPOSITION_RANGE_CHECK")
+	if useBitDecomp == "true" {
+		rangeCheckerType = BIT_DECOMP_RANGE_CHECKER
+	}
+
+	c.rangeCheckerType = rangeCheckerType
+
+	// If we are using the bit decomposition range checker, then create
+	if c.rangeCheckerType == BIT_DECOMP_RANGE_CHECKER {
+		c.rangeChecker = bitDecompChecker{api: api}
 	} else {
-		c.usingCommitChecker = false
-		c.usingSimpleChecker = true
-	}
+		if c.rangeCheckerType == COMMIT_RANGE_CHECKER {
+			api.Compiler().Defer(c.checkCollected)
+		}
 
-	if c.usingCommitChecker || c.usingSimpleChecker {
-		c.simpleChecker = bitDecompChecker{api: api}
-	}
-
-	if c.usingCommitChecker {
-		api.Compiler().Defer(c.checkCollected)
-	}
-
-	// The gnark range checker gadget needs to be created AFTER the c.checkCollected function is deferred.
-	// The commit range checker gadget will also calla deferred function, which needs to be called after c.checkCollected.
-	if !c.usingSimpleChecker {
+		// If we are using the native or commit range checker, then have gnark's range checker gadget's New function create it.
+		// Also, note that the range checker will need to be created AFTER the c.checkCollected function is deferred.
+		// The commit range checker gadget will also call a deferred function, which needs to be called after c.checkCollected.
 		c.rangeChecker = rangecheck.New(api)
 	}
 
@@ -400,14 +416,14 @@ func (p *Chip) AssertIsEqual(x, y Variable) {
 }
 
 func (p *Chip) rangeCheckerCheck(x frontend.Variable, nbBits int) {
-	if p.usingCommitChecker {
+	switch p.rangeCheckerType {
+	case NATIVE_RANGE_CHECKER:
+	case BIT_DECOMP_RANGE_CHECKER:
+		p.rangeChecker.Check(x, nbBits)
+	case COMMIT_RANGE_CHECKER:
 		p.collectedMutex.Lock()
 		defer p.collectedMutex.Unlock()
 		p.rangeCheckCollected = append(p.rangeCheckCollected, checkedVariable{v: x, bits: nbBits})
-	} else if p.usingSimpleChecker {
-		p.simpleChecker.Check(x, nbBits)
-	} else {
-		p.rangeChecker.Check(x, nbBits)
 	}
 }
 

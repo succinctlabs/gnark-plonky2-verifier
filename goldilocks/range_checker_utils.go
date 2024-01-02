@@ -76,14 +76,14 @@ func nbPLONKConstraints(baseLength int, collected []checkedVariable) int {
 	return nbleft + nbRight + eqs + 1 // and the final assert
 }
 
-func rangeCheckGadgetUsingCommitChecker(api frontend.API) bool {
+func gnarkRangeCheckSelector(api frontend.API) RangeCheckerType {
 	// Emulate the logic within rangecheck.New
 	// https://github.com/Consensys/gnark/blob/3421eaa7d544286abf3de8c46282b8d4da6d5da0/std/rangecheck/rangecheck.go#L24
 	if _, ok := api.(frontend.Rangechecker); ok {
-		return false
+		return NATIVE_RANGE_CHECKER
 	} else if _, ok := api.(frontend.Committer); ok {
-		return true
+		return COMMIT_RANGE_CHECKER
 	} else {
-		return false
+		return BIT_DECOMP_RANGE_CHECKER
 	}
 }
