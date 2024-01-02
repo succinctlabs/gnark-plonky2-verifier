@@ -328,6 +328,11 @@ func (p *Chip) RangeCheck(x Variable) {
 	)
 }
 
+// This function will assert that the field element x is less than 2^maxNbBits.
+func (p *Chip) RangeCheckWithMaxBits(x Variable, maxNbBits uint64) {
+	p.rangeChecker.Check(x.Limb, int(maxNbBits))
+}
+
 func (p *Chip) AssertIsEqual(x, y Variable) {
 	p.api.AssertIsEqual(x.Limb, y.Limb)
 }

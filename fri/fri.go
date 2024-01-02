@@ -75,14 +75,8 @@ func (f *Chip) ToOpenings(c variables.OpeningSet) Openings {
 func (f *Chip) assertLeadingZeros(powWitness gl.Variable, friConfig types.FriConfig) {
 	// Asserts that powWitness'es big-endian bit representation has at least friConfig.ProofOfWorkBits leading zeros.
 	// Note that this is assuming that the Goldilocks field is being used.  Specfically that the
-	// field is 64 bits long
-	maxPowWitness := uint64(math.Pow(2, float64(64-friConfig.ProofOfWorkBits))) - 1
-
-	// TODO:  This does an un-nessary reduce, since powWitness is already range checked to be within GL field.
-	reducedPowWitness := f.gl.Reduce(powWitness)
-
-	// TODO:  Can replace with with std.rangecheck.Check.  Will probably be less contraints.
-	f.api.AssertIsLessOrEqual(reducedPowWitness.Limb, frontend.Variable(maxPowWitness))
+	// field is 64 bits long.
+	f.gl.RangeCheckWithMaxBits(powWitness, 64-friConfig.ProofOfWorkBits)
 }
 
 func (f *Chip) fromOpeningsAndAlpha(
