@@ -42,10 +42,13 @@ var POWER_OF_TWO_GENERATOR goldilocks.Element = goldilocks.NewElement(1753635133
 var MODULUS *big.Int = emulated.Goldilocks{}.Modulus()
 
 // The number of bits to use for range checks on inner products of field elements.
+// This MUST be a multiple of EXPECTED_OPTIMAL_BASEWIDTH if the commit based range checker is used.
+// There is a bug in the that pre 0.9.2 gnark range checker where it wouldn't appropriately range check a bitwidth that
+// is misaligned from the EXPECTED_OPTIMAL_BASEWIDTH:  https://github.com/Consensys/gnark/security/advisories/GHSA-rjjm-x32p-m3f7
 var RANGE_CHECK_NB_BITS int = 144
 
 // The bit width size that the gnark commit based range checker should use.
-var EXPECTED_OPTIMIZED_BASEWIDTH int = 16
+var EXPECTED_OPTIMAL_BASEWIDTH int = 16
 
 // Registers the hint functions with the solver.
 func init() {
@@ -433,8 +436,8 @@ func (p *Chip) checkCollected(api frontend.API) error {
 	}
 
 	nbBits := getOptimalBasewidth(p.api, p.rangeCheckCollected)
-	if nbBits != EXPECTED_OPTIMIZED_BASEWIDTH {
-		panic("nbBits should be " + strconv.Itoa(EXPECTED_OPTIMIZED_BASEWIDTH))
+	if nbBits != EXPECTED_OPTIMAL_BASEWIDTH {
+		panic("nbBits should be " + strconv.Itoa(EXPECTED_OPTIMAL_BASEWIDTH))
 	}
 
 	for _, v := range p.rangeCheckCollected {
