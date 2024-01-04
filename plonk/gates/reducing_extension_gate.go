@@ -76,7 +76,7 @@ func (g *ReducingExtensionGate) wiresAccs(i uint64) Range {
 
 func (g *ReducingExtensionGate) EvalUnfiltered(
 	api frontend.API,
-	glApi gl.Chip,
+	glApi *gl.Chip,
 	vars EvaluationVars,
 ) []gl.QuadraticExtensionVariable {
 	alpha := vars.GetLocalExtAlgebra(g.wiresAlpha())

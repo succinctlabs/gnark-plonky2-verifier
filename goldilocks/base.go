@@ -19,6 +19,8 @@ import (
 	"math"
 	"math/big"
 	"os"
+	"strconv"
+	"sync"
 
 	"github.com/consensys/gnark-crypto/field/goldilocks"
 	"github.com/consensys/gnark/constraint/solver"
@@ -40,7 +42,13 @@ var POWER_OF_TWO_GENERATOR goldilocks.Element = goldilocks.NewElement(1753635133
 var MODULUS *big.Int = emulated.Goldilocks{}.Modulus()
 
 // The number of bits to use for range checks on inner products of field elements.
-var RANGE_CHECK_NB_BITS int = 140
+// This MUST be a multiple of EXPECTED_OPTIMAL_BASEWIDTH if the commit based range checker is used.
+// There is a bug in the pre 0.9.2 gnark range checker where it wouldn't appropriately range check a bitwidth that
+// is misaligned from EXPECTED_OPTIMAL_BASEWIDTH:  https://github.com/Consensys/gnark/security/advisories/GHSA-rjjm-x32p-m3f7
+var RANGE_CHECK_NB_BITS int = 144
+
+// The bit width size that the gnark commit based range checker should use.
+var EXPECTED_OPTIMAL_BASEWIDTH int = 16
 
 // Registers the hint functions with the solver.
 func init() {
@@ -76,25 +84,78 @@ func NegOne() Variable {
 	return NewVariable(MODULUS.Uint64() - 1)
 }
 
+type RangeCheckerType int
+
+const (
+	NATIVE_RANGE_CHECKER RangeCheckerType = iota
+	COMMIT_RANGE_CHECKER
+	BIT_DECOMP_RANGE_CHECKER
+)
+
 // The chip used for Goldilocks field operations.
 type Chip struct {
-	api          frontend.API
-	rangeChecker frontend.Rangechecker
+	api frontend.API
+
+	rangeChecker     frontend.Rangechecker
+	rangeCheckerType RangeCheckerType
+
+	rangeCheckCollected []checkedVariable // These field are used if rangeCheckerType == commit_range_checker
+	collectedMutex      sync.Mutex
 }
+
+var (
+	poseidonChips = make(map[frontend.API]*Chip)
+	mutex         sync.Mutex
+)
 
 // Creates a new Goldilocks Chip.
 func New(api frontend.API) *Chip {
-	use_bit_decomp := os.Getenv("USE_BIT_DECOMPOSITION_RANGE_CHECK")
+	mutex.Lock()
+	defer mutex.Unlock()
 
-	var rangeChecker frontend.Rangechecker
-
-	// If USE_BIT_DECOMPOSITION_RANGE_CHECK is not set, then use the std.rangecheck New function
-	if use_bit_decomp == "" {
-		rangeChecker = rangecheck.New(api)
-	} else {
-		rangeChecker = bitDecompChecker{api: api}
+	if chip, ok := poseidonChips[api]; ok {
+		return chip
 	}
-	return &Chip{api: api, rangeChecker: rangeChecker}
+
+	c := &Chip{api: api}
+
+	// Instantiate the range checker gadget
+	// Per Gnark's range checker gadget's New function, there are three possible range checkers:
+	// 1. The native range checker
+	// 2. The commit range checker
+	// 3. The bit decomposition range checker
+	//
+	// See https://github.com/Consensys/gnark/blob/3421eaa7d544286abf3de8c46282b8d4da6d5da0/std/rangecheck/rangecheck.go#L3
+
+	// This function will emulate gnark's range checker selection logic (within the gnarkRangeCheckSelector func).  However,
+	// if the USE_BIT_DECOMPOSITION_RANGE_CHECK env var is set, then it will explicitly use the bit decomposition range checker.
+
+	rangeCheckerType := gnarkRangeCheckerSelector(api)
+	useBitDecomp := os.Getenv("USE_BIT_DECOMPOSITION_RANGE_CHECK")
+	if useBitDecomp == "true" {
+		fmt.Println("The USE_BIT_DECOMPOSITION_RANGE_CHECK env var is set to true.  Using the bit decomposition range checker.")
+		rangeCheckerType = BIT_DECOMP_RANGE_CHECKER
+	}
+
+	c.rangeCheckerType = rangeCheckerType
+
+	// If we are using the bit decomposition range checker, then create bitDecompChecker object
+	if c.rangeCheckerType == BIT_DECOMP_RANGE_CHECKER {
+		c.rangeChecker = bitDecompChecker{api: api}
+	} else {
+		if c.rangeCheckerType == COMMIT_RANGE_CHECKER {
+			api.Compiler().Defer(c.checkCollected)
+		}
+
+		// If we are using the native or commit range checker, then have gnark's range checker gadget's New function create it.
+		// Also, note that the range checker will need to be created AFTER the c.checkCollected function is deferred.
+		// The commit range checker gadget will also call a deferred function, which needs to be called after c.checkCollected.
+		c.rangeChecker = rangecheck.New(api)
+	}
+
+	poseidonChips[api] = c
+
+	return c
 }
 
 // Adds two goldilocks field elements and returns a value within the goldilocks field.
@@ -209,7 +270,7 @@ func (p *Chip) ReduceWithMaxBits(x Variable, maxNbBits uint64) Variable {
 	}
 
 	quotient := result[0]
-	p.rangeChecker.Check(quotient, int(maxNbBits))
+	p.rangeCheckerCheck(quotient, int(maxNbBits))
 
 	remainder := NewVariable(result[1])
 	p.RangeCheck(remainder)
@@ -321,8 +382,8 @@ func (p *Chip) RangeCheck(x Variable) {
 		),
 		x.Limb,
 	)
-	p.rangeChecker.Check(mostSigLimb, 32)
-	p.rangeChecker.Check(leastSigLimb, 32)
+	p.rangeCheckerCheck(mostSigLimb, 32)
+	p.rangeCheckerCheck(leastSigLimb, 32)
 
 	// If the most significant bits are all 1, then we need to check that the least significant bits are all zero
 	// in order for element to be less than the Goldilock's modulus.
@@ -340,11 +401,44 @@ func (p *Chip) RangeCheck(x Variable) {
 
 // This function will assert that the field element x is less than 2^maxNbBits.
 func (p *Chip) RangeCheckWithMaxBits(x Variable, maxNbBits uint64) {
-	p.rangeChecker.Check(x.Limb, int(maxNbBits))
+	p.rangeCheckerCheck(x.Limb, int(maxNbBits))
 }
 
 func (p *Chip) AssertIsEqual(x, y Variable) {
 	p.api.AssertIsEqual(x.Limb, y.Limb)
+}
+
+func (p *Chip) rangeCheckerCheck(x frontend.Variable, nbBits int) {
+	switch p.rangeCheckerType {
+	case NATIVE_RANGE_CHECKER:
+	case BIT_DECOMP_RANGE_CHECKER:
+		p.rangeChecker.Check(x, nbBits)
+	case COMMIT_RANGE_CHECKER:
+		p.collectedMutex.Lock()
+		defer p.collectedMutex.Unlock()
+		p.rangeCheckCollected = append(p.rangeCheckCollected, checkedVariable{v: x, bits: nbBits})
+	}
+}
+
+func (p *Chip) checkCollected(api frontend.API) error {
+	if p.rangeCheckerType != COMMIT_RANGE_CHECKER {
+		panic("checkCollected should only be called when using the commit range checker")
+	}
+
+	nbBits := getOptimalBasewidth(p.api, p.rangeCheckCollected)
+	if nbBits != EXPECTED_OPTIMAL_BASEWIDTH {
+		panic("nbBits should be " + strconv.Itoa(EXPECTED_OPTIMAL_BASEWIDTH))
+	}
+
+	for _, v := range p.rangeCheckCollected {
+		if v.bits%nbBits != 0 {
+			panic("v.bits is not nbBits aligned")
+		}
+
+		p.rangeChecker.Check(v.v, v.bits)
+	}
+
+	return nil
 }
 
 // Computes the n'th primitive root of unity for the Goldilocks field.

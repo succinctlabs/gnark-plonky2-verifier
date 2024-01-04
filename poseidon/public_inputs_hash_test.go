@@ -26,7 +26,7 @@ func (circuit *TestPublicInputsHashCircuit) Define(api frontend.API) error {
 		input[i] = gl.NewVariable(api.FromBinary(api.ToBinary(circuit.In[i], 64)...))
 	}
 
-	poseidonChip := &GoldilocksChip{api: api, gl: *glAPI}
+	poseidonChip := &GoldilocksChip{api: api, gl: glAPI}
 	output := poseidonChip.HashNoPad(input[:])
 
 	// Check that output is correct
