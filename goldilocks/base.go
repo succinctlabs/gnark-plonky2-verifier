@@ -19,6 +19,7 @@ import (
 	"math"
 	"math/big"
 	"os"
+	"strconv"
 	"sync"
 
 	"github.com/consensys/gnark-crypto/field/goldilocks"
@@ -41,7 +42,10 @@ var POWER_OF_TWO_GENERATOR goldilocks.Element = goldilocks.NewElement(1753635133
 var MODULUS *big.Int = emulated.Goldilocks{}.Modulus()
 
 // The number of bits to use for range checks on inner products of field elements.
-var RANGE_CHECK_NB_BITS int = 140
+var RANGE_CHECK_NB_BITS int = 144
+
+// The bit width size that the gnark commit based range checker should use.
+var EXPECTED_OPTIMIZED_BASEWIDTH int = 16
 
 // Registers the hint functions with the solver.
 func init() {
@@ -404,7 +408,7 @@ func (p *Chip) RangeCheck(x Variable) {
 
 // This function will assert that the field element x is less than 2^maxNbBits.
 func (p *Chip) RangeCheckWithMaxBits(x Variable, maxNbBits uint64) {
-	p.rangeChecker.Check(x.Limb, int(maxNbBits))
+	p.rangeCheckerCheck(x.Limb, int(maxNbBits))
 }
 
 func (p *Chip) AssertIsEqual(x, y Variable) {
@@ -429,31 +433,16 @@ func (p *Chip) checkCollected(api frontend.API) error {
 	}
 
 	nbBits := getOptimalBasewidth(p.api, p.rangeCheckCollected)
+	if nbBits != EXPECTED_OPTIMIZED_BASEWIDTH {
+		panic("nbBits should be " + strconv.Itoa(EXPECTED_OPTIMIZED_BASEWIDTH))
+	}
 
 	for _, v := range p.rangeCheckCollected {
-
-		// If b.vits is not nbBits aligned, then we will need to left shift the value to be nbBits aligned.
-		// Per this issue, https://github.com/Consensys/gnark/security/advisories/GHSA-rjjm-x32p-m3f7
-		// the commitment/logup based range checker has a bug for checking non aligned bitwidths.
-		nonalignedBitwidth := v.bits % nbBits
-
-		var valueToCheck frontend.Variable
-		var valueBitwidth int
-		var one = big.NewInt(1)
-		if nonalignedBitwidth != 0 {
-			leftShift := nbBits - nonalignedBitwidth
-			valueToCheck = p.api.Mul(v.v, new(big.Int).Lsh(one, uint(leftShift)))
-			valueBitwidth = v.bits + leftShift
-		} else {
-			valueToCheck = v.v
-			valueBitwidth = v.bits
+		if v.bits%nbBits != 0 {
+			panic("v.bits is not nbBits aligned")
 		}
 
-		if valueBitwidth%nbBits != 0 {
-			panic("value_bitwidth is not nbBits aligned")
-		}
-
-		p.rangeChecker.Check(valueToCheck, valueBitwidth)
+		p.rangeChecker.Check(v.v, v.bits)
 	}
 
 	return nil
