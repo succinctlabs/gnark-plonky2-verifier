@@ -8,11 +8,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/succinctlabs/gnark-plonky2-verifier/types"
-	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
-	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
-
 	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark-crypto/kzg"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/backend/plonk"
 	"github.com/consensys/gnark/constraint"
@@ -21,6 +18,10 @@ import (
 	"github.com/consensys/gnark/frontend/cs/scs"
 	"github.com/consensys/gnark/profile"
 	"github.com/consensys/gnark/test"
+	"github.com/succinctlabs/gnark-plonky2-verifier/trusted_setup"
+	"github.com/succinctlabs/gnark-plonky2-verifier/types"
+	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
+	"github.com/succinctlabs/gnark-plonky2-verifier/verifier"
 )
 
 func runBenchmark(plonky2Circuit string, proofSystem string, profileCircuit bool, dummy bool, saveArtifacts bool) {
@@ -79,6 +80,7 @@ func runBenchmark(plonky2Circuit string, proofSystem string, profileCircuit bool
 func plonkProof(r1cs constraint.ConstraintSystem, circuitName string, dummy bool, saveArtifacts bool) {
 	var pk plonk.ProvingKey
 	var vk plonk.VerifyingKey
+	var srs kzg.SRS = kzg.NewSRS(ecc.BN254)
 	var err error
 
 	proofWithPis := variables.DeserializeProofWithPublicInputs(types.ReadProofWithPublicInputs("testdata/" + circuitName + "/proof_with_public_inputs.json"))
@@ -98,15 +100,35 @@ func plonkProof(r1cs constraint.ConstraintSystem, circuitName string, dummy bool
 
 	fmt.Println("Running circuit setup", time.Now())
 	if dummy {
-		panic("dummy setup not supported for plonk")
-	} else {
-		fmt.Println("Using real setup")
-		srs, err := test.NewKZGSRS(r1cs)
+		fmt.Println("Using test setup")
+
+		srs, err = test.NewKZGSRS(r1cs)
+
 		if err != nil {
 			panic(err)
 		}
-		pk, vk, err = plonk.Setup(r1cs, srs)
+	} else {
+		fmt.Println("Using real setup")
+
+		fileName := "srs_setup"
+
+		if _, err := os.Stat(fileName); os.IsNotExist(err) {
+			trusted_setup.DownloadAndSaveAztecIgnitionSrs(174, fileName)
+		}
+
+		fSRS, err := os.Open(fileName)
+
+		_, err = srs.ReadFrom(fSRS)
+
+		fSRS.Close()
+
+		if err != nil {
+			panic(err)
+		}
 	}
+
+	pk, vk, err = plonk.Setup(r1cs, srs)
+
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -293,10 +315,6 @@ func main() {
 	if plonky2Circuit == nil || *plonky2Circuit == "" {
 		fmt.Println("Please provide a plonky2 circuit to benchmark")
 		os.Exit(1)
-	}
-
-	if *proofSystem == "plonk" {
-		*dummySetup = false
 	}
 
 	fmt.Printf("Running benchmark for %s circuit with proof system %s\n", *plonky2Circuit, *proofSystem)

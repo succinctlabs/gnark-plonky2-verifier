@@ -19,3 +19,6 @@ gnark.pprof
 
 # Output from pprof visualization
 verifier.png
+
+# Output from aztec ignition
+data/
