@@ -73,6 +73,10 @@ func ReadCommonCircuitData(path string) CommonCircuitData {
 		panic(err)
 	}
 
+	return DeserializeCommonCircuitData(raw)
+}
+
+func DeserializeCommonCircuitData(raw CommonCircuitDataRaw) CommonCircuitData {
 	var commonCircuitData CommonCircuitData
 	commonCircuitData.Config.NumWires = raw.Config.NumWires
 	commonCircuitData.Config.NumRoutedWires = raw.Config.NumRoutedWires
