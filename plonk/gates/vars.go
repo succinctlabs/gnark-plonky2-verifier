@@ -5,10 +5,11 @@ import (
 	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
 )
 
+// EvaluationVars stores variables for gate evaluations in a quadratic extension field.
 type EvaluationVars struct {
-	localConstants   []gl.QuadraticExtensionVariable
-	localWires       []gl.QuadraticExtensionVariable
-	publicInputsHash poseidon.GoldilocksHashOut
+	localConstants   []gl.QuadraticExtensionVariable // Constants local to the gate evaluation
+	localWires       []gl.QuadraticExtensionVariable // Wires representing local variables
+	publicInputsHash poseidon.GoldilocksHashOut      // Hash of the public inputs
 }
 
 func NewEvaluationVars(
@@ -23,10 +24,12 @@ func NewEvaluationVars(
 	}
 }
 
+// RemovePrefix removes the first `numSelectors` elements from localConstants.
 func (e *EvaluationVars) RemovePrefix(numSelectors uint64) {
 	e.localConstants = e.localConstants[numSelectors:]
 }
 
+// GetLocalExtAlgebra retrieves a subrange of local wires as a quadratic extension algebra variable.
 func (e *EvaluationVars) GetLocalExtAlgebra(wireRange Range) gl.QuadraticExtensionAlgebraVariable {
 	// For now, only support degree 2
 	if wireRange.end-wireRange.start != gl.D {
