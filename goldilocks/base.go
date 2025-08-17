@@ -30,13 +30,13 @@ import (
 )
 
 // The multiplicative group generator of the field.
-var MULTIPLICATIVE_GROUP_GENERATOR goldilocks.Element = goldilocks.NewElement(7)
+var MULTIPLICATIVE_GROUP_GENERATOR goldilocks.Element = goldilocks.NewElement(14293326489335486720)
 
 // The two adicity of the field.
 var TWO_ADICITY uint64 = 32
 
 // The power of two generator of the field.
-var POWER_OF_TWO_GENERATOR goldilocks.Element = goldilocks.NewElement(1753635133440165772)
+var POWER_OF_TWO_GENERATOR goldilocks.Element = goldilocks.NewElement(7277203076849721926)
 
 // The modulus of the field.
 var MODULUS *big.Int = emulated.Goldilocks{}.Modulus()

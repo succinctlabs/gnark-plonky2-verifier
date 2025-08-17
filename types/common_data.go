@@ -86,6 +86,13 @@ func ReadCommonCircuitData(path string) CommonCircuitData {
 	commonCircuitData.Config.FriConfig.RateBits = raw.Config.FriConfig.RateBits
 	commonCircuitData.Config.FriConfig.CapHeight = raw.Config.FriConfig.CapHeight
 	commonCircuitData.Config.FriConfig.ProofOfWorkBits = raw.Config.FriConfig.ProofOfWorkBits
+	// since the only reduction_strategy supported in gnark-plonky2-verifier is
+	// ConstantArityBits, set the first element of the array to 1 (following
+	// https://github.com/0xPolygonZero/plonky2/blob/main/plonky2/src/fri/reduction_strategies.rs#L70).
+	// Ideally this first value set to 1 would already be set by plonky2 serialization of the
+	// CommonCircuitData, but the serializer available in plonky2's implementation does not
+	// include this first value
+	commonCircuitData.Config.FriConfig.ReductionStrategy = append([]uint64{1}, raw.Config.FriConfig.ReductionStrategy.ConstantArityBits...)
 	commonCircuitData.Config.FriConfig.NumQueryRounds = raw.Config.FriConfig.NumQueryRounds
 
 	commonCircuitData.FriParams.DegreeBits = raw.FriParams.DegreeBits
@@ -93,6 +100,9 @@ func ReadCommonCircuitData(path string) CommonCircuitData {
 	commonCircuitData.FriParams.Config.RateBits = raw.FriParams.Config.RateBits
 	commonCircuitData.FriParams.Config.CapHeight = raw.FriParams.Config.CapHeight
 	commonCircuitData.FriParams.Config.ProofOfWorkBits = raw.FriParams.Config.ProofOfWorkBits
+	// set FriParams.ReductionStrategy[0]=1, for the same reason as in
+	// FriConfig.ReductionStrategy few lines above
+	commonCircuitData.FriParams.Config.ReductionStrategy = append([]uint64{1}, raw.FriParams.Config.ReductionStrategy.ConstantArityBits...)
 	commonCircuitData.FriParams.Config.NumQueryRounds = raw.FriParams.Config.NumQueryRounds
 	commonCircuitData.FriParams.ReductionArityBits = raw.FriParams.ReductionArityBits
 

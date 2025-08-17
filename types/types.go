@@ -5,13 +5,11 @@ import (
 )
 
 type FriConfig struct {
-	RateBits        uint64
-	CapHeight       uint64
-	ProofOfWorkBits uint64
-	NumQueryRounds  uint64
-	// Note that we do not need `reduction_strategy` of type FriReductionStrategy as the plonky2 FriConfig has.
-	// reduction_strategy is only used for computing `reduction_arity_bits`, which is serialized in the
-	// CommonCircuitData.
+	RateBits          uint64
+	CapHeight         uint64
+	ProofOfWorkBits   uint64
+	ReductionStrategy []uint64 // only ConstantArityBits is supported
+	NumQueryRounds    uint64
 }
 
 func (fc *FriConfig) Rate() float64 {

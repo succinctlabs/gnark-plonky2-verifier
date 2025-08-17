@@ -53,6 +53,7 @@ func (c *VerifierChip) GetChallenges(
 
 	var circuitDigest = verifierData.CircuitDigest
 
+	challenger.ObserveFriParams(c.commonData.FriParams)
 	challenger.ObserveBN254Hash(circuitDigest)
 	challenger.ObserveHash(publicInputsHash)
 	challenger.ObserveCap(proof.WiresCap)

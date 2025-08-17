@@ -86,6 +86,29 @@ func (c *Chip) ObserveOpenings(openings fri.Openings) {
 	}
 }
 
+func (c *Chip) ObserveFriConfig(
+	config types.FriConfig,
+) {
+	c.ObserveElement(gl.NewVariable(config.RateBits))
+	c.ObserveElement(gl.NewVariable(config.CapHeight))
+	c.ObserveElement(gl.NewVariable(config.ProofOfWorkBits))
+	for i := 0; i < len(config.ReductionStrategy); i++ {
+		c.ObserveElement(gl.NewVariable(config.ReductionStrategy[i]))
+	}
+	c.ObserveElement(gl.NewVariable(config.NumQueryRounds))
+}
+
+func (c *Chip) ObserveFriParams(
+	params types.FriParams,
+) {
+	c.ObserveFriConfig(params.Config)
+	c.ObserveElement(gl.NewVariable(0)) // Hiding, should be always false as hiding is not supported in gnark-plonky2-verifier
+	c.ObserveElement(gl.NewVariable(params.DegreeBits))
+	for i := 0; i < len(params.ReductionArityBits); i++ {
+		c.ObserveElement(gl.NewVariable(params.ReductionArityBits[i]))
+	}
+}
+
 func (c *Chip) GetChallenge() gl.Variable {
 	if len(c.inputBuffer) != 0 || len(c.outputBuffer) == 0 {
 		c.duplexing()
